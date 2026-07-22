@@ -40,18 +40,17 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "数据库未配置" }, { status: 500 });
     }
 
-    // 检查邮箱是否已注册
-    const { data: existing } = await admin
-      .from("loop_designer_users")
-      .select("id")
-      .eq("email", email)
-      .maybeSingle();
+    // Check if email already registered
+    const existing = await admin.loopDesignerUser.findFirst({
+      where: { email },
+      select: { id: true },
+    });
 
     if (existing) {
       return NextResponse.json({ error: "该邮箱已注册" }, { status: 409 });
     }
 
-    // 验证邀请码（如果提供了）
+    // Validate invite code (if provided)
     let targetEnterprise: { enterpriseId: string; enterpriseName: string } | null = null;
 
     if (inviteCode) {
@@ -63,63 +62,63 @@ export async function POST(request: Request) {
       }
     }
 
-    // 创建用户
+    // Create user
     const passwordHash = await bcrypt.hash(password, 12);
-    const now = new Date().toISOString();
-    const userRecord: Record<string, unknown> = {
+    const now = new Date();
+    const userData: Record<string, unknown> = {
       email,
-      password_hash: passwordHash,
-      auth_provider: "email",
-      display_name: displayName,
+      passwordHash,
+      authProvider: "email",
+      displayName,
       status: "active",
-      created_at: now,
-      updated_at: now,
-      last_login_at: now,
+      createdAt: now,
+      updatedAt: now,
+      lastLoginAt: now,
     };
 
-    // 如果提供了邀请码，直接设置 enterprise_id
     if (targetEnterprise) {
-      userRecord.enterprise_id = targetEnterprise.enterpriseId;
+      userData.enterpriseId = targetEnterprise.enterpriseId;
     }
 
-    const { data: user, error } = await admin
-      .from("loop_designer_users")
-      .insert(userRecord)
-      .select("*")
-      .single();
+    const user = await admin.loopDesignerUser.create({
+      data: userData,
+    });
 
-    if (error || !user) {
-      return NextResponse.json({ error: error?.message || "注册失败" }, { status: 500 });
-    }
-
-    // 如果通过邀请码注册，创建成员记录
+    // If registered via invite code, create member record
     if (targetEnterprise) {
-      await admin.from("loop_designer_enterprise_members").insert({
-        enterprise_id: targetEnterprise.enterpriseId,
-        user_id: user.id,
-        role: "member",
-        is_active: true,
+      await admin.loopDesignerEnterpriseMember.create({
+        data: {
+          enterpriseId: targetEnterprise.enterpriseId,
+          userId: user.id,
+          role: "member",
+          isActive: true,
+        },
       });
 
-      await admin.rpc("increment_used_seats", { p_enterprise_id: targetEnterprise.enterpriseId });
+      await admin.loopDesignerEnterprise.update({
+        where: { id: targetEnterprise.enterpriseId },
+        data: { usedSeats: { increment: 1 } },
+      });
 
-      await admin.from("loop_designer_audit_logs").insert({
-        enterprise_id: targetEnterprise.enterpriseId,
-        user_id: user.id,
-        action: "member_joined_via_invite",
-        resource_type: "enterprise",
-        resource_id: targetEnterprise.enterpriseId,
-        details: { email, auth_provider: "email" },
+      await admin.loopDesignerAuditLog.create({
+        data: {
+          enterpriseId: targetEnterprise.enterpriseId,
+          userId: user.id,
+          action: "member_joined_via_invite",
+          resourceType: "enterprise",
+          resourceId: targetEnterprise.enterpriseId,
+          details: { email, auth_provider: "email" },
+        },
       });
     }
 
-    // 创建 session cookie
+    // Create session cookie
     const { createAppSession, normalizeUser } = await import("@/lib/app-session");
     await createAppSession(normalizeUser(user));
 
     return NextResponse.json({
       success: true,
-      user: { id: user.id, email: user.email, displayName: user.display_name },
+      user: { id: user.id, email: user.email, displayName: user.displayName },
       ...(targetEnterprise ? { enterprise: targetEnterprise } : {}),
     });
   } catch (error) {

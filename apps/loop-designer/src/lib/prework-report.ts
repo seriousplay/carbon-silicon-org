@@ -62,23 +62,25 @@ export type PreworkReport = {
 
 type SessionReportRow = {
   id: string;
-  user_id: string;
-  enterprise_id: string;
-  context: { entryPoint?: string; questionnaire?: QuestionnaireAnswers } | null;
-  created_at: string;
-  updated_at?: string | null;
-  submitted_at: string | null;
+  userId: string;
+  enterpriseId: string | null;
+  context: PrismaJson | null;
+  createdAt: Date;
+  updatedAt: Date;
+  submittedAt: Date | null;
 };
+
+type PrismaJson = Record<string, unknown> | null;
 
 type EnterpriseRow = {
   id: string;
-  tenant_key: string;
-  company_name: string;
+  tenantKey: string;
+  companyName: string;
 };
 
 type UserRow = {
   id: string;
-  display_name: string;
+  displayName: string;
 };
 
 type PreworkReportInput =
@@ -135,26 +137,36 @@ export async function getPrework624Report(input: PreworkReportInput): Promise<Pr
   const admin = getAdminClient();
   if (!admin) throw new Error("Supabase service role is not configured");
 
-  let query = admin
-    .from("loop_designer_sessions")
-    .select("id,user_id,enterprise_id,context,created_at,updated_at,submitted_at")
-    .order("created_at", { ascending: false })
-    .limit(500);
-
+  const where: Record<string, unknown> = {};
   if (input.scope === "enterprise") {
-    query = query.eq("enterprise_id", input.enterpriseId);
+    where.enterpriseId = input.enterpriseId;
   }
 
-  const { data, error } = await query;
-  if (error) throw new Error(error.message);
+  const data = await admin.loopDesignerSession.findMany({
+    where: where as any,
+    select: {
+      id: true,
+      userId: true,
+      enterpriseId: true,
+      context: true,
+      createdAt: true,
+      updatedAt: true,
+      submittedAt: true,
+    },
+    orderBy: { createdAt: "desc" },
+    take: 500,
+  });
 
-  const rows = (data ?? []) as SessionReportRow[];
+  const rows = data as unknown as SessionReportRow[];
   const [enterpriseById, userById] = await Promise.all([
-    getEnterpriseMap(rows.map((row) => row.enterprise_id)),
-    getUserMap(rows.map((row) => row.user_id)),
+    getEnterpriseMap(rows.map((row) => row.enterpriseId ?? "")),
+    getUserMap(rows.map((row) => row.userId)),
   ]);
   const allSubmissions = rows
-    .filter((row) => row.context?.entryPoint === "prework_624" && row.context.questionnaire)
+    .filter((row) => {
+      const context = row.context as Record<string, unknown> | null;
+      return context?.entryPoint === "prework_624" && context?.questionnaire;
+    })
     .map((row) => normalizeSubmission(row, enterpriseById, userById))
     .sort((a, b) => timestamp(b.submittedAt) - timestamp(a.submittedAt));
   const hideTestAccounts = Boolean(input.hideTestAccounts);
@@ -208,13 +220,12 @@ async function getUserMap(userIds: string[]) {
   const admin = getAdminClient();
   if (!admin) return new Map<string, UserRow>();
 
-  const { data, error } = await admin
-    .from("loop_designer_users")
-    .select("id,display_name")
-    .in("id", uniqueIds);
+  const data = await admin.loopDesignerUser.findMany({
+    where: { id: { in: uniqueIds } },
+    select: { id: true, displayName: true },
+  });
 
-  if (error) throw new Error(error.message);
-  return new Map(((data ?? []) as UserRow[]).map((row) => [row.id, row]));
+  return new Map(data.map((row) => [row.id, row]));
 }
 
 async function getEnterpriseMap(enterpriseIds: string[]) {
@@ -223,13 +234,12 @@ async function getEnterpriseMap(enterpriseIds: string[]) {
   const admin = getAdminClient();
   if (!admin) return new Map<string, EnterpriseRow>();
 
-  const { data, error } = await admin
-    .from("loop_designer_enterprises")
-    .select("id,tenant_key,company_name")
-    .in("id", uniqueIds);
+  const data = await admin.loopDesignerEnterprise.findMany({
+    where: { id: { in: uniqueIds } },
+    select: { id: true, tenantKey: true, companyName: true },
+  });
 
-  if (error) throw new Error(error.message);
-  return new Map(((data ?? []) as EnterpriseRow[]).map((row) => [row.id, row]));
+  return new Map(data.map((row) => [row.id, row]));
 }
 
 function normalizeSubmission(
@@ -237,14 +247,15 @@ function normalizeSubmission(
   enterpriseById: Map<string, EnterpriseRow>,
   userById: Map<string, UserRow>,
 ): PreworkSubmission {
-  const questionnaire = row.context?.questionnaire as QuestionnaireAnswers;
-  const enterprise = enterpriseById.get(row.enterprise_id);
-  const submitterName = userById.get(row.user_id)?.display_name ?? "";
+  const context = row.context as Record<string, unknown> | null;
+  const questionnaire = context?.questionnaire as QuestionnaireAnswers;
+  const enterprise = enterpriseById.get(row.enterpriseId ?? "");
+  const submitterName = userById.get(row.userId)?.displayName ?? "";
   return {
     id: row.id,
-    enterpriseId: row.enterprise_id,
-    enterpriseName: enterprise?.company_name ?? questionnaire.company,
-    tenantKey: enterprise?.tenant_key ?? "",
+    enterpriseId: row.enterpriseId ?? "",
+    enterpriseName: enterprise?.companyName ?? questionnaire.company,
+    tenantKey: enterprise?.tenantKey ?? "",
     submitterName,
     isTestAccount: isLikelyTestSubmission(submitterName, questionnaire),
     participantName: questionnaire.name,
@@ -255,7 +266,7 @@ function normalizeSubmission(
     business: questionnaire.business,
     aiStageLabel: aiStageLabels[questionnaire.aiStageChoice],
     aiConcern: questionnaire.aiConcern,
-    submittedAt: row.submitted_at ?? row.updated_at ?? row.created_at,
+    submittedAt: row.submittedAt?.toISOString() ?? row.updatedAt.toISOString(),
     questionnaire,
   };
 }

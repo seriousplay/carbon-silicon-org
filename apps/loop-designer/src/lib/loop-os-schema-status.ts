@@ -22,25 +22,6 @@ export type LoopOsSchemaStatus = {
   remediation?: string;
 };
 
-export const LOOP_OS_V1_SCHEMA_CHECKS: LoopOsSchemaCheck[] = [
-  {
-    table: "loop_os_assets",
-    columns: "id,enterprise_id,title,domain,status,current_version_id,source_session_id,matrix_workspace_id,matrix_circuit_logical_id,matrix_base_version_id,created_by",
-  },
-  {
-    table: "loop_os_versions",
-    columns: "id,asset_id,version_number,plan,maturity_mapping,birth_certificate,source_session_version_id,matrix_review,created_by",
-  },
-  {
-    table: "loop_os_relationships",
-    columns: "id,enterprise_id,source_asset_id,target_asset_id,type,interface_name,strength,created_by",
-  },
-  {
-    table: "loop_os_org_profiles",
-    columns: "enterprise_id,profile,source,computed_at,updated_at",
-  },
-];
-
 export async function getLoopOsSchemaStatus(): Promise<LoopOsSchemaStatus> {
   const admin = getAdminClient();
   const checkedAt = new Date().toISOString();
@@ -48,31 +29,73 @@ export async function getLoopOsSchemaStatus(): Promise<LoopOsSchemaStatus> {
     return {
       status: "degraded",
       checkedAt,
-      checks: LOOP_OS_V1_SCHEMA_CHECKS.map((check) => ({
-        table: check.table,
-        status: "down",
-        latencyMs: 0,
-        error: "Supabase service role is not configured",
-      })),
+      checks: [],
       remediation: "请先配置 NEXT_PUBLIC_SUPABASE_URL 和 SUPABASE_SERVICE_ROLE_KEY。",
     };
   }
 
-  const checks = await Promise.all(LOOP_OS_V1_SCHEMA_CHECKS.map(async (check) => {
-    const startedAt = Date.now();
-    const { error } = await admin
-      .from(check.table)
-      .select(check.columns)
-      .limit(1);
-    const latencyMs = Date.now() - startedAt;
-    if (!error) return { table: check.table, status: "ok" as const, latencyMs };
-    return {
-      table: check.table,
-      status: "down" as const,
-      latencyMs,
-      error: loopOsErrorMessage(error, `Unable to read ${check.table}`),
-    };
-  }));
+  const checks: LoopOsSchemaCheckResult[] = [];
+
+  // Check loop_os_assets
+  let startedAt = Date.now();
+  try {
+    await admin.loopOsAsset.findFirst({
+      select: {
+        id: true, enterpriseId: true, title: true, domain: true, status: true,
+        currentVersionId: true, sourceSessionId: true, matrixWorkspaceId: true,
+        matrixCircuitLogicalId: true, matrixBaseVersionId: true, createdBy: true,
+      },
+      take: 1,
+    });
+    checks.push({ table: "loop_os_assets", status: "ok", latencyMs: Date.now() - startedAt });
+  } catch (error) {
+    checks.push({ table: "loop_os_assets", status: "down", latencyMs: Date.now() - startedAt, error: loopOsErrorMessage(error, "Unable to read loop_os_assets") });
+  }
+
+  // Check loop_os_versions
+  startedAt = Date.now();
+  try {
+    await admin.loopOsVersion.findFirst({
+      select: {
+        id: true, assetId: true, versionNumber: true, plan: true, maturityMapping: true,
+        birthCertificate: true, sourceSessionVersionId: true, createdBy: true,
+      },
+      take: 1,
+    });
+    checks.push({ table: "loop_os_versions", status: "ok", latencyMs: Date.now() - startedAt });
+  } catch (error) {
+    checks.push({ table: "loop_os_versions", status: "down", latencyMs: Date.now() - startedAt, error: loopOsErrorMessage(error, "Unable to read loop_os_versions") });
+  }
+
+  // Check loop_os_relationships
+  startedAt = Date.now();
+  try {
+    await admin.loopOsRelationship.findFirst({
+      select: {
+        id: true, enterpriseId: true, sourceAssetId: true, targetAssetId: true,
+        type: true, interfaceName: true, strength: true, createdBy: true,
+      },
+      take: 1,
+    });
+    checks.push({ table: "loop_os_relationships", status: "ok", latencyMs: Date.now() - startedAt });
+  } catch (error) {
+    checks.push({ table: "loop_os_relationships", status: "down", latencyMs: Date.now() - startedAt, error: loopOsErrorMessage(error, "Unable to read loop_os_relationships") });
+  }
+
+  // Check loop_os_org_profiles
+  startedAt = Date.now();
+  try {
+    await admin.loopOsOrgProfile.findFirst({
+      select: {
+        enterpriseId: true, profile: true, source: true, computedAt: true, updatedAt: true,
+      },
+      take: 1,
+    });
+    checks.push({ table: "loop_os_org_profiles", status: "ok", latencyMs: Date.now() - startedAt });
+  } catch (error) {
+    checks.push({ table: "loop_os_org_profiles", status: "down", latencyMs: Date.now() - startedAt, error: loopOsErrorMessage(error, "Unable to read loop_os_org_profiles") });
+  }
+
   const ok = checks.every((check) => check.status === "ok");
   return {
     status: ok ? "ok" : "degraded",

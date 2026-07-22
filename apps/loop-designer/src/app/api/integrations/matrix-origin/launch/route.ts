@@ -18,25 +18,81 @@ export async function GET(request: NextRequest) {
     const ticket = verifyMatrixLaunchTicket(token);
     const admin = getAdminClient();
     if (!admin) throw new Error("Supabase service role is not configured");
-    const now = new Date().toISOString();
+    const now = new Date();
     const enterprise = await activateEnterprise({
       tenantKey: ticket.tenantKey,
       companyName: ticket.displayName,
       displayName: ticket.displayName,
     });
-    const { data: userRow, error: userError } = await admin.from("loop_designer_users").upsert({
-      tenant_key: ticket.tenantKey,
-      enterprise_id: enterprise.id,
-      open_id: ticket.openId,
-      union_id: ticket.unionId,
-      display_name: ticket.displayName,
-      avatar_url: ticket.avatarUrl,
-      status: "active",
-      updated_at: now,
-      last_login_at: now,
-    }, { onConflict: "tenant_key,open_id" })
-      .select("id,tenant_key,enterprise_id,open_id,union_id,feishu_user_id,display_name,avatar_url").single();
-    if (userError || !userRow) throw new Error(userError?.message || "无法映射 Loop 用户");
+
+    // Upsert user (by tenantKey + openId)
+    const existingUser = await admin.loopDesignerUser.findFirst({
+      where: {
+        tenantKey: ticket.tenantKey,
+        openId: ticket.openId,
+      },
+      select: {
+        id: true,
+        tenantKey: true,
+        enterpriseId: true,
+        openId: true,
+        unionId: true,
+        feishuUserId: true,
+        displayName: true,
+        avatarUrl: true,
+      },
+    });
+
+    let userRow: any;
+    if (existingUser) {
+      userRow = await admin.loopDesignerUser.update({
+        where: { id: existingUser.id },
+        data: {
+          enterpriseId: enterprise.id,
+          unionId: ticket.unionId,
+          displayName: ticket.displayName,
+          avatarUrl: ticket.avatarUrl,
+          status: "active",
+          updatedAt: now,
+          lastLoginAt: now,
+        },
+        select: {
+          id: true,
+          tenantKey: true,
+          enterpriseId: true,
+          openId: true,
+          unionId: true,
+          feishuUserId: true,
+          displayName: true,
+          avatarUrl: true,
+        },
+      });
+    } else {
+      userRow = await admin.loopDesignerUser.create({
+        data: {
+          tenantKey: ticket.tenantKey,
+          enterpriseId: enterprise.id,
+          openId: ticket.openId,
+          unionId: ticket.unionId,
+          displayName: ticket.displayName,
+          avatarUrl: ticket.avatarUrl,
+          status: "active",
+          updatedAt: now,
+          lastLoginAt: now,
+        },
+        select: {
+          id: true,
+          tenantKey: true,
+          enterpriseId: true,
+          openId: true,
+          unionId: true,
+          feishuUserId: true,
+          displayName: true,
+          avatarUrl: true,
+        },
+      });
+    }
+
     const appUser = normalizeUser(userRow);
 
     const consume = signIntegrationBody({ ticket: token, loopUserId: appUser.id, loopEnterpriseId: enterprise.id });

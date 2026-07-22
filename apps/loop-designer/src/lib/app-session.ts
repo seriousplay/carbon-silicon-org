@@ -5,6 +5,7 @@ import { createOpaqueToken, hashToken } from "./auth-crypto";
 import { extractCookieValues, uniqueCookieValues } from "./session-cookie";
 import { getAdminClient } from "./supabase";
 import { activateEnterprise } from "./enterprise";
+import type { PrismaClient } from "@prisma/client";
 
 export const APP_SESSION_COOKIE = "loop_designer_session";
 export const OAUTH_STATE_COOKIE = "loop_designer_oauth_state";
@@ -24,13 +25,13 @@ export type AppUser = {
 
 type UserRow = {
   id: string;
-  tenant_key: string;
-  enterprise_id: string;
-  open_id: string;
-  union_id: string | null;
-  feishu_user_id: string | null;
-  display_name: string;
-  avatar_url: string | null;
+  tenantKey: string;
+  enterpriseId: string | null;
+  openId: string;
+  unionId: string | null;
+  feishuUserId: string | null;
+  displayName: string;
+  avatarUrl: string | null;
 };
 
 function cookieOptions(expires?: Date) {
@@ -71,13 +72,13 @@ function sessionTtlSeconds() {
 export function normalizeUser(row: UserRow): AppUser {
   return {
     id: row.id,
-    tenantKey: row.tenant_key,
-    enterpriseId: row.enterprise_id,
-    openId: row.open_id,
-    unionId: row.union_id,
-    feishuUserId: row.feishu_user_id,
-    displayName: row.display_name,
-    avatarUrl: row.avatar_url,
+    tenantKey: row.tenantKey,
+    enterpriseId: row.enterpriseId ?? "",
+    openId: row.openId,
+    unionId: row.unionId,
+    feishuUserId: row.feishuUserId,
+    displayName: row.displayName,
+    avatarUrl: row.avatarUrl,
   };
 }
 
@@ -90,52 +91,73 @@ export async function createAppSession(user: AppUser, options?: { skipEnterprise
   const expiresAt = new Date(Date.now() + sessionTtlSeconds() * 1000);
 
   if (options?.skipEnterpriseActivation) {
-    const { error } = await admin.from("loop_designer_auth_sessions").insert({
-      user_id: user.id,
-      token_hash: tokenHash,
-      expires_at: expiresAt.toISOString(),
+    await admin.loopDesignerAuthSession.create({
+      data: {
+        userId: user.id,
+        tokenHash,
+        expiresAt,
+      },
     });
-    if (error) throw new Error(error.message);
     await setCompatibleCookie(APP_SESSION_COOKIE, token, expiresAt);
     return;
   }
 
-  // Try atomic RPC first (all DB operations in one transaction)
-  const { data: rpcResult, error: rpcError } = await admin.rpc(
-    "create_app_session_atomic",
-    {
-      p_user_id: user.id,
-      p_tenant_key: user.tenantKey,
-      p_company_name: user.displayName,
-      p_token_hash: tokenHash,
-      p_expires_at: expiresAt.toISOString(),
-    }
-  );
+  // Atomic operation: create session + activate enterprise in one transaction
+  try {
+    await (admin as PrismaClient).$transaction(async (tx) => {
+      // 1. Activate enterprise (get or create)
+      const enterprise = await activateEnterprise({
+        tenantKey: user.tenantKey,
+        companyName: user.displayName,
+        displayName: user.displayName,
+      });
 
-  if (rpcError || !rpcResult) {
-    // Fallback: legacy non-atomic approach for environments without the RPC migration
+      // 2. Ensure user is linked to enterprise
+      await tx.loopDesignerUser.update({
+        where: { id: user.id },
+        data: { enterpriseId: enterprise.id },
+      });
+
+      // 3. Increment used seats
+      await tx.loopDesignerEnterprise.update({
+        where: { id: enterprise.id },
+        data: { usedSeats: { increment: 1 } },
+      });
+
+      // 4. Create auth session
+      await tx.loopDesignerAuthSession.create({
+        data: {
+          userId: user.id,
+          tokenHash,
+          expiresAt,
+        },
+      });
+    });
+  } catch {
+    // Fallback: legacy non-atomic approach
     const enterprise = await activateEnterprise({
       tenantKey: user.tenantKey,
       companyName: user.displayName,
       displayName: user.displayName,
     });
 
-    await admin
-      .from("loop_designer_users")
-      .update({ enterprise_id: enterprise.id })
-      .eq("id", user.id);
-
-    await admin
-      .from("loop_designer_enterprises")
-      .update({ used_seats: enterprise.usedSeats + 1 })
-      .eq("id", enterprise.id);
-
-    const { error } = await admin.from("loop_designer_auth_sessions").insert({
-      user_id: user.id,
-      token_hash: tokenHash,
-      expires_at: expiresAt.toISOString(),
+    await admin.loopDesignerUser.update({
+      where: { id: user.id },
+      data: { enterpriseId: enterprise.id },
     });
-    if (error) throw new Error(error.message);
+
+    await admin.loopDesignerEnterprise.update({
+      where: { id: enterprise.id },
+      data: { usedSeats: { increment: 1 } },
+    });
+
+    await admin.loopDesignerAuthSession.create({
+      data: {
+        userId: user.id,
+        tokenHash,
+        expiresAt,
+      },
+    });
   }
 
   await setCompatibleCookie(APP_SESSION_COOKIE, token, expiresAt);
@@ -152,37 +174,48 @@ export async function readAppSession(): Promise<AppUser | null> {
   if (!tokenCandidates.length) return null;
   const admin = getAdminClient();
   if (!admin) return null;
-  const now = new Date().toISOString();
+  const now = new Date();
 
   for (const token of tokenCandidates) {
-    const { data: session } = await admin
-      .from("loop_designer_auth_sessions")
-      .select("id,user_id")
-      .eq("token_hash", hashToken(token))
-      .is("revoked_at", null)
-      .gt("expires_at", now)
-      .maybeSingle();
+    const tokenHash = hashToken(token);
+    const session = await admin.loopDesignerAuthSession.findFirst({
+      where: {
+        tokenHash,
+        revokedAt: null,
+        expiresAt: { gt: now },
+      },
+      select: { id: true, userId: true },
+    });
     if (!session) continue;
 
-    const { data: user } = await admin
-      .from("loop_designer_users")
-      .select("id,tenant_key,enterprise_id,open_id,union_id,feishu_user_id,display_name,avatar_url")
-      .eq("id", session.user_id)
-      .eq("status", "active")
-      .maybeSingle();
+    const user = await admin.loopDesignerUser.findFirst({
+      where: {
+        id: session.userId,
+        status: "active",
+      },
+      select: {
+        id: true,
+        tenantKey: true,
+        enterpriseId: true,
+        openId: true,
+        unionId: true,
+        feishuUserId: true,
+        displayName: true,
+        avatarUrl: true,
+      },
+    });
     if (!user) continue;
 
-    const { data: enterprise } = await admin
-      .from("loop_designer_enterprises")
-      .select("is_active")
-      .eq("id", user.enterprise_id)
-      .maybeSingle();
-    if (!enterprise?.is_active) continue;
+    const enterprise = await admin.loopDesignerEnterprise.findFirst({
+      where: { id: user.enterpriseId! },
+      select: { isActive: true },
+    });
+    if (!enterprise?.isActive) continue;
 
-    void admin
-      .from("loop_designer_auth_sessions")
-      .update({ last_seen_at: now })
-      .eq("id", session.id);
+    void admin.loopDesignerAuthSession.update({
+      where: { id: session.id },
+      data: { lastSeenAt: now },
+    });
     return normalizeUser(user as UserRow);
   }
 
@@ -194,31 +227,31 @@ export async function revokeCurrentAppSession() {
   const token = cookieStore.get(APP_SESSION_COOKIE)?.value;
   const admin = getAdminClient();
   if (token && admin) {
-    // 先获取用户信息以释放席位
+    // Get user info to release seat
     const hashedToken = hashToken(token);
-    const { data: session } = await admin
-      .from("loop_designer_auth_sessions")
-      .select("user_id")
-      .eq("token_hash", hashedToken)
-      .is("revoked_at", null)
-      .maybeSingle();
+    const session = await admin.loopDesignerAuthSession.findFirst({
+      where: {
+        tokenHash: hashedToken,
+        revokedAt: null,
+      },
+      select: { userId: true },
+    });
 
     if (session) {
-      const { data: user } = await admin
-        .from("loop_designer_users")
-        .select("id,enterprise_id")
-        .eq("id", session.user_id)
-        .maybeSingle();
+      const user = await admin.loopDesignerUser.findFirst({
+        where: { id: session.userId },
+        select: { id: true, enterpriseId: true },
+      });
 
       if (user) {
-        await releaseUserSeat(user.id, user.enterprise_id);
+        await releaseUserSeat(user.id, user.enterpriseId ?? "");
       }
     }
 
-    await admin
-      .from("loop_designer_auth_sessions")
-      .update({ revoked_at: new Date().toISOString() })
-      .eq("token_hash", hashedToken);
+    await admin.loopDesignerAuthSession.updateMany({
+      where: { tokenHash: hashedToken },
+      data: { revokedAt: new Date() },
+    });
   }
   await clearCompatibleCookie(APP_SESSION_COOKIE);
 }
@@ -236,11 +269,14 @@ export async function consumeOAuthStateCookie() {
 }
 
 /**
- * Phase 1: 释放企业席位
+ * Phase 1: Release enterprise seat
  */
-async function releaseUserSeat(userId: string, enterpriseId: string | null) {
+async function releaseUserSeat(userId: string, enterpriseId: string) {
   if (!enterpriseId) return;
   const admin = getAdminClient();
   if (!admin) return;
-  await admin.rpc("decrement_used_seats", { p_enterprise_id: enterpriseId });
+  await admin.loopDesignerEnterprise.update({
+    where: { id: enterpriseId },
+    data: { usedSeats: { decrement: 1 } },
+  });
 }

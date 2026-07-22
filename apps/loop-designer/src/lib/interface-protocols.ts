@@ -14,22 +14,17 @@ import { getAdminClient } from "./supabase";
 
 type InterfaceProtocolRow = {
   id: string;
-  enterprise_id: string;
-  relationship_id: string;
-  version_number: number;
-  coupling_type: InterfaceProtocol["couplingType"];
-  semantic_protocol: InterfaceProtocol["semanticProtocol"];
-  structural_protocol: InterfaceProtocol["structuralProtocol"];
-  governance_protocol: InterfaceProtocol["governanceProtocol"];
-  status: InterfaceProtocolStatus;
-  change_reason: string | null;
-  created_by: string;
-  created_at: string;
-};
-
-type RelationshipRef = {
-  id: string;
-  enterprise_id: string;
+  enterpriseId: string;
+  relationshipId: string;
+  versionNumber: number;
+  couplingType: string;
+  semanticProtocol: Record<string, unknown>;
+  structuralProtocol: Record<string, unknown>;
+  governanceProtocol: Record<string, unknown>;
+  status: string;
+  changeReason: string | null;
+  createdBy: string;
+  createdAt: Date;
 };
 
 export async function listAssetInterfaceProtocols(user: AppUser, assetId: string): Promise<InterfaceProtocol[]> {
@@ -55,24 +50,21 @@ export async function createInterfaceProtocol(
   const validPayload = validateInterfaceProtocolPayload(payload);
   const existing = await listRelationshipInterfaceProtocols(user, relationshipId);
   const versionNumber = nextProtocolVersion(existing);
-  const { data, error } = await admin
-    .from("loop_os_interface_protocols")
-    .insert({
-      enterprise_id: user.enterpriseId,
-      relationship_id: relationshipId,
-      version_number: versionNumber,
-      coupling_type: validPayload.couplingType,
-      semantic_protocol: validPayload.semanticProtocol,
-      structural_protocol: validPayload.structuralProtocol,
-      governance_protocol: validPayload.governanceProtocol,
+  const data = await admin.loopOsInterfaceProtocol.create({
+    data: {
+      enterpriseId: user.enterpriseId,
+      relationshipId,
+      versionNumber,
+      couplingType: validPayload.couplingType,
+      semanticProtocol: validPayload.semanticProtocol as Record<string, unknown>,
+      structuralProtocol: validPayload.structuralProtocol as Record<string, unknown>,
+      governanceProtocol: validPayload.governanceProtocol as Record<string, unknown>,
       status: "draft",
-      change_reason: changeReason?.trim() || null,
-      created_by: user.id,
-    })
-    .select("*")
-    .single();
-  if (error || !data) throw new Error(loopOsErrorMessage(error, "Unable to create interface protocol"));
-  return normalizeInterfaceProtocol(data as InterfaceProtocolRow);
+      changeReason: changeReason?.trim() || null,
+      createdBy: user.id,
+    },
+  });
+  return normalizeInterfaceProtocol(data as unknown as InterfaceProtocolRow);
 }
 
 export async function updateInterfaceProtocolStatus(
@@ -86,79 +78,69 @@ export async function updateInterfaceProtocolStatus(
   const protocol = await getInterfaceProtocol(user, protocolId);
   if (!protocol) throw new Error("Interface protocol not found");
   if (status === "active") {
-    const { error: deprecateError } = await admin
-      .from("loop_os_interface_protocols")
-      .update({ status: "deprecated" })
-      .eq("enterprise_id", user.enterpriseId)
-      .eq("relationship_id", protocol.relationshipId)
-      .eq("status", "active")
-      .neq("id", protocolId);
-    if (deprecateError) throw new Error(loopOsErrorMessage(deprecateError, "Unable to deprecate previous interface protocol"));
+    await admin.loopOsInterfaceProtocol.updateMany({
+      where: {
+        enterpriseId: user.enterpriseId,
+        relationshipId: protocol.relationshipId,
+        status: "active",
+        id: { not: protocolId },
+      },
+      data: { status: "deprecated" },
+    });
   }
-  const { data, error } = await admin
-    .from("loop_os_interface_protocols")
-    .update({ status })
-    .eq("enterprise_id", user.enterpriseId)
-    .eq("id", protocolId)
-    .select("*")
-    .single();
-  if (error || !data) throw new Error(loopOsErrorMessage(error, "Unable to update interface protocol status"));
-  return normalizeInterfaceProtocol(data as InterfaceProtocolRow);
+  const data = await admin.loopOsInterfaceProtocol.update({
+    where: { enterpriseId: user.enterpriseId, id: protocolId },
+    data: { status },
+  });
+  return normalizeInterfaceProtocol(data as unknown as InterfaceProtocolRow);
 }
 
 export async function getInterfaceProtocol(user: AppUser, protocolId: string): Promise<InterfaceProtocol | null> {
   const admin = getAdminClient();
   if (!admin) return null;
-  const { data, error } = await admin
-    .from("loop_os_interface_protocols")
-    .select("*")
-    .eq("enterprise_id", user.enterpriseId)
-    .eq("id", protocolId)
-    .maybeSingle();
-  if (error) throw new Error(loopOsErrorMessage(error, "Unable to get interface protocol"));
-  return data ? normalizeInterfaceProtocol(data as InterfaceProtocolRow) : null;
+  const data = await admin.loopOsInterfaceProtocol.findFirst({
+    where: { enterpriseId: user.enterpriseId, id: protocolId },
+  });
+  return data ? normalizeInterfaceProtocol(data as unknown as InterfaceProtocolRow) : null;
 }
 
 async function listProtocolsByRelationshipIds(user: AppUser, relationshipIds: string[]) {
   const admin = getAdminClient();
   if (!admin) return [];
-  const { data, error } = await admin
-    .from("loop_os_interface_protocols")
-    .select("*")
-    .eq("enterprise_id", user.enterpriseId)
-    .in("relationship_id", relationshipIds)
-    .order("version_number", { ascending: false });
-  if (error) throw new Error(loopOsErrorMessage(error, "Unable to list interface protocols"));
-  return ((data ?? []) as InterfaceProtocolRow[]).map(normalizeInterfaceProtocol);
+  const data = await admin.loopOsInterfaceProtocol.findMany({
+    where: {
+      enterpriseId: user.enterpriseId,
+      relationshipId: { in: relationshipIds },
+    },
+    orderBy: { versionNumber: "desc" },
+  });
+  return (data as unknown as InterfaceProtocolRow[]).map(normalizeInterfaceProtocol);
 }
 
 async function requireRelationship(user: AppUser, relationshipId: string) {
   const admin = getAdminClient();
   if (!admin) throw new Error("Supabase service role is not configured");
-  const { data, error } = await admin
-    .from("loop_os_relationships")
-    .select("id, enterprise_id")
-    .eq("enterprise_id", user.enterpriseId)
-    .eq("id", relationshipId)
-    .maybeSingle();
-  if (error) throw new Error(loopOsErrorMessage(error, "Unable to require loop relationship"));
+  const data = await admin.loopOsRelationship.findFirst({
+    where: { enterpriseId: user.enterpriseId, id: relationshipId },
+    select: { id: true, enterpriseId: true },
+  });
   if (!data) throw new Error("Loop relationship not found");
-  return data as RelationshipRef;
+  return data;
 }
 
 function normalizeInterfaceProtocol(row: InterfaceProtocolRow): InterfaceProtocol {
   return {
     id: row.id,
-    enterpriseId: row.enterprise_id,
-    relationshipId: row.relationship_id,
-    versionNumber: row.version_number,
-    couplingType: row.coupling_type,
-    semanticProtocol: row.semantic_protocol,
-    structuralProtocol: row.structural_protocol,
-    governanceProtocol: row.governance_protocol,
-    status: row.status,
-    changeReason: row.change_reason,
-    createdBy: row.created_by,
-    createdAt: row.created_at,
+    enterpriseId: row.enterpriseId,
+    relationshipId: row.relationshipId,
+    versionNumber: row.versionNumber,
+    couplingType: row.couplingType as InterfaceProtocol["couplingType"],
+    semanticProtocol: row.semanticProtocol as InterfaceProtocol["semanticProtocol"],
+    structuralProtocol: row.structuralProtocol as InterfaceProtocol["structuralProtocol"],
+    governanceProtocol: row.governanceProtocol as InterfaceProtocol["governanceProtocol"],
+    status: row.status as InterfaceProtocolStatus,
+    changeReason: row.changeReason,
+    createdBy: row.createdBy,
+    createdAt: row.createdAt.toISOString(),
   };
 }

@@ -21,17 +21,17 @@ export type PlatformEnterprise = {
 
 type EnterpriseRow = {
   id: string;
-  tenant_key: string;
-  company_name: string;
-  subscription_tier: string;
-  seat_limit: number;
-  used_seats: number;
-  is_active: boolean;
-  is_trial: boolean;
-  trial_ends_at: string | null;
-  feature_flags: Record<string, unknown> | null;
-  created_at: string;
-  updated_at: string | null;
+  tenantKey: string;
+  companyName: string;
+  subscriptionTier: string;
+  seatLimit: number;
+  usedSeats: number;
+  isActive: boolean;
+  isTrial: boolean;
+  trialEndsAt: Date | null;
+  featureFlags: Record<string, unknown> | null;
+  createdAt: Date;
+  updatedAt: Date | null;
 };
 
 function parseList(value: string | undefined) {
@@ -69,25 +69,37 @@ export async function listPlatformEnterprises(): Promise<PlatformEnterprise[]> {
   const admin = getAdminClient();
   if (!admin) throw new Error("Database not configured");
 
-  const { data, error } = await admin
-    .from("loop_designer_enterprises")
-    .select("id,tenant_key,company_name,subscription_tier,seat_limit,used_seats,is_active,is_trial,trial_ends_at,feature_flags,created_at,updated_at")
-    .order("created_at", { ascending: false });
+  const data = await admin.loopDesignerEnterprise.findMany({
+    select: {
+      id: true,
+      tenantKey: true,
+      companyName: true,
+      subscriptionTier: true,
+      seatLimit: true,
+      usedSeats: true,
+      isActive: true,
+      isTrial: true,
+      trialEndsAt: true,
+      featureFlags: true,
+      createdAt: true,
+      updatedAt: true,
+    },
+    orderBy: { createdAt: "desc" },
+  });
 
-  if (error) throw new Error(error.message);
-  return ((data ?? []) as EnterpriseRow[]).map((row) => ({
+  return (data as unknown as EnterpriseRow[]).map((row) => ({
     id: row.id,
-    tenantKey: row.tenant_key,
-    companyName: row.company_name,
-    subscriptionTier: row.subscription_tier,
-    seatLimit: row.seat_limit,
-    usedSeats: row.used_seats,
-    isActive: row.is_active,
-    isTrial: row.is_trial,
-    trialEndsAt: row.trial_ends_at,
-    authSource: typeof row.feature_flags?.auth_source === "string" ? row.feature_flags.auth_source : null,
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
+    tenantKey: row.tenantKey,
+    companyName: row.companyName,
+    subscriptionTier: row.subscriptionTier,
+    seatLimit: row.seatLimit,
+    usedSeats: row.usedSeats,
+    isActive: row.isActive,
+    isTrial: row.isTrial,
+    trialEndsAt: row.trialEndsAt?.toISOString() ?? null,
+    authSource: typeof row.featureFlags?.auth_source === "string" ? row.featureFlags.auth_source : null,
+    createdAt: row.createdAt.toISOString(),
+    updatedAt: row.updatedAt?.toISOString() ?? null,
   }));
 }
 
@@ -99,25 +111,24 @@ export async function setEnterpriseAccess(input: {
   const admin = getAdminClient();
   if (!admin) throw new Error("Database not configured");
 
-  const { data, error } = await admin
-    .from("loop_designer_enterprises")
-    .update({
-      is_active: input.isActive,
-      updated_at: new Date().toISOString(),
-    })
-    .eq("id", input.enterpriseId)
-    .select("id,company_name,is_active")
-    .single();
+  const data = await admin.loopDesignerEnterprise.update({
+    where: { id: input.enterpriseId },
+    data: {
+      isActive: input.isActive,
+      updatedAt: new Date(),
+    },
+    select: { id: true, companyName: true, isActive: true },
+  });
 
-  if (error || !data) throw new Error(error?.message ?? "企业不存在");
-
-  await admin.from("loop_designer_audit_logs").insert({
-    enterprise_id: input.enterpriseId,
-    user_id: input.actorUserId,
-    action: input.isActive ? "tenant_access_enabled" : "tenant_access_disabled",
-    resource_type: "platform_enterprise",
-    resource_id: input.enterpriseId,
-    details: { company_name: data.company_name },
+  await admin.loopDesignerAuditLog.create({
+    data: {
+      enterpriseId: input.enterpriseId,
+      userId: input.actorUserId,
+      action: input.isActive ? "tenant_access_enabled" : "tenant_access_disabled",
+      resourceType: "platform_enterprise",
+      resourceId: input.enterpriseId,
+      details: { company_name: data.companyName },
+    },
   });
 
   return data;

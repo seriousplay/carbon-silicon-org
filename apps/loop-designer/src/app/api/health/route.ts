@@ -16,8 +16,7 @@ export async function GET(request: Request) {
   try {
     const admin = getAdminClient();
     if (!admin) throw new Error("Not configured");
-    const { error } = await admin.from("loop_designer_users").select("id").limit(1);
-    if (error) throw error;
+    await admin.loopDesignerUser.findFirst({ select: { id: true }, take: 1 });
     checks.database = { status: "ok", latencyMs: Date.now() - dbStart };
   } catch {
     checks.database = { status: "down", latencyMs: Date.now() - dbStart };

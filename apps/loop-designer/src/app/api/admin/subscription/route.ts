@@ -5,20 +5,20 @@ import { getAdminClient } from "@/lib/supabase";
 import { statusFromAdminError } from "@/lib/admin-api";
 
 type EnterpriseSubscriptionRow = {
-  subscription_tier: "free" | "pro" | "enterprise";
-  seat_limit: number;
-  is_trial: boolean;
-  trial_ends_at: string | null;
+  subscriptionTier: string;
+  seatLimit: number;
+  isTrial: boolean;
+  trialEndsAt: Date | null;
 };
 
 type EnterpriseSeatUsageRow = {
-  used_seats: number;
-  subscription_tier: string;
+  usedSeats: number;
+  subscriptionTier: string;
 };
 
 /**
  * GET /api/admin/subscription
- * 获取企业订阅信息（需要 manage_billing 权限）
+ * Get enterprise subscription info (requires manage_billing permission)
  */
 export async function GET() {
   try {
@@ -32,32 +32,30 @@ export async function GET() {
       return NextResponse.json({ success: false, error: "Database not configured" }, { status: 500 });
     }
 
-    const { data: enterprise } = await admin
-      .from("loop_designer_enterprises")
-      .select("*")
-      .eq("id", user.enterpriseId)
-      .single();
+    const enterprise = await admin.loopDesignerEnterprise.findFirst({
+      where: { id: user.enterpriseId },
+    });
 
     if (!enterprise) {
       return NextResponse.json({ success: false, error: "Enterprise not found" }, { status: 404 });
     }
-    const enterpriseRow = enterprise as EnterpriseSubscriptionRow;
-    const { count: activeMemberCount } = await admin
-      .from("loop_designer_enterprise_members")
-      .select("id", { count: "exact", head: true })
-      .eq("enterprise_id", user.enterpriseId)
-      .eq("is_active", true);
+    const enterpriseRow = enterprise as unknown as EnterpriseSubscriptionRow;
+    const activeMemberCount = await admin.loopDesignerEnterpriseMember.count({
+      where: {
+        enterpriseId: user.enterpriseId,
+        isActive: true,
+      },
+    });
 
-    // TODO: Phase 3 - 集成实际支付API获取账单信息
-    // 目前返回模拟数据
+    // TODO: Phase 3 - Integrate with real payment API for billing
     const subscription = {
-      tier: enterpriseRow.subscription_tier,
-      seatLimit: enterpriseRow.seat_limit,
+      tier: enterpriseRow.subscriptionTier,
+      seatLimit: enterpriseRow.seatLimit,
       usedSeats: activeMemberCount ?? 0,
-      isTrial: enterpriseRow.is_trial,
-      trialEndsAt: enterpriseRow.trial_ends_at,
-      nextBillingDate: null, // TODO: 从支付API获取
-      amount: null, // TODO: 从支付API获取
+      isTrial: enterpriseRow.isTrial,
+      trialEndsAt: enterpriseRow.trialEndsAt?.toISOString() ?? null,
+      nextBillingDate: null, // TODO: From payment API
+      amount: null, // TODO: From payment API
       availableTiers: [
         { tier: "free", name: "免费版", price: 0, seats: 5 },
         { tier: "pro", name: "专业版", price: 99, seats: "unlimited" },
@@ -75,7 +73,7 @@ export async function GET() {
 
 /**
  * PATCH /api/admin/subscription
- * 升级/降级订阅（需要 manage_billing 权限）
+ * Upgrade/downgrade subscription (requires manage_billing permission)
  */
 export async function PATCH(request: Request) {
   try {
@@ -101,7 +99,7 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ success: false, error: "Database not configured" }, { status: 500 });
     }
 
-    // 计算新席位上限
+    // Calculate new seat limit
     let newSeatLimit = body.seatLimit;
     if (!newSeatLimit) {
       if (body.tier === "free") newSeatLimit = 5;
@@ -110,44 +108,34 @@ export async function PATCH(request: Request) {
     }
 
     // Validate downgrade: ensure new seat limit accommodates current members
-    const { data: current } = await admin
-      .from("loop_designer_enterprises")
-      .select("used_seats, subscription_tier")
-      .eq("id", user.enterpriseId)
-      .single();
-    const currentUsage = current as EnterpriseSeatUsageRow | null;
+    const current = await admin.loopDesignerEnterprise.findFirst({
+      where: { id: user.enterpriseId },
+      select: { usedSeats: true, subscriptionTier: true },
+    });
+    const currentUsage = current as unknown as EnterpriseSeatUsageRow | null;
 
-    if (currentUsage && newSeatLimit < currentUsage.used_seats) {
+    if (currentUsage && newSeatLimit < currentUsage.usedSeats) {
       return NextResponse.json(
         {
           success: false,
-          error: `当前已占用 ${currentUsage.used_seats} 个席位，降级后席位上限为 ${newSeatLimit}。请先移除多余成员后再降级。`,
+          error: `当前已占用 ${currentUsage.usedSeats} 个席位，降级后席位上限为 ${newSeatLimit}。请先移除多余成员后再降级。`,
         },
         { status: 422 }
       );
     }
 
-    // 更新企业订阅
-    const { data: enterprise, error } = await admin
-      .from("loop_designer_enterprises")
-      .update({
-        subscription_tier: body.tier,
-        seat_limit: newSeatLimit,
-        is_trial: false,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", user.enterpriseId)
-      .select("*")
-      .single();
+    // Update enterprise subscription
+    const enterprise = await admin.loopDesignerEnterprise.update({
+      where: { id: user.enterpriseId },
+      data: {
+        subscriptionTier: body.tier,
+        seatLimit: newSeatLimit,
+        isTrial: false,
+        updatedAt: new Date(),
+      },
+    });
 
-    if (error || !enterprise) {
-      return NextResponse.json(
-        { success: false, error: error?.message || "Failed to update subscription" },
-        { status: 500 }
-      );
-    }
-
-    // TODO: Phase 3 - 调用支付API创建订单
+    // TODO: Phase 3 - Call payment API to create order
 
     return NextResponse.json({ success: true, data: enterprise });
   } catch (error) {

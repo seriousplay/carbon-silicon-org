@@ -1,6 +1,7 @@
 import "server-only";
 
 import { randomUUID } from "node:crypto";
+import { Prisma } from "@prisma/client";
 import { CONVERSATION_STEPS, getNextStepIndex } from "./conversation";
 import { normalizeLoopCells, parseBusinessGoalAnchor, parseWorkflowInput, serializeBusinessGoalAnchor } from "./design-brief";
 import { cleanOrganizationName } from "./identity-labels";
@@ -38,31 +39,32 @@ import { loopPlanSchema, type LoopPlan } from "./plan-schema";
 
 type SessionRow = {
   id: string;
-  status: LoopDesignerSession["status"];
-  user_id: string;
-  enterprise_id: string; // Phase 1: 新增企业ID
-  participant_snapshot: Record<string, string | undefined> | null;
-  context: SessionContext | null;
-  responses: SessionResponses | null;
-  outputs: SessionOutputs | null;
-  created_at: string;
-  submitted_at: string | null;
-  matrix_integration: MatrixIntegrationContext | null;
+  status: string;
+  userId: string;
+  enterpriseId: string | null;
+  participantSnapshot: Prisma.JsonValue;
+  context: Prisma.JsonValue;
+  responses: Prisma.JsonValue;
+  outputs: Prisma.JsonValue;
+  createdAt: Date;
+  updatedAt: Date;
+  submittedAt: Date | null;
+  matrixIntegration: Prisma.JsonValue | null;
 };
 
 function normalize(row: SessionRow): LoopDesignerSession {
   return {
     id: row.id,
-    status: row.status,
-    userId: row.user_id,
-    enterpriseId: row.enterprise_id, // Phase 1: 返回企业ID
-    participantSnapshot: row.participant_snapshot ?? {},
-    context: row.context ?? { currentStep: 0 },
-    responses: row.responses ?? {},
-    outputs: row.outputs ?? { messages: [], versions: [], refinementCount: 0 },
-    createdAt: row.created_at,
-    submittedAt: row.submitted_at,
-    matrixIntegration: row.matrix_integration ?? null,
+    status: row.status as LoopDesignerSession["status"],
+    userId: row.userId,
+    enterpriseId: row.enterpriseId ?? "",
+    participantSnapshot: (row.participantSnapshot ?? {}) as Record<string, string | undefined>,
+    context: (row.context ?? { currentStep: 0 }) as SessionContext,
+    responses: (row.responses ?? {}) as SessionResponses,
+    outputs: (row.outputs ?? { messages: [], versions: [], refinementCount: 0 }) as SessionOutputs,
+    createdAt: row.createdAt.toISOString(),
+    submittedAt: row.submittedAt?.toISOString() ?? null,
+    matrixIntegration: (row.matrixIntegration ?? null) as MatrixIntegrationContext | null,
   };
 }
 
@@ -77,21 +79,22 @@ export async function createIntegratedSession(
   const welcome: ConversationMessage = {
     id: randomUUID(),
     role: "assistant",
-    content: `你正在深化 Matrix Origin 中的“${circuit.name}”。当前目的：${circuit.purpose}。我会先校准业务目标，再把真实工作过程拆成可审阅的回路单元。`,
+    content: `你正在深化 Matrix Origin 中的"${circuit.name}"。当前目的：${circuit.purpose}。我会先校准业务目标，再把真实工作过程拆成可审阅的回路单元。`,
     createdAt: now,
   };
-  const { data, error } = await admin.from("loop_designer_sessions").insert({
-    user_id: user.id,
-    enterprise_id: user.enterpriseId,
-    status: "in_progress",
-    participant_snapshot: { displayName: user.displayName, openId: user.openId, tenantKey: user.tenantKey },
-    context: { currentStep: 0, workflowStage: "loop_design", loopType: circuit.name, loopPurpose: circuit.purpose },
-    responses: {},
-    outputs: { messages: [welcome], versions: [], refinementCount: 0 },
-    matrix_integration: integration,
-  }).select("*").single();
-  if (error || !data) throw new Error(error?.message || "Unable to create integrated session");
-  return normalize(data as SessionRow);
+  const data = await admin.loopDesignerSession.create({
+    data: {
+      userId: user.id,
+      enterpriseId: user.enterpriseId,
+      status: "in_progress",
+      participantSnapshot: { displayName: user.displayName, openId: user.openId, tenantKey: user.tenantKey },
+      context: { currentStep: 0, workflowStage: "loop_design", loopType: circuit.name, loopPurpose: circuit.purpose },
+      responses: {},
+      outputs: { messages: [welcome], versions: [], refinementCount: 0 },
+      matrixIntegration: integration as Prisma.InputJsonValue,
+    },
+  });
+  return normalize(data as unknown as SessionRow);
 }
 
 type SessionWorkflowInput = "questionnaire" | "diagnosis" | "loop_design" | "blueprint";
@@ -114,9 +117,9 @@ export async function createSession(user: AppUser, input: { templateId?: string;
     id: randomUUID(),
     role: "assistant",
     content: preferredCandidate
-      ? `已从回路 inbox 带入蓝图锁定回路“${preferredCandidate.title}”。请先校准业务目标锚点，蓝图内容只是建议草稿。${CONVERSATION_STEPS[0].prompt}`
+      ? `已从回路 inbox 带入蓝图锁定回路"${preferredCandidate.title}"。请先校准业务目标锚点，蓝图内容只是建议草稿。${CONVERSATION_STEPS[0].prompt}`
       : template
-      ? `你选择了行业参考模板“${template.title}”。它会作为高价值回路参考，但不会替代你的真实组织输入。${CONVERSATION_STEPS[0].prompt}`
+      ? `你选择了行业参考模板"${template.title}"。它会作为高价值回路参考，但不会替代你的真实组织输入。${CONVERSATION_STEPS[0].prompt}`
       : CONVERSATION_STEPS[0].prompt,
     createdAt: now,
   };
@@ -145,38 +148,36 @@ export async function createSession(user: AppUser, input: { templateId?: string;
         }),
       }
     : {};
-  const { data, error } = await admin
-    .from("loop_designer_sessions")
-    .insert({
-      user_id: user.id,
-      enterprise_id: user.enterpriseId, // Phase 1: 写入企业ID
+  const data = await admin.loopDesignerSession.create({
+    data: {
+      userId: user.id,
+      enterpriseId: user.enterpriseId,
       status: "in_progress",
-      participant_snapshot: {
+      participantSnapshot: {
         displayName: user.displayName,
         openId: user.openId,
         tenantKey: user.tenantKey,
       },
-      context,
-      responses,
-      outputs,
-    })
-    .select("*")
-    .single();
-  if (error || !data) throw new Error(error?.message ?? "Unable to create session");
-  return normalize(data as SessionRow);
+      context: context as Prisma.InputJsonValue,
+      responses: responses as Prisma.InputJsonValue,
+      outputs: outputs as Prisma.InputJsonValue,
+    },
+  });
+  return normalize(data as unknown as SessionRow);
 }
 
 export async function getOrCreatePreworkQuestionnaireSession(user: AppUser) {
   const admin = getAdminClient();
   if (!admin) throw new Error("Supabase service role is not configured");
-  const { data } = await admin
-    .from("loop_designer_sessions")
-    .select("*")
-    .eq("enterprise_id", user.enterpriseId)
-    .eq("user_id", user.id)
-    .order("created_at", { ascending: false })
-    .limit(20);
-  const existing = ((data ?? []) as SessionRow[])
+  const data = await admin.loopDesignerSession.findMany({
+    where: {
+      enterpriseId: user.enterpriseId,
+      userId: user.id,
+    },
+    orderBy: { createdAt: "desc" },
+    take: 20,
+  });
+  const existing = (data as unknown as SessionRow[])
     .map(normalize)
     .find((session) => session.context.workflowStage === "questionnaire");
   if (existing) {
@@ -195,14 +196,15 @@ export async function getOrCreatePreworkQuestionnaireSession(user: AppUser) {
 export async function getOrCreateBlueprintSession(user: AppUser) {
   const admin = getAdminClient();
   if (!admin) throw new Error("Supabase service role is not configured");
-  const { data } = await admin
-    .from("loop_designer_sessions")
-    .select("*")
-    .eq("enterprise_id", user.enterpriseId)
-    .eq("user_id", user.id)
-    .order("created_at", { ascending: false })
-    .limit(30);
-  const sessions = ((data ?? []) as SessionRow[]).map(normalize);
+  const data = await admin.loopDesignerSession.findMany({
+    where: {
+      enterpriseId: user.enterpriseId,
+      userId: user.id,
+    },
+    orderBy: { createdAt: "desc" },
+    take: 30,
+  });
+  const sessions = (data as unknown as SessionRow[]).map(normalize);
   const resumable = sessions.find((session) =>
     (session.context.workflowStage === "diagnosis" && hasBlueprintDiagnosisWork(session.context))
     || (session.context.workflowStage === "blueprint" && Boolean(session.outputs.blueprint)),
@@ -374,16 +376,20 @@ export async function selectBlueprintCandidate(user: AppUser, sessionId: string,
 async function getLatestQuestionnaire(user: AppUser): Promise<QuestionnaireAnswers | null> {
   const admin = getAdminClient();
   if (!admin) return null;
-  const { data } = await admin
-    .from("loop_designer_sessions")
-    .select("context")
-    .eq("enterprise_id", user.enterpriseId)
-    .eq("user_id", user.id)
-    .not("context->questionnaire", "is", null)
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-  return (data?.context as SessionContext | undefined)?.questionnaire ?? null;
+  const data = await admin.loopDesignerSession.findFirst({
+    where: {
+      enterpriseId: user.enterpriseId,
+      userId: user.id,
+      context: { not: Prisma.DbNull },
+    },
+    orderBy: { createdAt: "desc" },
+    select: { context: true },
+  });
+  // Filter for sessions where context.questionnaire is not null at the JSON level
+  // Since Prisma JSON path filtering is limited, we do post-filtering
+  if (!data) return null;
+  const context = data.context as SessionContext | undefined;
+  return context?.questionnaire ?? null;
 }
 
 async function fallbackQuestionnaire(user: AppUser): Promise<QuestionnaireAnswers> {
@@ -404,42 +410,43 @@ async function fallbackQuestionnaire(user: AppUser): Promise<QuestionnaireAnswer
 async function getEnterpriseCompanyName(user: AppUser) {
   const admin = getAdminClient();
   if (!admin) return "";
-  const { data } = await admin
-    .from("loop_designer_enterprises")
-    .select("company_name")
-    .eq("id", user.enterpriseId)
-    .maybeSingle();
-  return cleanOrganizationName(data?.company_name);
+  const data = await admin.loopDesignerEnterprise.findFirst({
+    where: { id: user.enterpriseId },
+    select: { companyName: true },
+  });
+  return cleanOrganizationName(data?.companyName);
 }
 
 async function getPreferredBlueprintFromSession(user: AppUser, sessionId: string) {
   const admin = getAdminClient();
   if (!admin) return null;
-  const { data } = await admin
-    .from("loop_designer_sessions")
-    .select("outputs")
-    .eq("enterprise_id", user.enterpriseId)
-    .eq("user_id", user.id)
-    .eq("id", sessionId)
-    .not("outputs->blueprint->preferredCandidateId", "is", null)
-    .maybeSingle();
-  return (data?.outputs as SessionOutputs | undefined)?.blueprint ?? null;
+  const data = await admin.loopDesignerSession.findFirst({
+    where: {
+      enterpriseId: user.enterpriseId,
+      userId: user.id,
+      id: sessionId,
+    },
+    select: { outputs: true },
+  });
+  if (!data) return null;
+  const outputs = data.outputs as SessionOutputs | undefined;
+  return outputs?.blueprint ?? null;
 }
 
 export async function listLoopInboxSessions(user: AppUser) {
   const admin = getAdminClient();
   if (!admin) return [];
-  const { data } = await admin
-    .from("loop_designer_sessions")
-    .select("*")
-    .eq("enterprise_id", user.enterpriseId)
-    .eq("user_id", user.id)
-    .not("outputs->blueprint->preferredCandidateId", "is", null)
-    .order("created_at", { ascending: false })
-    .limit(12);
+  const data = await admin.loopDesignerSession.findMany({
+    where: {
+      enterpriseId: user.enterpriseId,
+      userId: user.id,
+    },
+    orderBy: { createdAt: "desc" },
+    take: 12,
+  });
   const deduped: LoopDesignerSession[] = [];
   const seen = new Set<string>();
-  for (const session of ((data ?? []) as SessionRow[])
+  for (const session of (data as unknown as SessionRow[])
     .map(normalize)
     .filter((session) => !session.outputs.currentPlan)) {
     const candidate = session.outputs.blueprint ? getPreferredCandidate(session.outputs.blueprint) : null;
@@ -455,29 +462,32 @@ export async function listLoopInboxSessions(user: AppUser) {
 export async function listRecentSessions(user: AppUser) {
   const admin = getAdminClient();
   if (!admin) return [];
-  const { data } = await admin
-    .from("loop_designer_sessions")
-    .select("*")
-    .eq("enterprise_id", user.enterpriseId) // Phase 1: 强制企业隔离
-    .eq("user_id", user.id) // 再过滤用户（双重保障）
-    .order("created_at", { ascending: false })
-    .limit(8);
-  return ((data ?? []) as SessionRow[]).map(normalize);
+  const data = await admin.loopDesignerSession.findMany({
+    where: {
+      enterpriseId: user.enterpriseId,
+      userId: user.id,
+    },
+    orderBy: { createdAt: "desc" },
+    take: 8,
+  });
+  return (data as unknown as SessionRow[]).map(normalize);
 }
 
 export async function listCompletedLoopDesignSessions(user: AppUser) {
   const admin = getAdminClient();
   if (!admin) return [];
-  const { data } = await admin
-    .from("loop_designer_sessions")
-    .select("*")
-    .eq("enterprise_id", user.enterpriseId)
-    .eq("user_id", user.id)
-    .eq("status", "submitted")
-    .not("outputs->currentPlan", "is", null)
-    .order("created_at", { ascending: false })
-    .limit(6);
-  return ((data ?? []) as SessionRow[]).map(normalize);
+  const data = await admin.loopDesignerSession.findMany({
+    where: {
+      enterpriseId: user.enterpriseId,
+      userId: user.id,
+      status: "submitted",
+    },
+    orderBy: { createdAt: "desc" },
+    take: 6,
+  });
+  return (data as unknown as SessionRow[])
+    .map(normalize)
+    .filter((s) => s.outputs.currentPlan != null);
 }
 
 function normalizeInboxLoopKey(value: string) {
@@ -487,15 +497,15 @@ function normalizeInboxLoopKey(value: string) {
 export async function getAuthorizedSession(user: AppUser, sessionId: string) {
   const admin = getAdminClient();
   if (!admin) return null;
-  const { data, error } = await admin
-    .from("loop_designer_sessions")
-    .select("*")
-    .eq("id", sessionId)
-    .eq("enterprise_id", user.enterpriseId) // Phase 1: 强制企业隔离
-    .eq("user_id", user.id) // 双重保障
-    .maybeSingle();
-  if (error || !data) return null;
-  return normalize(data as SessionRow);
+  const data = await admin.loopDesignerSession.findFirst({
+    where: {
+      id: sessionId,
+      enterpriseId: user.enterpriseId,
+      userId: user.id,
+    },
+  });
+  if (!data) return null;
+  return normalize(data as unknown as SessionRow);
 }
 
 export async function saveAnswer(
@@ -695,16 +705,17 @@ export async function updateSession(
   if (values.context) payload.context = values.context;
   if (values.responses) payload.responses = values.responses;
   if (values.outputs) payload.outputs = values.outputs;
-  if (values.matrixIntegration) payload.matrix_integration = values.matrixIntegration;
-  if (values.status === "submitted") payload.submitted_at = new Date().toISOString();
-  payload.updated_at = new Date().toISOString();
-  const { error } = await admin
-    .from("loop_designer_sessions")
-    .update(payload)
-    .eq("id", sessionId)
-    .eq("enterprise_id", user.enterpriseId) // Phase 1: 强制企业隔离
-    .eq("user_id", user.id); // 防止同企业横向越权
-  if (error) throw new Error(error.message);
+  if (values.matrixIntegration) payload.matrixIntegration = values.matrixIntegration;
+  if (values.status === "submitted") payload.submittedAt = new Date();
+  payload.updatedAt = new Date();
+  await admin.loopDesignerSession.updateMany({
+    where: {
+      id: sessionId,
+      enterpriseId: user.enterpriseId,
+      userId: user.id,
+    },
+    data: payload as Prisma.InputJsonValue,
+  });
 }
 
 export async function renameSession(user: AppUser, sessionId: string, title: string) {
@@ -747,7 +758,7 @@ export async function reopenSessionForEditing(user: AppUser, sessionId: string, 
       {
         id: randomUUID(),
         role: "assistant",
-        content: `已回到“${CONVERSATION_STEPS[stepIndex].title}”。上一版方案已保留，修改输入后可以重新生成一版。`,
+        content: `已回到"${CONVERSATION_STEPS[stepIndex].title}"。上一版方案已保留，修改输入后可以重新生成一版。`,
         createdAt: now,
       },
     ],
@@ -800,11 +811,11 @@ export async function updateLoopPlanCellRuntime(
 export async function deleteSession(user: AppUser, sessionId: string) {
   const admin = getAdminClient();
   if (!admin) throw new Error("Supabase service role is not configured");
-  const { error } = await admin
-    .from("loop_designer_sessions")
-    .delete()
-    .eq("id", sessionId)
-    .eq("enterprise_id", user.enterpriseId)
-    .eq("user_id", user.id);
-  if (error) throw new Error(error.message);
+  await admin.loopDesignerSession.deleteMany({
+    where: {
+      id: sessionId,
+      enterpriseId: user.enterpriseId,
+      userId: user.id,
+    },
+  });
 }

@@ -4,13 +4,13 @@ import type { AppUser } from "./app-session";
 import { getAdminClient } from "./supabase";
 
 /**
- * Phase 2: 企业管理员权限管理
+ * Phase 2: Enterprise admin privilege management
  *
- * 角色层级（从高到低）：
- * - super_admin: 超级管理员（企业创建者自动获得）
- * - billing_admin: 计费管理员
- * - member_admin: 成员管理员
- * - member: 普通成员
+ * Role hierarchy (from high to low):
+ * - super_admin: Super admin (auto-granted to enterprise creator)
+ * - billing_admin: Billing admin
+ * - member_admin: Member admin
+ * - member: Regular member
  */
 
 export type AdminRole = "super_admin" | "billing_admin" | "member_admin" | "member";
@@ -60,82 +60,82 @@ export type EnterpriseSettings = {
 
 type EnterpriseMemberRow = {
   id: string;
-  enterprise_id: string;
-  user_id: string;
-  role: AdminRole;
-  invited_by: string | null;
-  is_active: boolean;
-  joined_at: string;
-  left_at: string | null;
+  enterpriseId: string;
+  userId: string;
+  role: string;
+  invitedBy: string | null;
+  isActive: boolean;
+  joinedAt: Date;
+  leftAt: Date | null;
   user?: {
-    display_name: string;
-    avatar_url: string | null;
+    displayName: string;
+    avatarUrl: string | null;
   } | null;
 };
 
 type UserProfileRow = {
   id: string;
-  display_name: string;
-  avatar_url: string | null;
+  displayName: string;
+  avatarUrl: string | null;
 };
 
 type AuditLogRow = {
   id: string;
-  enterprise_id: string;
-  user_id: string | null;
+  enterpriseId: string;
+  userId: string | null;
   action: string;
-  resource_type: string;
-  resource_id: string | null;
+  resourceType: string;
+  resourceId: string | null;
   details: Record<string, unknown>;
-  ip_address: string | null;
-  user_agent: string | null;
-  created_at: string;
+  ipAddress: string | null;
+  userAgent: string | null;
+  createdAt: Date;
   user?: {
-    display_name: string;
+    displayName: string;
   } | null;
 };
 
 type EnterpriseSettingsRow = {
   id: string;
-  enterprise_id: string;
-  default_ai_model: string;
-  enable_ai_claude: boolean;
-  enable_custom_knowledge_base: boolean;
+  enterpriseId: string;
+  defaultAiModel: string;
+  enableAiClaude: boolean;
+  enableCustomKnowledgeBase: boolean;
   branding: Record<string, unknown>;
-  data_retention_days: number;
-  updated_at: string;
+  dataRetentionDays: number;
+  updatedAt: Date;
 };
 
 /**
- * 权限检查：是否可以管理成员
+ * Permission check: can manage members
  */
 export function canManageMembers(role: AdminRole): boolean {
   return role === "super_admin" || role === "member_admin";
 }
 
 /**
- * 权限检查：是否可以管理计费
+ * Permission check: can manage billing
  */
 export function canManageBilling(role: AdminRole): boolean {
   return role === "super_admin" || role === "billing_admin";
 }
 
 /**
- * 权限检查：是否可以查看审计日志
+ * Permission check: can view audit logs
  */
 export function canViewAuditLogs(role: AdminRole): boolean {
   return role === "super_admin" || role === "billing_admin" || role === "member_admin";
 }
 
 /**
- * 权限检查：是否可以修改企业设置
+ * Permission check: can modify enterprise settings
  */
 export function canModifySettings(role: AdminRole): boolean {
   return role === "super_admin";
 }
 
 /**
- * 获取用户在企业中的角色
+ * Get user's role in enterprise
  */
 export async function getUserEnterpriseRole(
   userId: string,
@@ -144,19 +144,20 @@ export async function getUserEnterpriseRole(
   const admin = getAdminClient();
   if (!admin) return null;
 
-  const { data } = await admin
-    .from("loop_designer_enterprise_members")
-    .select("role")
-    .eq("user_id", userId)
-    .eq("enterprise_id", enterpriseId)
-    .eq("is_active", true)
-    .maybeSingle();
+  const data = await admin.loopDesignerEnterpriseMember.findFirst({
+    where: {
+      userId,
+      enterpriseId,
+      isActive: true,
+    },
+    select: { role: true },
+  });
 
-  return (data as { role: AdminRole } | null)?.role ?? null;
+  return (data?.role as AdminRole) ?? null;
 }
 
 /**
- * 检查用户是否是管理员
+ * Check if user is an admin
  */
 export async function isEnterpriseAdmin(
   user: AppUser
@@ -166,7 +167,7 @@ export async function isEnterpriseAdmin(
 }
 
 /**
- * 获取企业所有成员
+ * Get all enterprise members
  */
 export async function getEnterpriseMembers(
   enterpriseId: string
@@ -174,39 +175,38 @@ export async function getEnterpriseMembers(
   const admin = getAdminClient();
   if (!admin) return [];
 
-  const { data, error } = await admin
-    .from("loop_designer_enterprise_members")
-    .select("*")
-    .eq("enterprise_id", enterpriseId)
-    .eq("is_active", true)
-    .order("joined_at", { ascending: false });
+  const data = await admin.loopDesignerEnterpriseMember.findMany({
+    where: {
+      enterpriseId,
+      isActive: true,
+    },
+    orderBy: { joinedAt: "desc" },
+  });
 
-  if (error) throw new Error(error.message);
-  const rows = (data ?? []) as EnterpriseMemberRow[];
-  const userIds = rows.map((row) => row.user_id);
+  const rows = data as unknown as EnterpriseMemberRow[];
+  const userIds = rows.map((row) => row.userId);
   if (!userIds.length) return [];
 
-  const { data: users, error: userError } = await admin
-    .from("loop_designer_users")
-    .select("id,display_name,avatar_url")
-    .in("id", userIds);
+  const users = await admin.loopDesignerUser.findMany({
+    where: { id: { in: userIds } },
+    select: { id: true, displayName: true, avatarUrl: true },
+  });
 
-  if (userError) throw new Error(userError.message);
   const userById = new Map(
-    ((users ?? []) as UserProfileRow[]).map((user) => [user.id, user]),
+    users.map((user) => [user.id, user]),
   );
 
   return rows.map((row) => normalizeMember({
     ...row,
-    user: userById.get(row.user_id) ? {
-      display_name: userById.get(row.user_id)!.display_name,
-      avatar_url: userById.get(row.user_id)!.avatar_url,
+    user: userById.get(row.userId) ? {
+      displayName: userById.get(row.userId)!.displayName,
+      avatarUrl: userById.get(row.userId)!.avatarUrl,
     } : null,
   }));
 }
 
 /**
- * 添加企业成员
+ * Add enterprise member
  */
 export async function addEnterpriseMember(input: {
   enterpriseId: string;
@@ -217,24 +217,18 @@ export async function addEnterpriseMember(input: {
   const admin = getAdminClient();
   if (!admin) throw new Error("Supabase service role is not configured");
 
-  // 1. 添加成员
-  const { data: member, error } = await admin
-    .from("loop_designer_enterprise_members")
-    .insert({
-      enterprise_id: input.enterpriseId,
-      user_id: input.userId,
+  // 1. Add member
+  const member = await admin.loopDesignerEnterpriseMember.create({
+    data: {
+      enterpriseId: input.enterpriseId,
+      userId: input.userId,
       role: input.role,
-      invited_by: input.invitedBy,
-      is_active: true,
-    })
-    .select("*")
-    .single();
+      invitedBy: input.invitedBy,
+      isActive: true,
+    },
+  });
 
-  if (error || !member) {
-    throw new Error(error?.message ?? "Failed to add member");
-  }
-
-  // 2. 记录审计日志
+  // 2. Log audit event
   await logAuditEvent({
     enterpriseId: input.enterpriseId,
     userId: input.invitedBy,
@@ -244,14 +238,14 @@ export async function addEnterpriseMember(input: {
     details: { role: input.role },
   });
 
-  // 3. 更新企业已使用席位
+  // 3. Increment used seats
   await incrementUsedSeats(input.enterpriseId);
 
-  return normalizeMember(member as EnterpriseMemberRow);
+  return normalizeMember(member as unknown as EnterpriseMemberRow);
 }
 
 /**
- * 移除企业成员
+ * Remove enterprise member
  */
 export async function removeEnterpriseMember(
   enterpriseId: string,
@@ -261,19 +255,19 @@ export async function removeEnterpriseMember(
   const admin = getAdminClient();
   if (!admin) throw new Error("Supabase service role is not configured");
 
-  // 1. 标记为非活跃
-  const { error } = await admin
-    .from("loop_designer_enterprise_members")
-    .update({
-      is_active: false,
-      left_at: new Date().toISOString(),
-    })
-    .eq("enterprise_id", enterpriseId)
-    .eq("user_id", userId);
+  // 1. Mark as inactive
+  await admin.loopDesignerEnterpriseMember.updateMany({
+    where: {
+      enterpriseId,
+      userId,
+    },
+    data: {
+      isActive: false,
+      leftAt: new Date(),
+    },
+  });
 
-  if (error) throw new Error(error.message);
-
-  // 2. 记录审计日志
+  // 2. Log audit event
   await logAuditEvent({
     enterpriseId,
     userId: removedBy,
@@ -283,12 +277,12 @@ export async function removeEnterpriseMember(
     details: {},
   });
 
-  // 3. 减少企业席位
+  // 3. Release enterprise seat
   await releaseUserSeat(userId, enterpriseId);
 }
 
 /**
- * 更新成员角色
+ * Update member role
  */
 export async function updateMemberRole(
   enterpriseId: string,
@@ -299,16 +293,16 @@ export async function updateMemberRole(
   const admin = getAdminClient();
   if (!admin) throw new Error("Supabase service role is not configured");
 
-  const { error } = await admin
-    .from("loop_designer_enterprise_members")
-    .update({ role: newRole })
-    .eq("enterprise_id", enterpriseId)
-    .eq("user_id", userId)
-    .eq("is_active", true);
+  await admin.loopDesignerEnterpriseMember.updateMany({
+    where: {
+      enterpriseId,
+      userId,
+      isActive: true,
+    },
+    data: { role: newRole },
+  });
 
-  if (error) throw new Error(error.message);
-
-  // 记录审计日志
+  // Log audit event
   await logAuditEvent({
     enterpriseId,
     userId: updatedBy,
@@ -320,7 +314,7 @@ export async function updateMemberRole(
 }
 
 /**
- * 记录审计日志
+ * Record audit log
  */
 export async function logAuditEvent(input: {
   enterpriseId: string;
@@ -335,20 +329,22 @@ export async function logAuditEvent(input: {
   const admin = getAdminClient();
   if (!admin) return;
 
-  await admin.from("loop_designer_audit_logs").insert({
-    enterprise_id: input.enterpriseId,
-    user_id: input.userId,
-    action: input.action,
-    resource_type: input.resourceType,
-    resource_id: input.resourceId,
-    details: input.details,
-    ip_address: input.ipAddress ?? null,
-    user_agent: input.userAgent ?? null,
+  await admin.loopDesignerAuditLog.create({
+    data: {
+      enterpriseId: input.enterpriseId,
+      userId: input.userId,
+      action: input.action,
+      resourceType: input.resourceType,
+      resourceId: input.resourceId,
+      details: input.details,
+      ipAddress: input.ipAddress ?? null,
+      userAgent: input.userAgent ?? null,
+    },
   });
 }
 
 /**
- * 获取企业审计日志
+ * Get enterprise audit logs
  */
 export async function getEnterpriseAuditLogs(
   enterpriseId: string,
@@ -358,33 +354,33 @@ export async function getEnterpriseAuditLogs(
   const admin = getAdminClient();
   if (!admin) return [];
 
-  const { data } = await admin
-    .from("loop_designer_audit_logs")
-    .select(`
-      *,
-      user:loop_designer_users(display_name)
-    `)
-    .eq("enterprise_id", enterpriseId)
-    .order("created_at", { ascending: false })
-    .range(offset, offset + limit - 1);
+  const data = await admin.loopDesignerAuditLog.findMany({
+    where: { enterpriseId },
+    orderBy: { createdAt: "desc" },
+    skip: offset,
+    take: limit,
+    include: {
+      user: { select: { displayName: true } },
+    },
+  });
 
-  return ((data ?? []) as AuditLogRow[]).map((row) => ({
+  return (data as unknown as AuditLogRow[]).map((row) => ({
     id: row.id,
-    enterpriseId: row.enterprise_id,
-    userId: row.user_id,
+    enterpriseId: row.enterpriseId,
+    userId: row.userId,
     action: row.action,
-    resourceType: row.resource_type,
-    resourceId: row.resource_id,
+    resourceType: row.resourceType,
+    resourceId: row.resourceId,
     details: row.details,
-    ipAddress: row.ip_address,
-    userAgent: row.user_agent,
-    createdAt: row.created_at,
-    user: row.user ? { displayName: row.user.display_name } : undefined,
+    ipAddress: row.ipAddress,
+    userAgent: row.userAgent,
+    createdAt: row.createdAt.toISOString(),
+    user: row.user ? { displayName: row.user.displayName } : undefined,
   }));
 }
 
 /**
- * 获取企业设置
+ * Get enterprise settings
  */
 export async function getEnterpriseSettings(
   enterpriseId: string
@@ -392,17 +388,15 @@ export async function getEnterpriseSettings(
   const admin = getAdminClient();
   if (!admin) return null;
 
-  const { data } = await admin
-    .from("loop_designer_enterprise_settings")
-    .select("*")
-    .eq("enterprise_id", enterpriseId)
-    .maybeSingle();
+  const data = await admin.loopDesignerEnterpriseSetting.findFirst({
+    where: { enterpriseId },
+  });
 
-  return data ? normalizeSettings(data as EnterpriseSettingsRow) : null;
+  return data ? normalizeSettings(data as unknown as EnterpriseSettingsRow) : null;
 }
 
 /**
- * 更新企业设置
+ * Update enterprise settings
  */
 export async function updateEnterpriseSettings(
   enterpriseId: string,
@@ -412,21 +406,15 @@ export async function updateEnterpriseSettings(
   const admin = getAdminClient();
   if (!admin) throw new Error("Supabase service role is not configured");
 
-  const { data, error } = await admin
-    .from("loop_designer_enterprise_settings")
-    .update({
+  const data = await admin.loopDesignerEnterpriseSetting.update({
+    where: { enterpriseId },
+    data: {
       ...settings,
-      updated_at: new Date().toISOString(),
-    })
-    .eq("enterprise_id", enterpriseId)
-    .select("*")
-    .single();
+      updatedAt: new Date(),
+    },
+  });
 
-  if (error || !data) {
-    throw new Error(error?.message ?? "Failed to update settings");
-  }
-
-  // 记录审计日志
+  // Log audit event
   await logAuditEvent({
     enterpriseId,
     userId: updatedBy,
@@ -436,42 +424,48 @@ export async function updateEnterpriseSettings(
     details: { changed_fields: Object.keys(settings) },
   });
 
-  return normalizeSettings(data as EnterpriseSettingsRow);
+  return normalizeSettings(data as unknown as EnterpriseSettingsRow);
 }
 
 /**
- * 增加企业席位（原子操作）
+ * Increment enterprise seats (atomic operation)
  */
 async function incrementUsedSeats(enterpriseId: string) {
   const admin = getAdminClient();
   if (!admin) return;
 
-  await admin.rpc("increment_used_seats", { p_enterprise_id: enterpriseId });
+  await admin.loopDesignerEnterprise.update({
+    where: { id: enterpriseId },
+    data: { usedSeats: { increment: 1 } },
+  });
 }
 
 /**
- * 释放企业席位（原子操作）
+ * Release enterprise seat (atomic operation)
  */
 async function releaseUserSeat(_userId: string, enterpriseId: string) {
   const admin = getAdminClient();
   if (!admin) return;
 
-  await admin.rpc("decrement_used_seats", { p_enterprise_id: enterpriseId });
+  await admin.loopDesignerEnterprise.update({
+    where: { id: enterpriseId },
+    data: { usedSeats: { decrement: 1 } },
+  });
 }
 
 function normalizeMember(row: EnterpriseMemberRow): EnterpriseMember {
   return {
     id: row.id,
-    enterpriseId: row.enterprise_id,
-    userId: row.user_id,
-    role: row.role,
-    invitedBy: row.invited_by,
-    isActive: row.is_active,
-    joinedAt: row.joined_at,
-    leftAt: row.left_at,
+    enterpriseId: row.enterpriseId,
+    userId: row.userId,
+    role: row.role as AdminRole,
+    invitedBy: row.invitedBy,
+    isActive: row.isActive,
+    joinedAt: row.joinedAt.toISOString(),
+    leftAt: row.leftAt?.toISOString() ?? null,
     user: row.user ? {
-      displayName: row.user.display_name,
-      avatarUrl: row.user.avatar_url,
+      displayName: row.user.displayName,
+      avatarUrl: row.user.avatarUrl,
     } : undefined,
   };
 }
@@ -479,12 +473,12 @@ function normalizeMember(row: EnterpriseMemberRow): EnterpriseMember {
 function normalizeSettings(row: EnterpriseSettingsRow): EnterpriseSettings {
   return {
     id: row.id,
-    enterpriseId: row.enterprise_id,
-    defaultAiModel: row.default_ai_model,
-    enableAiClaude: row.enable_ai_claude,
-    enableCustomKnowledgeBase: row.enable_custom_knowledge_base,
+    enterpriseId: row.enterpriseId,
+    defaultAiModel: row.defaultAiModel,
+    enableAiClaude: row.enableAiClaude,
+    enableCustomKnowledgeBase: row.enableCustomKnowledgeBase,
     branding: row.branding,
-    dataRetentionDays: row.data_retention_days,
-    updatedAt: row.updated_at,
+    dataRetentionDays: row.dataRetentionDays,
+    updatedAt: row.updatedAt.toISOString(),
   };
 }

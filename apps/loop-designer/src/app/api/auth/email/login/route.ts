@@ -9,7 +9,7 @@ const LOGIN_RATE_LIMIT = { maxRequests: 5, windowSeconds: 60 };
 
 /**
  * POST /api/auth/email/login
- * 邮箱密码登录
+ * Email + password login
  */
 export async function POST(request: Request) {
   try {
@@ -37,25 +37,24 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "数据库未配置" }, { status: 500 });
     }
 
-    // 1. 查找用户（仅邮箱认证方式）
-    const { data: user, error: userError } = await admin
-      .from("loop_designer_users")
-      .select("*")
-      .eq("email", email)
-      .eq("auth_provider", "email")
-      .eq("status", "active")
-      .maybeSingle();
+    // 1. Find user (only email auth method)
+    const user = await admin.loopDesignerUser.findFirst({
+      where: {
+        email,
+        authProvider: "email",
+        status: "active",
+      },
+    });
 
-    if (userError || !user) {
-      // 统一错误消息，避免泄露用户是否存在
+    if (!user) {
       return NextResponse.json(
         { error: "邮箱或密码错误" },
         { status: 401 }
       );
     }
 
-    // 2. 验证密码
-    const passwordHash = user.password_hash as string;
+    // 2. Verify password
+    const passwordHash = user.passwordHash;
     if (!passwordHash) {
       return NextResponse.json(
         { error: "该账号未设置密码，请使用其他方式登录" },
@@ -71,36 +70,38 @@ export async function POST(request: Request) {
       );
     }
 
-    // 3. 更新最后登录时间
-    await admin
-      .from("loop_designer_users")
-      .update({ last_login_at: new Date().toISOString() })
-      .eq("id", user.id);
-
-    // 4. 创建 Session
-    await createAppSession(normalizeUser(user));
-
-    // 5. 记录审计日志
-    await admin.from("loop_designer_audit_logs").insert({
-      enterprise_id: user.enterprise_id,
-      user_id: user.id,
-      action: "user_login",
-      resource_type: "user",
-      resource_id: user.id,
-      details: { auth_provider: "email", email },
-      ip_address: request.headers.get("x-forwarded-for") || null,
-      user_agent: request.headers.get("user-agent") || null,
+    // 3. Update last login time
+    await admin.loopDesignerUser.update({
+      where: { id: user.id },
+      data: { lastLoginAt: new Date() },
     });
 
-    // 6. 返回成功
+    // 4. Create session
+    await createAppSession(normalizeUser(user));
+
+    // 5. Record audit log
+    await admin.loopDesignerAuditLog.create({
+      data: {
+        enterpriseId: user.enterpriseId ?? "",
+        userId: user.id,
+        action: "user_login",
+        resourceType: "user",
+        resourceId: user.id,
+        details: { auth_provider: "email", email },
+        ipAddress: request.headers.get("x-forwarded-for") || null,
+        userAgent: request.headers.get("user-agent") || null,
+      },
+    });
+
+    // 6. Return success
     return NextResponse.json({
       success: true,
       user: {
         id: user.id,
         email: user.email,
-        displayName: user.display_name,
+        displayName: user.displayName,
       },
-      ...(user.enterprise_id ? { enterpriseId: user.enterprise_id } : {}),
+      ...(user.enterpriseId ? { enterpriseId: user.enterpriseId } : {}),
     });
   } catch (error) {
     safeLogError("email-login", error);

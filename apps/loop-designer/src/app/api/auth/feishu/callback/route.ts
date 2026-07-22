@@ -37,40 +37,62 @@ export async function GET(request: NextRequest) {
     const admin = getAdminClient();
     if (!admin) throw new Error("Supabase service role is not configured");
 
-    // Phase 1: 自动激活企业
+    // Phase 1: Auto activate enterprise
     const enterprise = await activateEnterprise({
       tenantKey: feishuUser.tenantKey,
       companyName: feishuUser.displayName,
       displayName: feishuUser.displayName,
     });
 
-    const now = new Date().toISOString();
-    const { data: user, error } = await admin
-      .from("loop_designer_users")
-      .upsert(
-        {
-          tenant_key: feishuUser.tenantKey,
-          enterprise_id: enterprise.id, // Phase 1: 关联企业
-          open_id: feishuUser.openId,
-          union_id: feishuUser.unionId,
-          feishu_user_id: feishuUser.userId,
-          display_name: feishuUser.displayName,
-          avatar_url: feishuUser.avatarUrl,
-          status: "active",
-          updated_at: now,
-          last_login_at: now,
-        },
-        { onConflict: "tenant_key,open_id" },
-      )
-      .select("id,enterprise_id")
-      .single();
-    if (error || !user) throw new Error(error?.message || "无法建立本地飞书用户");
+    const now = new Date();
 
-    // 返回完整的用户信息给 createAppSession
+    // Upsert user (by tenantKey + openId)
+    const existingUser = await admin.loopDesignerUser.findFirst({
+      where: {
+        tenantKey: feishuUser.tenantKey,
+        openId: feishuUser.openId,
+      },
+    });
+
+    let user: { id: string; enterpriseId: string | null };
+    if (existingUser) {
+      user = await admin.loopDesignerUser.update({
+        where: { id: existingUser.id },
+        data: {
+          enterpriseId: enterprise.id,
+          unionId: feishuUser.unionId,
+          feishuUserId: feishuUser.userId,
+          displayName: feishuUser.displayName,
+          avatarUrl: feishuUser.avatarUrl,
+          status: "active",
+          updatedAt: now,
+          lastLoginAt: now,
+        },
+        select: { id: true, enterpriseId: true },
+      });
+    } else {
+      user = await admin.loopDesignerUser.create({
+        data: {
+          tenantKey: feishuUser.tenantKey,
+          enterpriseId: enterprise.id,
+          openId: feishuUser.openId,
+          unionId: feishuUser.unionId,
+          feishuUserId: feishuUser.userId,
+          displayName: feishuUser.displayName,
+          avatarUrl: feishuUser.avatarUrl,
+          status: "active",
+          updatedAt: now,
+          lastLoginAt: now,
+        },
+        select: { id: true, enterpriseId: true },
+      });
+    }
+
+    // Return full user info to createAppSession
     const appUser = {
       id: user.id,
       tenantKey: feishuUser.tenantKey,
-      enterpriseId: user.enterprise_id,
+      enterpriseId: user.enterpriseId ?? "",
       openId: feishuUser.openId,
       unionId: feishuUser.unionId,
       feishuUserId: feishuUser.userId,

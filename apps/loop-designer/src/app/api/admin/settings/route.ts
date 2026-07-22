@@ -8,7 +8,7 @@ import { getModelCandidateSummaries } from "@/lib/model-config";
 
 /**
  * GET /api/admin/settings
- * 获取企业设置（需要 modify_settings 权限）
+ * Get enterprise settings (requires modify_settings permission)
  */
 export async function GET() {
   try {
@@ -19,17 +19,22 @@ export async function GET() {
 
     const settings = await getEnterpriseSettings(user.enterpriseId);
 
-    // 同时获取企业订阅信息
+    // Also get enterprise subscription info
     const admin = getAdminClient();
     if (!admin) {
       return NextResponse.json({ success: false, error: "Database not configured" }, { status: 500 });
     }
 
-    const { data: enterprise } = await admin
-      .from("loop_designer_enterprises")
-      .select("subscription_tier, seat_limit, used_seats, is_trial, trial_ends_at")
-      .eq("id", user.enterpriseId)
-      .single();
+    const enterprise = await admin.loopDesignerEnterprise.findFirst({
+      where: { id: user.enterpriseId },
+      select: {
+        subscriptionTier: true,
+        seatLimit: true,
+        usedSeats: true,
+        isTrial: true,
+        trialEndsAt: true,
+      },
+    });
 
     return NextResponse.json({
       success: true,
@@ -48,7 +53,7 @@ export async function GET() {
 
 /**
  * PATCH /api/admin/settings
- * 更新企业设置（需要 modify_settings 权限）
+ * Update enterprise settings (requires modify_settings permission)
  */
 export async function PATCH(request: Request) {
   try {

@@ -74,57 +74,54 @@ async function quickLoginWithoutAccessCode(input: EventLoginInput, options: { re
   const tenantKey = `event_phone:${phoneKey}`;
   const openId = `event_phone:${phoneKey}`;
 
-  const { data: existing } = await admin
-    .from("loop_designer_users")
-    .select("*")
-    .eq("tenant_key", tenantKey)
-    .eq("open_id", openId)
-    .maybeSingle();
+  const existing = await admin.loopDesignerUser.findFirst({
+    where: {
+      tenantKey,
+      openId,
+    },
+  });
 
   if (existing) {
-    if (existing.auth_provider !== "event") {
+    if (existing.authProvider !== "event") {
       throw new Error("该手机号已被其他登录方式使用");
     }
-    if (existing.password_hash && password) {
-      const passwordOk = await bcrypt.compare(password, existing.password_hash);
+    if (existing.passwordHash && password) {
+      const passwordOk = await bcrypt.compare(password, existing.passwordHash);
       if (!passwordOk) throw new Error("手机号或密码错误");
-    } else if (existing.password_hash && options.requirePassword) {
+    } else if (existing.passwordHash && options.requirePassword) {
       throw new Error("请输入登录密码");
     }
     const updates: Record<string, unknown> = {
-      last_login_at: now,
-      updated_at: now,
+      lastLoginAt: new Date(),
+      updatedAt: new Date(),
     };
-    if (requestedDisplayName) updates.display_name = requestedDisplayName;
-    if (!existing.password_hash && password) updates.password_hash = await bcrypt.hash(password, 12);
+    if (requestedDisplayName) updates.displayName = requestedDisplayName;
+    if (!existing.passwordHash && password) updates.passwordHash = await bcrypt.hash(password, 12);
     if (email) updates.email = email;
-    const { data: updated, error: updateError } = await admin
-      .from("loop_designer_users")
-      .update(updates)
-      .eq("id", existing.id)
-      .select("*")
-      .single();
-    if (updateError || !updated) throw new Error(updateError?.message || "更新活动用户失败");
+    await admin.loopDesignerUser.update({
+      where: { id: existing.id },
+      data: updates,
+    });
 
-    if (updated.enterprise_id && (requestedCompanyName || contact || requestedDisplayName)) {
+    if (existing.enterpriseId && (requestedCompanyName || contact || requestedDisplayName)) {
       const enterpriseUpdates: Record<string, unknown> = {
-        updated_at: now,
+        updatedAt: new Date(),
       };
-      if (requestedCompanyName) enterpriseUpdates.company_name = requestedCompanyName;
-      enterpriseUpdates.billing_contact = {
+      if (requestedCompanyName) enterpriseUpdates.companyName = requestedCompanyName;
+      enterpriseUpdates.billingContact = {
         phone,
         contact: contact || null,
-        display_name: requestedDisplayName || updated.display_name,
+        displayName: requestedDisplayName || existing.displayName,
       };
-      await admin
-        .from("loop_designer_enterprises")
-        .update(enterpriseUpdates)
-        .eq("id", updated.enterprise_id);
+      await admin.loopDesignerEnterprise.update({
+        where: { id: existing.enterpriseId },
+        data: enterpriseUpdates,
+      });
     }
 
     await writeEventAuditLog({
-      enterpriseId: updated.enterprise_id,
-      userId: updated.id,
+      enterpriseId: existing.enterpriseId ?? "",
+      userId: existing.id,
       companyName,
       contact,
       phone,
@@ -132,8 +129,8 @@ async function quickLoginWithoutAccessCode(input: EventLoginInput, options: { re
       userAgent: input.userAgent,
       reused: true,
     });
-    await createAppSession(normalizeUser(updated), { skipEnterpriseActivation: true });
-    return { user: updated, enterpriseId: updated.enterprise_id, reused: true };
+    await createAppSession(normalizeUser(existing), { skipEnterpriseActivation: true });
+    return { user: existing, enterpriseId: existing.enterpriseId, reused: true };
   }
 
   const enterprise = await findOrCreateEventEnterprise({
@@ -145,39 +142,37 @@ async function quickLoginWithoutAccessCode(input: EventLoginInput, options: { re
     now,
   });
 
-  const { data: user, error: userError } = await admin
-    .from("loop_designer_users")
-    .insert({
-      tenant_key: tenantKey,
-      enterprise_id: enterprise.id,
-      open_id: openId,
-      union_id: null,
-      feishu_user_id: null,
-      display_name: displayName,
+  const user = await admin.loopDesignerUser.create({
+    data: {
+      tenantKey,
+      enterpriseId: enterprise.id,
+      openId,
+      unionId: null,
+      feishuUserId: null,
+      displayName,
       email,
-      ...(password ? { password_hash: await bcrypt.hash(password, 12) } : {}),
-      auth_provider: "event",
+      ...(password ? { passwordHash: await bcrypt.hash(password, 12) } : {}),
+      authProvider: "event",
       status: "active",
-      created_at: now,
-      updated_at: now,
-      last_login_at: now,
-    })
-    .select("*")
-    .single();
-
-  if (userError || !user) {
-    throw new Error(userError?.message || "创建活动用户失败");
-  }
-
-  await admin.from("loop_designer_enterprise_members").insert({
-    enterprise_id: enterprise.id,
-    user_id: user.id,
-    role: "super_admin",
-    is_active: true,
+      createdAt: new Date(now),
+      updatedAt: new Date(now),
+      lastLoginAt: new Date(now),
+    },
   });
 
-  await admin.from("loop_designer_enterprise_settings").insert({
-    enterprise_id: enterprise.id,
+  await admin.loopDesignerEnterpriseMember.create({
+    data: {
+      enterpriseId: enterprise.id,
+      userId: user.id,
+      role: "super_admin",
+      isActive: true,
+    },
+  });
+
+  await admin.loopDesignerEnterpriseSetting.create({
+    data: {
+      enterpriseId: enterprise.id,
+    },
   });
 
   await writeEventAuditLog({
@@ -214,41 +209,35 @@ async function findOrCreateEventEnterprise(input: {
   const admin = getAdminClient();
   if (!admin) throw new Error("数据库未配置");
 
-  const { data: existing } = await admin
-    .from("loop_designer_enterprises")
-    .select("*")
-    .eq("tenant_key", input.tenantKey)
-    .maybeSingle();
+  const existing = await admin.loopDesignerEnterprise.findFirst({
+    where: { tenantKey: input.tenantKey },
+  });
   if (existing) return existing;
 
-  const { data: enterprise, error } = await admin
-    .from("loop_designer_enterprises")
-    .insert({
-      tenant_key: input.tenantKey,
-      company_name: input.companyName,
-      subscription_tier: "enterprise",
-      seat_limit: 5,
-      used_seats: 1,
-      feature_flags: { auth_source: "event_quick_login", identity: "phone" },
-      billing_contact: { phone: input.phone, contact: input.contact || null, display_name: input.displayName },
-      is_active: true,
-      is_trial: true,
-      trial_ends_at: process.env.LOOP_EVENT_ACCESS_UNTIL || null,
-      created_at: input.now,
-      updated_at: input.now,
-    })
-    .select("*")
-    .single();
-
-  if (!error && enterprise) return enterprise;
-
-  const { data: raced } = await admin
-    .from("loop_designer_enterprises")
-    .select("*")
-    .eq("tenant_key", input.tenantKey)
-    .maybeSingle();
-  if (raced) return raced;
-  throw new Error(error?.message || "创建活动企业失败");
+  try {
+    return await admin.loopDesignerEnterprise.create({
+      data: {
+        tenantKey: input.tenantKey,
+        companyName: input.companyName,
+        subscriptionTier: "enterprise",
+        seatLimit: 5,
+        usedSeats: 1,
+        featureFlags: { auth_source: "event_quick_login", identity: "phone" },
+        billingContact: { phone: input.phone, contact: input.contact || null, displayName: input.displayName },
+        isActive: true,
+        isTrial: true,
+        trialEndsAt: process.env.LOOP_EVENT_ACCESS_UNTIL ? new Date(process.env.LOOP_EVENT_ACCESS_UNTIL) : null,
+        createdAt: new Date(input.now),
+        updatedAt: new Date(input.now),
+      },
+    });
+  } catch {
+    const raced = await admin.loopDesignerEnterprise.findFirst({
+      where: { tenantKey: input.tenantKey },
+    });
+    if (raced) return raced;
+    throw new Error("创建活动企业失败");
+  }
 }
 
 function isEmail(value: string) {
@@ -271,22 +260,24 @@ async function writeEventAuditLog(input: {
 }) {
   const admin = getAdminClient();
   if (!admin) return;
-  await admin.from("loop_designer_audit_logs").insert({
-    enterprise_id: input.enterpriseId,
-    user_id: input.userId,
-    action: "event_quick_login",
-    resource_type: "enterprise",
-    resource_id: input.enterpriseId,
-    details: {
-      auth_provider: "event",
-      identity: "phone",
-      company_name: input.companyName,
-      contact: input.contact || null,
-      phone: input.phone,
-      reused: input.reused,
+  await admin.loopDesignerAuditLog.create({
+    data: {
+      enterpriseId: input.enterpriseId,
+      userId: input.userId,
+      action: "event_quick_login",
+      resourceType: "enterprise",
+      resourceId: input.enterpriseId,
+      details: {
+        auth_provider: "event",
+        identity: "phone",
+        company_name: input.companyName,
+        contact: input.contact || null,
+        phone: input.phone,
+        reused: input.reused,
+      },
+      ipAddress: normalizeIp(input.ipAddress),
+      userAgent: input.userAgent || null,
     },
-    ip_address: normalizeIp(input.ipAddress),
-    user_agent: input.userAgent || null,
   });
 }
 

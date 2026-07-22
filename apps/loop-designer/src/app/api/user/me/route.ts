@@ -20,12 +20,12 @@ export async function GET() {
     }
 
     // Fetch user sessions for export
-    const { data: sessions } = await admin
-      .from("loop_designer_sessions")
-      .select("id, status, context, created_at, submitted_at")
-      .eq("user_id", user.id)
-      .order("created_at", { ascending: false })
-      .limit(100);
+    const sessions = await admin.loopDesignerSession.findMany({
+      where: { userId: user.id },
+      select: { id: true, status: true, context: true, createdAt: true, submittedAt: true },
+      orderBy: { createdAt: "desc" },
+      take: 100,
+    });
 
     return NextResponse.json({
       exportedAt: new Date().toISOString(),
@@ -34,7 +34,7 @@ export async function GET() {
         displayName: user.displayName,
         tenantKey: user.tenantKey,
       },
-      sessions: sessions ?? [],
+      sessions,
     });
   } catch {
     return NextResponse.json(
@@ -61,30 +61,27 @@ export async function DELETE() {
     }
 
     // 1. Revoke all auth sessions for this user
-    await admin
-      .from("loop_designer_auth_sessions")
-      .update({
-        revoked_at: new Date().toISOString(),
-      })
-      .eq("user_id", user.id)
-      .is("revoked_at", null);
+    await admin.loopDesignerAuthSession.updateMany({
+      where: { userId: user.id, revokedAt: null },
+      data: { revokedAt: new Date() },
+    });
 
     // 2. Anonymize user record (soft delete)
     const anonymizedId = `deleted_${user.id}`;
-    await admin
-      .from("loop_designer_users")
-      .update({
-        display_name: "已删除用户",
+    await admin.loopDesignerUser.update({
+      where: { id: user.id },
+      data: {
+        displayName: "已删除用户",
         email: null,
-        password_hash: null,
-        avatar_url: null,
-        open_id: anonymizedId,
-        union_id: null,
-        feishu_user_id: null,
+        passwordHash: null,
+        avatarUrl: null,
+        openId: anonymizedId,
+        unionId: null,
+        feishuUserId: null,
         status: "disabled",
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", user.id);
+        updatedAt: new Date(),
+      },
+    });
 
     // 3. Revoke current session cookie
     await revokeCurrentAppSession();
