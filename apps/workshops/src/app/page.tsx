@@ -15,8 +15,8 @@ const workshops = [
     href: "/hr-bootcamp",
     icon: GraduationCap,
     tag: "Training",
-    title: "AI for HR精英赋能营",
-    desc: "提示词、智能体、Skill和知识库实战，加上回路治理落地实践。先会用，再理解组织怎么接住AI。",
+    title: "从工具赋能，到碳硅共生",
+    desc: "赋能每位HR成为引领组织从大陆文明到海洋文明迁移的超级个体。提示词、智能体、Skill、知识库实战，加上回路治理落地实践。",
     highlight: "开始学习",
   },
 ];

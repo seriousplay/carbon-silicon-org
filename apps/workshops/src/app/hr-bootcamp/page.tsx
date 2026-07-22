@@ -60,7 +60,7 @@ export default function HRBootcampPage() {
       {/* Sidebar */}
       <aside className={`fixed inset-y-0 left-0 z-50 w-64 transform border-r border-emerald-200/10 bg-[#0a1a16] transition-transform lg:relative lg:translate-x-0 ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}`}>
         <div className="flex h-14 items-center justify-between border-b border-emerald-200/10 px-4">
-          <span className="text-sm font-black text-emerald-200">AI赋能训练营 · HR篇</span>
+          <span className="text-sm font-black text-emerald-200">从工具赋能，到碳硅共生</span>
           <button onClick={() => setSidebarOpen(false)} className="lg:hidden"><X className="h-5 w-5 text-emerald-400" /></button>
         </div>
         <nav className="h-[calc(100%-3.5rem)] overflow-y-auto p-3">
@@ -181,7 +181,7 @@ function WelcomeSection({ onStart, selectedTask, onSelectTask }: { onStart: () =
           <Zap className="h-10 w-10 text-emerald-300" />
         </div>
         <p className="text-xs font-bold uppercase tracking-widest text-emerald-300/50">AI for HR · 精英赋能营</p>
-        <h1 className="mt-4 text-4xl font-black tracking-tight">AI赋能训练营<span className="text-emerald-300"> · HR篇</span></h1>
+        <h1 className="mt-4 text-4xl font-black tracking-tight">从工具赋能<span className="text-emerald-300">，到碳硅共生</span></h1>
         <p className="mt-4 text-lg leading-relaxed text-emerald-100/60">
           先会用提示词、智能体、Skill和知识库，再理解组织如何接住AI。<br />
           10个模块，5个HR场景任选。
