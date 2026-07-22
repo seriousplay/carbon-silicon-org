@@ -9,7 +9,7 @@ import {
 
 // ─── Course Structure ────────────────────────────────
 const steps = [
-  { id: "hr1", step: 1, time: "0-15min", section: "AI基础", title: "AI基础：四个核心能力", desc: "提示词、智能体、Skill、知识库——AI赋能HR的四大支柱。" },
+  { id: "hr1", step: 1, time: "0-5min", section: "AI基础", title: "AI基础：四个核心能力", desc: "提示词、智能体、Skill、知识库——AI赋能HR的四大支柱。", subs: ["prompt", "agent", "skill", "kb"] },
   { id: "hr2", step: 2, time: "15-40min", section: "HR上手", title: "HR提示词上手", desc: "写好提示词的5个核心技巧，HR专用模板实战。" },
   { id: "hr3", step: 3, time: "40-70min", section: "HR上手", title: "HR工作流：拿到成品", desc: "从对话到交付物，用AI产出招聘JD、培训方案、绩效反馈。" },
   { id: "hr4", step: 4, time: "70-95min", section: "Skill成品", title: "Skill：从对话到成品", desc: "把常用工作流程封装为可复用的AI技能。" },
@@ -21,6 +21,14 @@ const steps = [
   { id: "loop2", step: 9, time: "150-170min", section: "回路治理", title: "锁定关键业务，设计你的回路", desc: "不需要自上而下的组织变革。选一个痛点业务，画出它的回路地图，定义人机角色。" },
   { id: "loop3", step: 10, time: "170-180min", section: "回路治理", title: "我的行动承诺", desc: "带回公司的不是一个概念，而是一个可执行的最小回路方案。" },
 ];
+
+// Sub-steps for hr1 (each AI concept is a learning loop)
+const subSteps = [
+  { id: "prompt", title: "提示词 Prompt", icon: "💬", desc: "给AI下一份清晰任务书", color: "emerald" },
+  { id: "agent", title: "智能体 Agent", icon: "🤖", desc: "交目标后连续办事", color: "blue" },
+  { id: "skill", title: "技能 Skill", icon: "⚡", desc: "把经验变成可调用外挂", color: "purple" },
+  { id: "kb", title: "知识库 RAG", icon: "📚", desc: "让AI基于你的资料回答", color: "amber" },
+] as const;
 
 const tasks = [
   { id: "1", icon: Users, color: "emerald", label: "招聘回路", desc: "简历到面试的转化黑洞", output: "面试评估表Excel" },
@@ -142,6 +150,12 @@ export default function HRBootcampPage() {
           {active === "welcome" && <WelcomeSection onStart={() => setActive("hr1")} selectedTask={selectedTask} onSelectTask={setSelectedTask} />}
           {active === "choose" && <TaskSelectSection selectedTask={selectedTask} onSelectTask={(t) => { setSelectedTask(t); setActive("welcome"); }} />}
           {active === "governance" && <GovernanceSection />}
+          {subSteps.map(sub => (
+            active === `hr1-${sub.id}` && <SubStepSection key={sub.id} subId={sub.id} title={sub.title} icon={sub.icon} desc={sub.desc} color={sub.color}
+              onBack={() => setActive("hr1")}
+              onNext={() => { const idx = subSteps.findIndex(s => s.id === sub.id); if (idx < subSteps.length - 1) setActive(`hr1-${subSteps[idx + 1].id}`); else setActive("hr2"); }}
+            />
+          ))}
           {steps.map(s => (
             active === s.id && (
               <StepSection key={s.id} step={s} completed={completed.has(s.id)} onToggleComplete={() => toggleComplete(s.id)}
@@ -303,164 +317,301 @@ function StepTable({ headers, rows }: { headers: string[]; rows: React.ReactNode
 }
 
 function HR1Content() {
-  return <>
-    <InfoBox><strong className="text-emerald-200">先建立共同语言：</strong>HR 不需要先学复杂技术名词，但需要分清 AI 到底是在聊天、执行任务、生成文件，还是基于资料回答。四个能力不是平级的——它们是一条进化阶梯。</InfoBox>
-
-    {/* Overview table */}
-    <StepTable
-      headers={["能力", "一句话理解", "HR 场景", "上手判断"]}
-      rows={[
-        [<strong key="1">提示词 Prompt</strong>, "给 AI 下一份清晰任务书", "写 JD、绩效反馈、面试题", "有角色、对象、约束、输出格式"],
-        [<strong key="2">智能体 Agent</strong>, "交目标后能拆步骤、调用工具、交付结果", "招聘助手串联 JD、简历筛选、面试问题", "不是问一句答一句，而是能连续办事"],
-        [<strong key="3">技能 Skill</strong>, "可复用的专业能力包", "一句话生成 Excel、PPT、Word", "产出可下载、可编辑、可交付"],
-        [<strong key="4">知识库 RAG</strong>, "先读你的资料，再基于资料回答", "员工手册问答、制度解释", "回答能引用来源，不靠泛泛经验"],
-      ]}
-    />
-
-    {/* 1. Prompt */}
-    <div className="rounded-xl border border-emerald-200/10 bg-white/[0.02] p-5 mt-6">
-      <div className="flex items-center gap-2 mb-3">
-        <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-300/10 text-sm font-black text-emerald-300">1</span>
-        <h3 className="text-lg font-black text-emerald-100">提示词 Prompt — 对齐公式</h3>
+  return (
+    <div className="mx-auto max-w-3xl px-6 py-10">
+      <h2 className="text-3xl font-black">AI基础：四个核心能力</h2>
+      <p className="mt-4 text-lg leading-relaxed text-emerald-100/60">
+        四个能力不是平级的——它们是一条进化阶梯。每个能力都是一个完整的学习闭环：概念理解、HR场景、实践练习、模板和工具推荐。
+      </p>
+      <div className="mt-8 grid gap-4 sm:grid-cols-2">
+        {subSteps.map(sub => (
+          <button key={sub.id} onClick={() => setActive(`hr1-${sub.id}`)}
+            className="group rounded-2xl border border-emerald-200/14 bg-white/[0.035] p-5 text-left transition hover:-translate-y-1 hover:border-emerald-200/35 hover:bg-white/[0.06]">
+            <div className="flex items-center gap-3">
+              <span className="text-3xl">{sub.icon}</span>
+              <div>
+                <div className="font-black text-emerald-100 group-hover:text-emerald-200">{sub.title}</div>
+                <div className="text-xs text-emerald-100/40">{sub.desc}</div>
+              </div>
+            </div>
+            <div className="mt-3 flex items-center gap-1 text-xs font-bold text-emerald-300">
+              进入学习 <ChevronRight className="h-3 w-3 transition group-hover:translate-x-1" />
+            </div>
+          </button>
+        ))}
       </div>
-      <div className="rounded-lg bg-emerald-300/[0.06] border border-emerald-300/10 px-4 py-3 text-sm font-bold text-emerald-200 mb-4">
+    </div>
+  );
+}
+
+// ─── Sub-Step Section (learning loop for each AI concept) ───
+
+function SubStepSection({ subId, title, icon, desc, color, onBack, onNext }: {
+  subId: string; title: string; icon: string; desc: string; color: string; onBack: () => void; onNext: () => void;
+}) {
+  return (
+    <div className="mx-auto max-w-3xl px-6 py-10">
+      <button onClick={onBack} className="mb-4 flex items-center gap-1 text-xs font-bold text-emerald-300/60 hover:text-emerald-200">
+        <ChevronRight className="h-3 w-3 rotate-180" /> 返回四个核心能力
+      </button>
+      <div className="flex items-center gap-3 mb-2">
+        <span className="text-4xl">{icon}</span>
+        <div>
+          <h2 className="text-2xl font-black">{title}</h2>
+          <p className="text-sm text-emerald-100/40">{desc}</p>
+        </div>
+      </div>
+      <div className="mt-6 space-y-6">
+        {subId === "prompt" && <PromptModule />}
+        {subId === "agent" && <AgentModule />}
+        {subId === "skill" && <SkillModule />}
+        {subId === "kb" && <KnowledgeBaseModule />}
+      </div>
+      <div className="mt-8 flex justify-end">
+        <button onClick={onNext} className="inline-flex items-center gap-2 rounded-full bg-emerald-300 px-6 py-2 text-sm font-black text-[#07110f] transition hover:bg-emerald-200">
+          下一个能力 <ChevronRight className="h-4 w-4" />
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function LearnBlock({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div className="rounded-xl border border-emerald-200/10 bg-white/[0.02] p-5">
+      <div className="mb-3 flex items-center gap-2">
+        <div className="h-1 w-4 rounded-full bg-emerald-300" />
+        <h3 className="text-sm font-bold uppercase tracking-wider text-emerald-300">{title}</h3>
+      </div>
+      {children}
+    </div>
+  );
+}
+
+function PromptModule() {
+  return (<>
+    <LearnBlock title="概念理解">
+      <p className="text-sm leading-relaxed text-emerald-100/70">
+        提示词是你和AI沟通的<strong className="text-emerald-200">任务说明书</strong>。好的提示词让AI一次性输出可用结果，差的提示词让你改十遍。
+      </p>
+      <div className="mt-3 rounded-lg bg-emerald-300/[0.06] border border-emerald-300/10 px-4 py-3 text-sm font-bold text-emerald-200">
         对齐公式 = 角色 + 目标 + 对象画像 + 逻辑步骤 + 输出限制
       </div>
-      <div className="grid gap-3 sm:grid-cols-2 mb-4">
+    </LearnBlock>
+
+    <LearnBlock title="HR场景对比">
+      <div className="grid gap-3 sm:grid-cols-2">
         <div className="rounded-lg border border-rose-300/10 bg-rose-300/[0.04] p-4">
           <div className="text-xs font-bold text-rose-300/70 mb-2">❌ 散装提问</div>
-          <p className="text-sm text-rose-100/60">帮我写一个产品经理的 JD。</p>
-          <p className="mt-2 text-xs text-rose-100/30">结果：平庸、模板化，需要改很多轮。这就是"搜答案"，不是"接外挂"。</p>
+          <p className="text-sm text-rose-100/60">帮我写一个产品经理的JD。</p>
         </div>
         <div className="rounded-lg border border-emerald-300/10 bg-emerald-300/[0.04] p-4">
           <div className="text-xs font-bold text-emerald-300/70 mb-2">✅ 对齐提问</div>
-          <p className="text-sm text-emerald-100/70">你是一位资深招聘HR（角色）。为200人SaaS公司写高级产品经理JD（目标）。候选人需3年以上B端经验、熟悉敏捷协作（画像）。输出：岗位职责5条、硬性要求、加分项、面试关注点（步骤+限制）。语气专业但不浮夸。</p>
-          <p className="mt-2 text-xs text-emerald-100/30">结果：高度贴合需求，可直接使用。</p>
+          <p className="text-sm text-emerald-100/70">你是一位资深招聘HR（角色）。为200人SaaS公司写高级产品经理JD（目标）。候选人需3年以上B端经验（画像）。输出：职责5条、要求、加分项、面试关注点（步骤+限制）。</p>
         </div>
       </div>
-      <div className="text-xs text-emerald-100/40">💡 局限：每次都要从零输入这段话。有没有办法一劳永逸？→ 这就是 Skill 要解决的问题。</div>
-    </div>
+    </LearnBlock>
 
-    {/* 2. Agent */}
-    <div className="rounded-xl border border-emerald-200/10 bg-white/[0.02] p-5">
-      <div className="flex items-center gap-2 mb-3">
-        <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-300/10 text-sm font-black text-emerald-300">2</span>
-        <h3 className="text-lg font-black text-emerald-100">智能体 Agent — 不只是问答，是连续办事</h3>
+    <LearnBlock title="实践练习">
+      <p className="text-sm text-emerald-100/60 mb-3">用对齐公式改写以下提示词：</p>
+      <div className="rounded-lg border border-amber-300/10 bg-amber-300/[0.04] p-4 text-sm text-amber-100/60">
+        原始："帮我写一封绩效反馈。"
       </div>
-      <p className="text-sm leading-relaxed text-emerald-100/60 mb-3">
-        提示词是"给AI下一份任务书"。Agent 是"交给AI一个目标，它自己拆步骤、调用工具、交付结果"。区别在于：提示词是单轮对话，Agent是多轮连续执行。
+      <div className="mt-3 text-xs text-emerald-100/40">提示：补全角色（你是___）、目标（写给___的___）、画像（员工特点是___）、步骤（先___再___最后___）、限制（字数___语气___）</div>
+      <div className="mt-2 border-b border-dashed border-emerald-200/20 pt-2 pb-4 min-h-[3rem] text-sm text-emerald-100/50"></div>
+    </LearnBlock>
+
+    <LearnBlock title="HR模板速查">
+      <div className="grid gap-2 text-xs">
+        <div className="rounded bg-white/[0.03] p-3"><span className="font-bold text-emerald-300">招聘JD：</span>角色+岗位名+公司规模+经验要求+输出格式（职责/要求/加分项/面试问题）</div>
+        <div className="rounded bg-white/[0.03] p-3"><span className="font-bold text-emerald-300">绩效反馈：</span>角色+员工画像+具体事件+反馈要点（肯定/改进/行动）+语气要求+字数限制</div>
+        <div className="rounded bg-white/[0.03] p-3"><span className="font-bold text-emerald-300">培训方案：</span>角色+学员画像+培训主题+时长+输出（大纲/活动/评估方式）</div>
+        <div className="rounded bg-white/[0.03] p-3"><span className="font-bold text-emerald-300">员工沟通：</span>角色+事件背景+沟通目标+对方情绪状态+语气要求+禁止用语</div>
+      </div>
+    </LearnBlock>
+
+    <LearnBlock title="工具推荐">
+      <StepTable headers={["工具", "特点", "适合场景"]} rows={[
+        ["豆包 (doubao.com)", "免费、中文优化、响应快", "日常提示词练习、HR文案生成"],
+        ["DeepSeek (chat.deepseek.com)", "免费、推理能力强", "分析类任务、复杂提示词"],
+        ["Kimi (kimi.moonshot.cn)", "超长上下文、可上传文件", "读取简历/制度文档后提问"],
+      ]} />
+    </LearnBlock>
+  </>);
+}
+
+function AgentModule() {
+  return (<>
+    <LearnBlock title="概念理解">
+      <p className="text-sm leading-relaxed text-emerald-100/70">
+        Agent不是"问一句答一句"——而是你<strong className="text-emerald-200">交给它一个目标，它自己拆步骤、调用工具、交付完整结果</strong>。提示词是单轮对话，Agent是多轮连续执行。
       </p>
-      <div className="rounded-lg bg-emerald-300/[0.06] border border-emerald-300/10 p-4 mb-3">
-        <div className="text-xs font-bold text-emerald-200 mb-2">HR Agent 示例：招聘助手</div>
-        <div className="flex flex-wrap items-center gap-1.5 text-xs">
-          <span className="rounded-full bg-emerald-300/10 px-2 py-0.5 text-emerald-200">📥 输入岗位需求</span>
-          <span className="text-emerald-100/30">→</span>
-          <span className="rounded-full bg-emerald-300/10 px-2 py-0.5 text-emerald-200">🤖 自动生成JD</span>
-          <span className="text-emerald-100/30">→</span>
-          <span className="rounded-full bg-emerald-300/10 px-2 py-0.5 text-emerald-200">🔍 筛选简历并打分</span>
-          <span className="text-emerald-100/30">→</span>
-          <span className="rounded-full bg-emerald-300/10 px-2 py-0.5 text-emerald-200">📋 生成面试问题</span>
-          <span className="text-emerald-100/30">→</span>
-          <span className="rounded-full bg-emerald-300/10 px-2 py-0.5 text-emerald-200">📊 输出评估表</span>
-        </div>
-        <p className="mt-2 text-xs text-emerald-100/40">不是你问一句它答一句——而是你给一个目标"帮我完成这个岗位的招聘准备"，它自己走完全流程。</p>
-      </div>
-      <StepTable
-        headers={["层级", "能做什么", "HR例子", "工具推荐"]}
-        rows={[
-          ["单Agent", "一个助手完成一个完整流程", "招聘助手从JD到面试问题一条龙", "扣子(Coze)、Minimax"],
-          ["多Agent", "多个助手分工协作", "调研Agent+分析Agent+创作Agent+审核Agent协同", "Trae、Codex、Dify"],
-        ]}
-      />
-    </div>
+    </LearnBlock>
 
-    {/* 3. Skill */}
-    <div className="rounded-xl border border-emerald-200/10 bg-white/[0.02] p-5">
-      <div className="flex items-center gap-2 mb-3">
-        <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-300/10 text-sm font-black text-emerald-300">3</span>
-        <h3 className="text-lg font-black text-emerald-100">技能 Skill — 把经验变成可调用的外挂</h3>
+    <LearnBlock title="HR场景：招聘助手Agent">
+      <div className="flex flex-wrap items-center gap-1.5 text-xs">
+        <span className="rounded-full bg-emerald-300/10 px-2 py-0.5 text-emerald-200">📥 输入岗位需求</span>
+        <span className="text-emerald-100/30">→</span>
+        <span className="rounded-full bg-emerald-300/10 px-2 py-0.5 text-emerald-200">🤖 自动生成JD</span>
+        <span className="text-emerald-100/30">→</span>
+        <span className="rounded-full bg-emerald-300/10 px-2 py-0.5 text-emerald-200">🔍 筛选简历打分</span>
+        <span className="text-emerald-100/30">→</span>
+        <span className="rounded-full bg-emerald-300/10 px-2 py-0.5 text-emerald-200">📋 生成面试问题</span>
+        <span className="text-emerald-100/30">→</span>
+        <span className="rounded-full bg-emerald-300/10 px-2 py-0.5 text-emerald-200">📊 输出评估表</span>
       </div>
-      <p className="text-sm leading-relaxed text-emerald-100/60 mb-4">
-        Skill 不是一段"长文本咒语"，而是把你的<strong className="text-emerald-200">默会经验刻录成随时调用的外挂操作手册</strong>。三个特点：按需加载、极其稳定、团队可复用。
+      <p className="mt-3 text-xs text-emerald-100/40">你给一个目标"完成这个岗位的招聘准备"，Agent自己走完全流程。不是你在驱动每一步。</p>
+    </LearnBlock>
+
+    <LearnBlock title="实践练习">
+      <p className="text-sm text-emerald-100/60 mb-3">选一个HR高频任务，设计它的Agent流程：</p>
+      <div className="grid gap-2">
+        {["1. 任务名称：________", "2. 输入信号（什么触发这个Agent？）：________", "3. Agent需要完成的步骤（3-5步）：________", "4. 最终交付物是什么？：________"].map(s => (
+          <div key={s} className="rounded bg-white/[0.03] p-3 text-sm text-emerald-100/50 border-b border-dashed border-emerald-200/15 min-h-[2rem]">{s}</div>
+        ))}
+      </div>
+    </LearnBlock>
+
+    <LearnBlock title="单Agent vs 多Agent">
+      <StepTable headers={["层级", "能做什么", "HR例子", "上手难度"]} rows={[
+        ["单Agent", "一个助手完成一个流程", "招聘助手从JD到面试题一条龙", "⭐ 入门"],
+        ["多Agent", "多个助手分工协作", "调研+分析+创作+审核Agent协同", "⭐⭐⭐ 进阶"],
+      ]} />
+    </LearnBlock>
+
+    <LearnBlock title="工具推荐">
+      <StepTable headers={["工具", "特点", "适合场景"]} rows={[
+        ["扣子 Coze (coze.cn)", "免费创建Bot、可视化编排、支持知识库", "HR入门首选、单Agent创建"],
+        ["Dify (dify.ai)", "开源、支持复杂工作流、可私有部署", "企业级多Agent编排"],
+        ["Trae / Codex", "AI编程工具，精准控制Agent行为", "需要代码能力的高级用户"],
+      ]} />
+    </LearnBlock>
+  </>);
+}
+
+function SkillModule() {
+  return (<>
+    <LearnBlock title="概念理解">
+      <p className="text-sm leading-relaxed text-emerald-100/70">
+        Skill不是一段"长文本咒语"——它是把你的<strong className="text-emerald-200">默会经验刻录成随时调用的外挂操作手册</strong>。三个特点：按需加载、极其稳定、团队可复用。
       </p>
-
-      {/* Three-tier comparison */}
-      <div className="text-xs font-bold text-emerald-200 mb-2">同一任务的三级对比：写一封员工绩效反馈信</div>
-      <div className="grid gap-3 mb-4">
-        <div className="rounded-lg border border-rose-300/10 bg-rose-300/[0.03] p-3">
-          <div className="text-xs font-bold text-rose-300/60">L1 浅层触达</div>
-          <p className="text-xs text-rose-100/50 mt-1">"帮我写一封绩效反馈，员工最近表现不好。" → 空泛、模板化，需要改很多轮。</p>
-        </div>
-        <div className="rounded-lg border border-amber-300/10 bg-amber-300/[0.03] p-3">
-          <div className="text-xs font-bold text-amber-300/60">L2 精准校准</div>
-          <p className="text-xs text-amber-100/50 mt-1">完整提示词：角色+员工画像+反馈要点+输出格式+语气要求。→ 很好了，但下次还得重写。</p>
-        </div>
-        <div className="rounded-lg border border-emerald-300/10 bg-emerald-300/[0.04] p-3">
-          <div className="text-xs font-bold text-emerald-300/60">L3 深度共生（Skill）</div>
-          <p className="text-xs text-emerald-100/60 mt-1">打开"绩效反馈助手"Skill，输入：员工名+事件+关注点。→ 自动按预设SOP（共情→事实→方案→行动）输出。SOP、语气、格式已刻在技能包里。</p>
+      <div className="mt-3 rounded-lg bg-emerald-300/[0.06] border border-emerald-300/10 p-4">
+        <div className="text-xs font-bold text-emerald-200 mb-2">同一任务三级对比</div>
+        <div className="grid gap-2 text-xs">
+          <div className="rounded bg-rose-300/[0.04] p-2"><span className="font-bold text-rose-300/60">L1：</span><span className="text-rose-100/50">"帮我写绩效反馈" → 空泛模板化</span></div>
+          <div className="rounded bg-amber-300/[0.04] p-2"><span className="font-bold text-amber-300/60">L2：</span><span className="text-amber-100/50">完整提示词 → 很好但每次要重写</span></div>
+          <div className="rounded bg-emerald-300/[0.06] p-2"><span className="font-bold text-emerald-300/60">L3：</span><span className="text-emerald-100/60">Skill包 → SOP已内置，只需输入变量</span></div>
         </div>
       </div>
+    </LearnBlock>
 
-      {/* Skill structure */}
-      <div className="text-xs font-bold text-emerald-200 mb-2">Skill 四层结构</div>
-      <StepTable
-        headers={["层级", "名称", "存放内容", "比喻"]}
-        rows={[
-          ["1", "使用说明书", "技能用途、触发条件、SOP流程", "操作手册"],
-          ["2", "参考文档", "评分标准、制度文件、优秀范例", "专业依据"],
-          ["3", "资源模板", "输出格式模板、排版要求", "输出标准"],
-          ["4", "可执行脚本", "数据计算、图表生成（进阶）", "自动化工具"],
-        ]}
-      />
-      <div className="mt-3 rounded-lg bg-amber-300/[0.06] border border-amber-300/10 px-3 py-2 text-xs text-amber-200/70">
-        💡 创建Skill五步法：梳理经验 → 准备资料 → 挂载模板 → 编写说明 → 部署测试
-      </div>
-    </div>
+    <LearnBlock title="Skill四层结构">
+      <StepTable headers={["层级", "名称", "存放内容", "比喻"]} rows={[
+        ["1", "使用说明书", "用途、触发条件、SOP流程", "操作手册"],
+        ["2", "参考文档", "评分标准、制度文件、优秀范例", "专业依据"],
+        ["3", "资源模板", "输出格式模板、排版要求", "输出标准"],
+        ["4", "可执行脚本", "数据计算、图表生成（进阶）", "自动化工具"],
+      ]} />
+    </LearnBlock>
 
-    {/* 4. Knowledge Base */}
-    <div className="rounded-xl border border-emerald-200/10 bg-white/[0.02] p-5">
-      <div className="flex items-center gap-2 mb-3">
-        <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-300/10 text-sm font-black text-emerald-300">4</span>
-        <h3 className="text-lg font-black text-emerald-100">知识库 RAG — 让AI基于你的资料回答</h3>
+    <LearnBlock title="实践练习">
+      <div className="text-xs font-bold text-emerald-200 mb-2">创建你的第一个Skill — 五步法</div>
+      <div className="grid gap-2">
+        {[
+          "Step 1 梳理经验：选一个你重复做了10次以上的HR任务（如筛选简历）",
+          "Step 2 准备资料：收集评分标准、优秀JD、面试问题库 → 放入references",
+          "Step 3 挂载模板：提供期望的输出格式（评估表模板） → 放入assets",
+          "Step 4 编写说明：在SKILL.md中写清楚触发条件、语气、SOP步骤",
+          "Step 5 部署测试：挂载到AI平台，用真实材料跑一遍，人工校验后发布",
+        ].map((s, i) => (
+          <div key={i} className="flex items-start gap-2 rounded bg-white/[0.03] p-3 text-xs text-emerald-100/60">
+            <span className="mt-0.5 font-black text-emerald-300">{i + 1}</span><span>{s.replace(/^Step \d+ /, "")}</span>
+          </div>
+        ))}
       </div>
-      <p className="text-sm leading-relaxed text-emerald-100/60 mb-3">
-        没有知识库的AI，回答基于全网通用知识——泛泛而谈，不知道你公司的具体情况。有了知识库，AI先读你的资料，再基于资料回答。回答能引用来源，不靠猜测。
+    </LearnBlock>
+
+    <LearnBlock title="HR Skill模板">
+      <div className="rounded-lg border border-emerald-300/10 bg-emerald-300/[0.03] p-4">
+        <div className="text-xs font-bold text-emerald-200 mb-2">SKILL.md 骨架（可直接复制使用）</div>
+        <pre className="text-xs text-emerald-100/60 whitespace-pre-wrap leading-relaxed">{`# 绩效反馈生成器
+
+## 触发条件
+当HR输入"员工绩效反馈"时激活
+
+## 角色
+你是一位有10年经验的HRBP
+
+## SOP
+1. 共情：先肯定员工贡献（20%）
+2. 事实：客观描述具体行为和数据（20%）
+3. 改进：给出2-3条可执行建议（40%）
+4. 行动：约定下次review时间和标准（20%）
+
+## 输出格式
+- 总字数400-600字
+- 语气温暖专业，不制造恐慌
+- 每段不超过3句
+
+## 参考文档
+- references/绩效评估标准.md
+- references/优秀反馈范例.md`}</pre>
+      </div>
+    </LearnBlock>
+
+    <LearnBlock title="工具推荐">
+      <StepTable headers={["工具", "特点", "适合场景"]} rows={[
+        ["扣子 Coze", "可视化创建Bot、支持知识库挂载", "HR Skill入门首选"],
+        ["ima (ima.qq.com)", "腾讯出品、支持知识库+Skill", "微信生态集成"],
+        ["Cursor / Claude", "支持SKILL.md格式的专业Skill", "需要文件结构的进阶Skill"],
+      ]} />
+    </LearnBlock>
+  </>);
+}
+
+function KnowledgeBaseModule() {
+  return (<>
+    <LearnBlock title="概念理解">
+      <p className="text-sm leading-relaxed text-emerald-100/70">
+        没有知识库的AI，回答基于<strong className="text-amber-300">全网通用知识</strong>——泛泛而谈。有了知识库，AI先读<strong className="text-emerald-300">你的资料</strong>，再基于资料回答。回答能引用来源，不靠猜测。
       </p>
-      <div className="grid gap-3 sm:grid-cols-2 mb-3">
+      <div className="mt-3 grid gap-3 sm:grid-cols-2">
         <div className="rounded-lg border border-rose-300/10 bg-rose-300/[0.04] p-4">
           <div className="text-xs font-bold text-rose-300/70 mb-1">❌ 没有知识库</div>
-          <p className="text-xs text-rose-100/50">问："我们公司的年假制度是什么？"<br/>AI回答："一般公司年假是5-15天……"——这不是你公司的制度，是AI猜的。</p>
+          <p className="text-xs text-rose-100/50">问："我们公司年假制度？"<br/>AI："一般5-15天……"——猜的。</p>
         </div>
         <div className="rounded-lg border border-emerald-300/10 bg-emerald-300/[0.04] p-4">
           <div className="text-xs font-bold text-emerald-300/70 mb-1">✅ 有知识库</div>
-          <p className="text-xs text-emerald-100/60">上传《员工手册》到知识库后问同样的问题。<br/>AI回答："根据员工手册第3.2条，入职满1年享有10天年假……"——引用来源，准确可靠。</p>
+          <p className="text-xs text-emerald-100/60">上传《员工手册》后问同样问题。<br/>AI："根据手册3.2条，入职满1年享10天年假……"——有据可查。</p>
         </div>
       </div>
-      <div className="rounded-lg bg-emerald-300/[0.06] border border-emerald-300/10 p-4">
-        <div className="text-xs font-bold text-emerald-200 mb-2">HR知识库的三个层次</div>
-        <div className="grid gap-2 text-xs">
-          <div className="rounded bg-white/[0.03] p-2"><span className="font-bold text-emerald-300">L1 制度问答：</span>上传员工手册、考勤制度、报销规范。员工自助查询，HR从重复问答中解放。</div>
-          <div className="rounded bg-white/[0.03] p-2"><span className="font-bold text-emerald-300">L2 案例参考：</span>上传过往优秀JD、培训方案、绩效反馈范例。AI生成新内容时参考你的最佳实践。</div>
-          <div className="rounded bg-white/[0.03] p-2"><span className="font-bold text-emerald-300">L3 组织大脑：</span>结构化沉淀每一次招聘决策、培训效果、离职原因。AI基于历史数据给出预测和建议。</div>
-        </div>
-      </div>
-    </div>
+    </LearnBlock>
 
-    {/* Evolution summary */}
-    <div className="rounded-xl border border-emerald-300/20 bg-emerald-300/[0.06] p-5">
-      <div className="text-sm font-bold text-emerald-300 mb-2">四个能力的进化关系</div>
-      <div className="flex flex-wrap items-center gap-2 text-xs">
-        <span className="rounded-full bg-emerald-300/10 px-3 py-1 text-emerald-200">提示词：让AI听懂任务</span>
-        <span className="text-emerald-100/30">→</span>
-        <span className="rounded-full bg-emerald-300/10 px-3 py-1 text-emerald-200">知识库：让AI有依据</span>
-        <span className="text-emerald-100/30">→</span>
-        <span className="rounded-full bg-emerald-300/10 px-3 py-1 text-emerald-200">Skill：让AI稳定交付</span>
-        <span className="text-emerald-100/30">→</span>
-        <span className="rounded-full bg-emerald-300/10 px-3 py-1 text-emerald-200">Agent：让AI连续办事</span>
+    <LearnBlock title="HR知识库三个层次">
+      <div className="grid gap-2 text-xs">
+        <div className="rounded bg-white/[0.03] p-3"><span className="font-bold text-emerald-300">L1 制度问答：</span>上传员工手册、考勤制度、报销规范。员工自助查询，HR从重复问答中解放。</div>
+        <div className="rounded bg-white/[0.03] p-3"><span className="font-bold text-emerald-300">L2 案例参考：</span>上传优秀JD、培训方案、绩效反馈范例。AI生成新内容时参考你的最佳实践。</div>
+        <div className="rounded bg-white/[0.03] p-3"><span className="font-bold text-emerald-300">L3 组织大脑：</span>沉淀每次招聘决策、培训效果、离职原因。AI基于历史数据给出预测和建议。</div>
       </div>
-      <p className="mt-3 text-xs text-emerald-100/50">这不是四个独立工具——它们是一条进化路径。提示词是起点，Agent是终点。中间每一步都在让AI更懂你、更可靠、更像一个真正的同事。</p>
-    </div>
-  </>;
+    </LearnBlock>
+
+    <LearnBlock title="实践练习">
+      <p className="text-sm text-emerald-100/60 mb-3">列出你可以立刻上传到知识库的3份HR文档：</p>
+      <div className="grid gap-2">
+        {["1. __________（制度类：手册/规范/流程）", "2. __________（案例类：优秀JD/方案/反馈）", "3. __________（数据类：历史记录/分析报告）"].map(s => (
+          <div key={s} className="rounded bg-white/[0.03] p-3 text-sm text-emerald-100/50 border-b border-dashed border-emerald-200/15 min-h-[2rem]">{s}</div>
+        ))}
+      </div>
+    </LearnBlock>
+
+    <LearnBlock title="工具推荐">
+      <StepTable headers={["工具", "特点", "适合场景"]} rows={[
+        ["Kimi (kimi.moonshot.cn)", "免费、超长上下文、拖拽上传", "快速体验知识库效果"],
+        ["扣子 Coze 知识库", "可挂载到Bot、支持自动更新", "HR自助问答Bot"],
+        ["ima (ima.qq.com)", "腾讯知识库、微信集成", "企业内部知识管理"],
+      ]} />
+    </LearnBlock>
+  </>);
 }
 
 function HR2Content() {
