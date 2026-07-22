@@ -17,8 +17,7 @@ const workshops = [
     tag: "Training",
     title: "AI赋能训练营 · HR篇",
     desc: "2小时HR AI个体赋能培训：提示词、智能体、Skill和知识库实战。先会用，再理解组织怎么接住AI。",
-    highlight: "扫码加入",
-    external: true,
+    highlight: "开始学习",
   },
 ];
 
