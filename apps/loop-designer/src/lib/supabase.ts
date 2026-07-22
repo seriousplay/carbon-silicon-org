@@ -1,17 +1,17 @@
 import "server-only";
 
-import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import { PrismaClient } from "@prisma/client";
+import { PrismaPg } from "@prisma/adapter-pg";
+import { Pool } from "pg";
 
-let adminClient: SupabaseClient | null = null;
+let prismaClient: PrismaClient | null = null;
 
 export function getAdminClient() {
-  if (adminClient) return adminClient;
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!url || !key) return null;
-  adminClient = createClient(url, key, {
-    auth: { autoRefreshToken: false, persistSession: false },
-    global: { headers: { "x-application-name": "carbon-silicon-loop-designer" } },
-  });
-  return adminClient;
+  if (prismaClient) return prismaClient;
+  const connectionString = process.env.DATABASE_URL;
+  if (!connectionString) return null;
+  const pool = new Pool({ connectionString, max: 20 });
+  const adapter = new PrismaPg(pool);
+  prismaClient = new PrismaClient({ adapter });
+  return prismaClient;
 }

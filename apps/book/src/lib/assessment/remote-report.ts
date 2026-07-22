@@ -1,20 +1,25 @@
 import "server-only";
 
-import { createAdminSupabaseClient } from "@/lib/supabase/admin";
+import { db } from "@/lib/supabase/pool";
 import type { Report } from "./types";
 
 export async function getRemoteReport(reportId: string): Promise<Report | null> {
-  const supabase = createAdminSupabaseClient();
-
-  if (!supabase || reportId === "demo" || reportId.startsWith("local-")) {
+  if (!db || reportId === "demo" || reportId.startsWith("local-")) {
     return null;
   }
 
-  const { data, error } = await supabase.from("reports").select("report_payload").eq("id", reportId).maybeSingle();
+  try {
+    const data = await db.report.findUnique({
+      where: { id: reportId },
+      select: { reportPayload: true },
+    });
 
-  if (error || !data?.report_payload) {
+    if (!data?.reportPayload) {
+      return null;
+    }
+
+    return data.reportPayload as Report;
+  } catch {
     return null;
   }
-
-  return data.report_payload as Report;
 }

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getCurrentUser, getUserWorkspace } from "@/lib/auth/server";
-import { createAdminSupabaseClient } from "@/lib/supabase/admin";
+import { db } from "@/lib/supabase/pool";
 import { buildReport } from "@/lib/assessment/scoring";
 import { canSubmitAssessmentAsGuest, verifyRunAccessCode } from "@/lib/runs/server";
 import type { AssessmentAnswers, ParticipantProfile, Report } from "@/lib/assessment/types";
@@ -25,10 +25,8 @@ const payloadSchema = z.object({
 export async function POST(request: Request) {
   const user = await getCurrentUser();
 
-  const supabase = createAdminSupabaseClient();
-
-  if (!supabase) {
-    return NextResponse.json({ ok: false, reason: "Supabase service role is not configured" });
+  if (!db) {
+    return NextResponse.json({ ok: false, reason: "Database is not configured" });
   }
 
   const parsed = payloadSchema.safeParse(await request.json().catch(() => null));
@@ -50,103 +48,84 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: access.reason ?? "Access denied" }, { status: 403 });
   }
 
-  const { data: event, error: eventError } = await supabase
-    .from("events")
-    .select("id,organization_id")
-    .eq("slug", eventSlug)
-    .maybeSingle();
+  try {
+    const event = await db.event.findUnique({
+      where: { slug: eventSlug },
+      select: { id: true, organizationId: true },
+    });
 
-  if (eventError) {
-    return NextResponse.json({ error: eventError.message }, { status: 500 });
+    if (!event?.id) {
+      return NextResponse.json({ error: "Event not found" }, { status: 404 });
+    }
+
+    const workspace = user ? await getUserWorkspace(user.id) : null;
+    const organizationId = event.organizationId ?? workspace?.defaultMembership?.organizationId ?? null;
+    const userId = user?.id ?? null;
+
+    const participantRow = await db.participant.create({
+      data: {
+        eventId: event.id,
+        userId,
+        organizationId,
+        displayName: participant.displayName,
+        role: participant.role,
+        industry: participant.industry,
+        orgSize: participant.orgSize,
+        companyName: participant.companyName || null,
+        contact: participant.contact || null,
+        contactConsent: Boolean(participant.contactConsent),
+      },
+      select: { id: true },
+    });
+
+    const assessmentRow = await db.assessment.create({
+      data: {
+        eventId: event.id,
+        participantId: participantRow.id,
+        userId,
+        status: "submitted",
+        submittedAt: new Date(),
+      },
+      select: { id: true },
+    });
+
+    const answerRows = Object.entries(answers).map(([questionId, value]) => ({
+      assessmentId: assessmentRow.id,
+      questionId,
+      numericValue: typeof value === "number" ? value : null,
+      textValue: typeof value === "string" ? value : null,
+    }));
+
+    await db.assessmentAnswer.createMany({ data: answerRows });
+
+    const reportId = crypto.randomUUID();
+    const report: Report = buildReport(eventSlug, participant as ParticipantProfile, answers as AssessmentAnswers, reportId);
+
+    const reportRow = await db.report.create({
+      data: {
+        id: reportId,
+        assessmentId: assessmentRow.id,
+        userId,
+        stageLevel: report.stageLevel,
+        nextLevel: report.nextLevel,
+        stageSummary: report.stageSummary,
+        spiralScores: report.spiralScores,
+        energyScores: report.energyScores,
+        chainScore: report.chainScore,
+        charterScore: report.charterScore,
+        primaryBottleneck: report.primaryBottleneck.key,
+        actionRecommendation: report.actionRecommendation,
+        recommendedTools: report.recommendedTools,
+        participantSnapshot: participant,
+        openAnswers: report.openAnswers,
+        reportPayload: report as unknown as Record<string, unknown>,
+      },
+      select: { id: true },
+    });
+
+    return NextResponse.json({ ok: true, reportId: reportRow.id });
+  } catch (error) {
+    console.error("Assessment submission error:", error);
+    return NextResponse.json({ error: "Failed to submit assessment" }, { status: 500 });
   }
-
-  if (!event?.id) {
-    return NextResponse.json({ error: "Event not found" }, { status: 404 });
-  }
-
-  const workspace = user ? await getUserWorkspace(user.id) : null;
-  const organizationId = event.organization_id ?? workspace?.defaultMembership?.organizationId ?? null;
-  const userId = user?.id ?? null;
-
-  const { data: participantRow, error: participantError } = await supabase
-    .from("participants")
-    .insert({
-      event_id: event.id,
-      user_id: userId,
-      organization_id: organizationId,
-      display_name: participant.displayName,
-      role: participant.role,
-      industry: participant.industry,
-      org_size: participant.orgSize,
-      company_name: participant.companyName || null,
-      contact: participant.contact || null,
-      contact_consent: Boolean(participant.contactConsent),
-    })
-    .select("id")
-    .single();
-
-  if (participantError || !participantRow) {
-    return NextResponse.json({ error: participantError?.message ?? "Participant insert failed" }, { status: 500 });
-  }
-
-  const { data: assessmentRow, error: assessmentError } = await supabase
-    .from("assessments")
-    .insert({
-      event_id: event.id,
-      participant_id: participantRow.id,
-      user_id: userId,
-      status: "submitted",
-      submitted_at: new Date().toISOString(),
-    })
-    .select("id")
-    .single();
-
-  if (assessmentError || !assessmentRow) {
-    return NextResponse.json({ error: assessmentError?.message ?? "Assessment insert failed" }, { status: 500 });
-  }
-
-  const answerRows = Object.entries(answers).map(([questionId, value]) => ({
-    assessment_id: assessmentRow.id,
-    question_id: questionId,
-    numeric_value: typeof value === "number" ? value : null,
-    text_value: typeof value === "string" ? value : null,
-  }));
-
-  const { error: answersError } = await supabase.from("assessment_answers").insert(answerRows);
-
-  if (answersError) {
-    return NextResponse.json({ error: answersError.message }, { status: 500 });
-  }
-
-  const reportId = crypto.randomUUID();
-  const report: Report = buildReport(eventSlug, participant as ParticipantProfile, answers as AssessmentAnswers, reportId);
-
-  const { data: reportRow, error: reportError } = await supabase
-    .from("reports")
-    .insert({
-      id: reportId,
-      assessment_id: assessmentRow.id,
-      user_id: userId,
-      stage_level: report.stageLevel,
-      next_level: report.nextLevel,
-      stage_summary: report.stageSummary,
-      spiral_scores: report.spiralScores,
-      energy_scores: report.energyScores,
-      chain_score: report.chainScore,
-      charter_score: report.charterScore,
-      primary_bottleneck: report.primaryBottleneck.key,
-      action_recommendation: report.actionRecommendation,
-      recommended_tools: report.recommendedTools,
-      participant_snapshot: participant,
-      open_answers: report.openAnswers,
-      report_payload: report,
-    })
-    .select("id")
-    .single();
-
-  if (reportError || !reportRow) {
-    return NextResponse.json({ error: reportError?.message ?? "Report insert failed" }, { status: 500 });
-  }
-
-  return NextResponse.json({ ok: true, reportId: reportRow.id });
 }

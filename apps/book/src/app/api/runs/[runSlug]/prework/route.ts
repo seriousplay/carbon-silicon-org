@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { createAdminSupabaseClient } from "@/lib/supabase/admin";
+import { db } from "@/lib/supabase/pool";
 
 const preworkSchema = z.object({
   name: z.string().trim().min(1, "请填写姓名").max(80),
@@ -22,89 +22,93 @@ function joinChoices(values: string[]) {
   return values.join("；");
 }
 
-export async function POST(request: Request, { params }: { params: Promise<{ runSlug: string }> }) {
+export async function POST(
+  request: Request,
+  { params }: { params: Promise<{ runSlug: string }> }
+) {
   const { runSlug } = await params;
   const parsed = preworkSchema.safeParse(await request.json().catch(() => null));
 
   if (!parsed.success) {
-    return NextResponse.json({ ok: false, reason: parsed.error.issues[0]?.message ?? "请补全必填信息。" }, { status: 400 });
+    return NextResponse.json(
+      { ok: false, reason: parsed.error.issues[0]?.message ?? "请补全必填信息。" },
+      { status: 400 }
+    );
   }
 
-  const supabase = createAdminSupabaseClient();
-  if (!supabase) {
-    return NextResponse.json({ ok: false, reason: "Supabase service role is not configured" }, { status: 500 });
+  if (!db) {
+    return NextResponse.json({ ok: false, reason: "Database is not configured" }, { status: 500 });
   }
 
-  const { data: event, error: eventError } = await supabase
-    .from("events")
-    .select("id,organization_id,status")
-    .eq("slug", runSlug)
-    .maybeSingle();
+  try {
+    const event = await db.event.findUnique({
+      where: { slug: runSlug },
+      select: { id: true, organizationId: true, status: true },
+    });
 
-  if (eventError || !event?.id) {
-    return NextResponse.json({ ok: false, reason: eventError?.message ?? "工作坊入口不存在。" }, { status: 404 });
-  }
+    if (!event?.id) {
+      return NextResponse.json({ ok: false, reason: "工作坊入口不存在。" }, { status: 404 });
+    }
 
-  if (!["active", "draft"].includes(String(event.status))) {
-    return NextResponse.json({ ok: false, reason: "工作坊入口当前不可提交。" }, { status: 403 });
-  }
+    if (!["active", "draft"].includes(String(event.status))) {
+      return NextResponse.json({ ok: false, reason: "工作坊入口当前不可提交。" }, { status: 403 });
+    }
 
-  const prework = parsed.data;
-  const { data, error } = await supabase
-    .from("tool_sessions")
-    .insert({
-      tool_id: "super-individual-prework",
-      event_id: event.id,
-      organization_id: event.organization_id ?? null,
-      user_id: null,
-      participant_id: null,
-      mode: "workshop_prework",
-      status: "submitted",
-      participant_snapshot: {
-        displayName: prework.name,
-        role: prework.workContext,
-      },
-      context: {
-        runSlug,
-        useCase: "超级个体赋能工作坊课前问卷",
-        dataScope: "课前准备、真实任务、工具安装和学习目标",
-        expectedOutput: "帮助主办方安排现场辅导和分组支持",
-      },
-      responses: {
-        workContext: prework.workContext,
-        aiFrequency: prework.aiFrequency,
-        aiUses: joinChoices(prework.aiUses),
-        stepclaw: prework.stepclaw ?? "",
-        ima: prework.ima ?? "",
-        obsidian: prework.obsidian ?? "",
-        toolIssue: prework.toolIssue ?? "",
-        targetTask: prework.targetTask,
-        goals: joinChoices(prework.goals),
-        bringMaterial: prework.bringMaterial,
-        materialType: prework.materialType ?? "",
-        biggestQuestion: prework.biggestQuestion ?? "",
-      },
-      outputs: {
-        toolName: "超级个体课前问卷",
-        nextAction: prework.targetTask,
-        report: {
-          title: "超级个体赋能工作坊课前问卷",
-          summary: `${prework.name} 的现场任务：${prework.targetTask}`,
-          goals: prework.goals,
-          toolReadiness: {
-            stepclaw: prework.stepclaw ?? "",
-            ima: prework.ima ?? "",
-            obsidian: prework.obsidian ?? "",
+    const prework = parsed.data;
+    const data = await db.toolSession.create({
+      data: {
+        toolId: "super-individual-prework",
+        eventId: event.id,
+        organizationId: event.organizationId ?? null,
+        userId: null,
+        participantId: null,
+        mode: "workshop_prework",
+        status: "submitted",
+        participantSnapshot: {
+          displayName: prework.name,
+          role: prework.workContext,
+        },
+        context: {
+          runSlug,
+          useCase: "超级个体赋能工作坊课前问卷",
+          dataScope: "课前准备、真实任务、工具安装和学习目标",
+          expectedOutput: "帮助主办方安排现场辅导和分组支持",
+        },
+        responses: {
+          workContext: prework.workContext,
+          aiFrequency: prework.aiFrequency,
+          aiUses: joinChoices(prework.aiUses),
+          stepclaw: prework.stepclaw ?? "",
+          ima: prework.ima ?? "",
+          obsidian: prework.obsidian ?? "",
+          toolIssue: prework.toolIssue ?? "",
+          targetTask: prework.targetTask,
+          goals: joinChoices(prework.goals),
+          bringMaterial: prework.bringMaterial,
+          materialType: prework.materialType ?? "",
+          biggestQuestion: prework.biggestQuestion ?? "",
+        },
+        outputs: {
+          toolName: "超级个体课前问卷",
+          nextAction: prework.targetTask,
+          report: {
+            title: "超级个体赋能工作坊课前问卷",
+            summary: `${prework.name} 的现场任务：${prework.targetTask}`,
+            goals: prework.goals,
+            toolReadiness: {
+              stepclaw: prework.stepclaw ?? "",
+              ima: prework.ima ?? "",
+              obsidian: prework.obsidian ?? "",
+            },
           },
         },
       },
-    })
-    .select("id")
-    .single();
+      select: { id: true },
+    });
 
-  if (error || !data) {
-    return NextResponse.json({ ok: false, reason: error?.message ?? "提交失败。" }, { status: 500 });
+    return NextResponse.json({ ok: true, id: data.id });
+  } catch (error) {
+    console.error("Prework submission error:", error);
+    return NextResponse.json({ ok: false, reason: "提交失败。" }, { status: 500 });
   }
-
-  return NextResponse.json({ ok: true, id: data.id });
 }

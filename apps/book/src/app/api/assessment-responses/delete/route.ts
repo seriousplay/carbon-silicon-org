@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createAdminSupabaseClient } from "@/lib/supabase/admin";
+import { db } from "@/lib/supabase/pool";
 
 export async function POST(request: NextRequest) {
   try {
@@ -9,43 +9,46 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ ok: false, reason: "No assessment IDs provided" }, { status: 400 });
     }
 
-    const supabase = createAdminSupabaseClient();
-    if (!supabase) {
-      return NextResponse.json({ ok: false, reason: "Supabase not configured" }, { status: 500 });
+    if (!db) {
+      return NextResponse.json({ ok: false, reason: "Database not configured" }, { status: 500 });
     }
 
     // Get participant_ids before deleting assessments
-    const { data: assessmentsToDelete } = await supabase
-      .from("assessments")
-      .select("id,participant_id")
-      .in("id", assessmentIds);
+    const assessmentsToDelete = await db.assessment.findMany({
+      where: { id: { in: assessmentIds } },
+      select: { id: true, participantId: true },
+    });
 
-    const participantIds = (assessmentsToDelete ?? [])
-      .map((a) => a.participant_id)
+    const participantIds = assessmentsToDelete
+      .map((a) => a.participantId)
       .filter((id): id is string => Boolean(id));
 
-    // Delete assessment_answers first
-    await supabase.from("assessment_answers").delete().in("assessment_id", assessmentIds);
+    // Delete in order: answers → reports → assessments → participants
+    await db.assessmentAnswer.deleteMany({
+      where: { assessmentId: { in: assessmentIds } },
+    });
 
-    // Delete reports
-    await supabase.from("reports").delete().in("assessment_id", assessmentIds);
+    await db.report.deleteMany({
+      where: { assessmentId: { in: assessmentIds } },
+    });
 
-    // Delete assessments
-    const { error: deleteError } = await supabase.from("assessments").delete().in("id", assessmentIds);
+    await db.assessment.deleteMany({
+      where: { id: { in: assessmentIds } },
+    });
 
-    if (deleteError) {
-      console.error("Delete error:", deleteError);
-      return NextResponse.json({ ok: false, reason: deleteError.message }, { status: 500 });
-    }
-
-    // Delete participants (orphaned records)
     if (participantIds.length > 0) {
-      await supabase.from("participants").delete().in("id", participantIds);
+      await db.participant.deleteMany({
+        where: { id: { in: participantIds } },
+      });
     }
 
-    return NextResponse.json({ ok: true, deleted: assessmentIds.length, participantsDeleted: participantIds.length });
+    return NextResponse.json({
+      ok: true,
+      deleted: assessmentIds.length,
+      participantsDeleted: participantIds.length,
+    });
   } catch (error) {
-    console.error("Error:", error);
+    console.error("Delete error:", error);
     return NextResponse.json({ ok: false, reason: "Internal error" }, { status: 500 });
   }
 }
