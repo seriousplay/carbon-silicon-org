@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, CalendarDays, Sparkles } from "lucide-react";
+import { ArrowRight, CalendarDays, Sparkles, GraduationCap } from "lucide-react";
 import { AppShell, Container, GlassCard, PrimaryLink, SectionLabel } from "@/components/ui";
 
 const workshops = [
@@ -10,6 +10,15 @@ const workshops = [
     title: "超级个体赋能工作坊",
     desc: "一天流程框架、核心术语、工具安装链接与课前问卷。从 Prompt 到 Skill 的完整路径。",
     highlight: "课前问卷",
+  },
+  {
+    href: "/hr-bootcamp",
+    icon: GraduationCap,
+    tag: "Training",
+    title: "AI赋能训练营 · HR篇",
+    desc: "2小时HR AI个体赋能培训：提示词、智能体、Skill和知识库实战。先会用，再理解组织怎么接住AI。",
+    highlight: "扫码加入",
+    external: true,
   },
 ];
 
@@ -43,11 +52,16 @@ export default function WorkshopsHomePage() {
         <SectionLabel>Available Workshops</SectionLabel>
         <h2 className="mt-3 text-3xl font-black text-white sm:text-4xl">当前可用工作坊</h2>
         <div className="mt-8 grid gap-5 md:grid-cols-2">
-          {workshops.map(({ href, icon: Icon, tag, title, desc, highlight }) => (
-            <Link
+          {workshops.map(({ href, icon: Icon, tag, title, desc, highlight, external }) => {
+            const isExternal = external || href.startsWith("http");
+            const Comp = isExternal ? "a" : Link;
+            const extraProps = isExternal ? { target: "_blank", rel: "noopener noreferrer" } : {};
+            return (
+            <Comp
               key={href}
-              href={href}
+              href={href.startsWith("http") ? href : `/workshops${href}`}
               className="group rounded-[28px] border border-emerald-200/14 bg-white/[0.035] p-6 transition hover:-translate-y-1 hover:border-emerald-200/35 hover:bg-white/[0.06]"
+              {...extraProps}
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="rounded-full border border-emerald-200/15 bg-emerald-300/10 px-3 py-1 text-xs font-bold text-emerald-200">
@@ -67,8 +81,8 @@ export default function WorkshopsHomePage() {
                   进入 <ArrowRight className="h-4 w-4 transition group-hover:translate-x-1" />
                 </span>
               </div>
-            </Link>
-          ))}
+            </Comp>
+          )})}
         </div>
       </Container>
 
