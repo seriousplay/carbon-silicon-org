@@ -16,7 +16,7 @@ export function HeaderAuth() {
     return (
       <Link
         className="rounded-full px-3 py-2 hover:bg-white/10 hover:text-white"
-        href="/book/login"
+        href="/login"
       >
         登录
       </Link>
@@ -29,7 +29,7 @@ export function HeaderAuth() {
     <span className="flex items-center gap-2">
       <Link
         className="max-w-48 truncate rounded-full px-3 py-2 text-emerald-100 hover:bg-white/10 hover:text-white"
-        href="/book/dashboard"
+        href="/dashboard"
         prefetch={false}
       >
         {displayName}
