@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import {
   ArrowRight,
   BookOpen,
@@ -165,6 +166,17 @@ export default async function Home() {
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_82%_18%,rgba(45,212,191,0.22),transparent_28%),linear-gradient(135deg,rgba(3,16,15,0.98),rgba(5,35,30,0.9)_48%,rgba(5,10,9,0.98))]" />
         <div className="absolute inset-0 bg-[linear-gradient(rgba(116,242,202,0.06)_1px,transparent_1px),linear-gradient(90deg,rgba(116,242,202,0.05)_1px,transparent_1px)] bg-[size:72px_72px] opacity-45" />
         <div className="absolute bottom-[-8rem] right-[-2rem] hidden h-[34rem] w-[34rem] rotate-[-10deg] rounded-[3rem] border border-emerald-200/15 bg-black/25 shadow-2xl shadow-emerald-950/50 lg:block" />
+        <div className="absolute bottom-[-6rem] right-[3vw] hidden w-[30rem] rotate-[-6deg] overflow-hidden rounded-[2rem] border border-emerald-200/20 shadow-[0_0_80px_rgba(45,212,191,0.15)] lg:block">
+          <Image
+            src="/book/hero-1600.png"
+            alt="碳硅组织封面视觉"
+            width={1600}
+            height={1000}
+            priority
+            sizes="(max-width: 1024px) 0px, 480px"
+            className="h-auto w-full opacity-[0.92] saturate-110"
+          />
+        </div>
 
         <Container className="relative py-16 sm:py-20 lg:py-24">
           <div className="max-w-4xl">
@@ -205,6 +217,17 @@ export default async function Home() {
             </div>
           </div>
 
+          <div className="mt-8 lg:hidden">
+            <Image
+              src="/book/hero-800.png"
+              alt="碳硅组织封面视觉"
+              width={800}
+              height={500}
+              loading="lazy"
+              sizes="100vw"
+              className="w-full rounded-[24px] border border-emerald-200/15 shadow-xl shadow-black/30"
+            />
+          </div>
         </Container>
       </section>
 
