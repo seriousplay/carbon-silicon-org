@@ -1,16 +1,16 @@
 import { buildSummary } from "./scoring";
 import { demoReports } from "./demo-data";
-import { createAdminSupabaseClient } from "@/lib/supabase/admin";
+import { db } from "@/lib/supabase/pool";
 import { createNamespacedCache } from "@/lib/cache";
 import type { AssessmentModule, EventSummary, QuestionDistribution, RunResponse, Insight, PaginatedResponses } from "./types";
 
 type ReportRow = {
-  stage_level: string | null;
-  spiral_scores: { key: string; label: string; score: number }[] | null;
-  energy_scores: { key: string; label: string; score: number }[] | null;
-  chain_score: number | null;
-  charter_score: number | null;
-  primary_bottleneck: string | null;
+  stageLevel: string | null;
+  spiralScores: { key: string; label: string; score: number }[] | null;
+  energyScores: { key: string; label: string; score: number }[] | null;
+  chainScore: number | null;
+  charterScore: number | null;
+  primaryBottleneck: string | null;
 };
 
 // In-memory TTL caches for different data types
@@ -47,7 +47,7 @@ function toDistributionScore(answer: number | string | null, module: string): nu
 
 function countLowestDimensionScores(
   rows: ReportRow[],
-  scoreField: "spiral_scores" | "energy_scores",
+  scoreField: "spiralScores" | "energyScores",
   labels: Record<string, string>,
 ): Record<string, number> {
   return rows.reduce<Record<string, number>>((acc, row) => {
@@ -69,123 +69,135 @@ export async function getEventSummary(eventSlug: string): Promise<EventSummary> 
     return cached;
   }
 
-  const supabase = createAdminSupabaseClient();
-
-  if (!supabase) {
+  if (!db) {
     const summary = buildSummary(eventSlug, demoReports());
     eventSummaryCache.set(eventSlug, summary);
     return summary;
   }
 
-  const { data: event } = await supabase.from("events").select("id,title,slug").eq("slug", eventSlug).maybeSingle();
+  try {
+    const event = await db.event.findUnique({
+      where: { slug: eventSlug },
+      select: { id: true, title: true, slug: true },
+    });
 
-  if (!event?.id) {
-    const summary = buildSummary(eventSlug, demoReports());
-    eventSummaryCache.set(eventSlug, summary);
-    return summary;
-  }
+    if (!event?.id) {
+      const summary = buildSummary(eventSlug, demoReports());
+      eventSummaryCache.set(eventSlug, summary);
+      return summary;
+    }
 
-  // Get assessments
-  const { data: assessments } = await supabase
-    .from("assessments")
-    .select("id")
-    .eq("event_id", event.id)
-    .eq("status", "submitted");
+    // Get assessments
+    const assessments = await db.assessment.findMany({
+      where: { eventId: event.id, status: "submitted" },
+      select: { id: true },
+    });
 
-  const assessmentIds = (assessments ?? []).map((item: { id: string }) => item.id);
+    const assessmentIds = assessments.map((item) => item.id);
 
-  if (!assessmentIds.length) {
-    // Return empty summary when database is accessible but no assessments yet
-    const emptySummary = {
+    if (!assessmentIds.length) {
+      // Return empty summary when database is accessible but no assessments yet
+      const emptySummary = {
+        eventSlug,
+        title: event.title ?? "碳硅共生：AI时代的组织进化工作坊",
+        participantCount: 0,
+        completedCount: 0,
+        stageDistribution: {},
+        spiralBottlenecks: {},
+        energyBottlenecks: {},
+        averageChainScore: 0,
+        averageCharterScore: 0,
+        openAnswerHighlights: [],
+      };
+      eventSummaryCache.set(eventSlug, emptySummary);
+      return emptySummary;
+    }
+
+    // Parallelize independent queries (reports + open answers)
+    // This reduces total time from 4 sequential queries to ~2 parallel queries
+    const [reports, openAnswers] = await Promise.all([
+      // Get all reports for these assessments
+      db.report.findMany({
+        where: { assessmentId: { in: assessmentIds } },
+        select: {
+          stageLevel: true,
+          spiralScores: true,
+          energyScores: true,
+          chainScore: true,
+          charterScore: true,
+          primaryBottleneck: true,
+        },
+      }),
+
+      // Get open-ended answers
+      db.assessmentAnswer.findMany({
+        where: {
+          assessmentId: { in: assessmentIds },
+          questionId: { in: ["open_scenario", "open_workflow", "open_blocker"] },
+        },
+        select: { textValue: true },
+        take: 12,
+      }),
+    ]);
+
+    const rows = reports as ReportRow[];
+
+    const stageDistribution = rows.reduce<Record<string, number>>((acc, row) => {
+      const key = row.stageLevel ?? "未判断";
+      acc[key] = (acc[key] ?? 0) + 1;
+      return acc;
+    }, {});
+
+    const bottleneckLabels: Record<string, string> = {
+      structure: "结构层",
+      cell: "细胞层",
+      environment: "环境层",
+      meaning: "意义",
+      power: "权力",
+      trust: "信任",
+      chain: "人机链路准备度",
+      charter: "AI 宪章准备度",
+    };
+
+    const spiralBottlenecks = countLowestDimensionScores(rows, "spiralScores", {
+      structure: bottleneckLabels.structure,
+      cell: bottleneckLabels.cell,
+      environment: bottleneckLabels.environment,
+    });
+
+    const energyBottlenecks = countLowestDimensionScores(rows, "energyScores", {
+      meaning: bottleneckLabels.meaning,
+      power: bottleneckLabels.power,
+      trust: bottleneckLabels.trust,
+    });
+
+    const average = (values: number[]) =>
+      values.length ? Number((values.reduce((sum, value) => sum + value, 0) / values.length).toFixed(1)) : 0;
+
+    const summary: EventSummary = {
       eventSlug,
       title: event.title ?? "碳硅共生：AI时代的组织进化工作坊",
-      participantCount: 0,
-      completedCount: 0,
-      stageDistribution: {},
-      spiralBottlenecks: {},
-      energyBottlenecks: {},
-      averageChainScore: 0,
-      averageCharterScore: 0,
-      openAnswerHighlights: [],
+      participantCount: assessmentIds.length,
+      completedCount: rows.length,
+      stageDistribution,
+      spiralBottlenecks,
+      energyBottlenecks,
+      averageChainScore: average(rows.map((row) => Number(row.chainScore ?? 0)).filter(Boolean)),
+      averageCharterScore: average(rows.map((row) => Number(row.charterScore ?? 0)).filter(Boolean)),
+      openAnswerHighlights: openAnswers
+        .map((row) => row.textValue)
+        .filter((value): value is string => Boolean(value)),
     };
-    eventSummaryCache.set(eventSlug, emptySummary);
-    return emptySummary;
+
+    // Cache the result for future requests
+    eventSummaryCache.set(eventSlug, summary);
+
+    return summary;
+  } catch {
+    const summary = buildSummary(eventSlug, demoReports());
+    eventSummaryCache.set(eventSlug, summary);
+    return summary;
   }
-
-  // Parallelize independent queries (reports + open answers)
-  // This reduces total time from 4 sequential queries to ~2 parallel queries
-  const [reportsResult, openAnswersResult] = await Promise.all([
-    // Get all reports for these assessments
-    supabase
-      .from("reports")
-      .select("stage_level, spiral_scores, energy_scores, chain_score, charter_score, primary_bottleneck")
-      .in("assessment_id", assessmentIds),
-
-    // Get open-ended answers
-    supabase
-      .from("assessment_answers")
-      .select("text_value")
-      .in("assessment_id", assessmentIds)
-      .in("question_id", ["open_scenario", "open_workflow", "open_blocker"])
-      .limit(12),
-  ]);
-
-  const reports = reportsResult.data;
-  const openAnswers = openAnswersResult.data;
-
-  const rows = (reports ?? []) as ReportRow[];
-
-  const stageDistribution = rows.reduce<Record<string, number>>((acc, row) => {
-    const key = row.stage_level ?? "未判断";
-    acc[key] = (acc[key] ?? 0) + 1;
-    return acc;
-  }, {});
-
-  const bottleneckLabels: Record<string, string> = {
-    structure: "结构层",
-    cell: "细胞层",
-    environment: "环境层",
-    meaning: "意义",
-    power: "权力",
-    trust: "信任",
-    chain: "人机链路准备度",
-    charter: "AI 宪章准备度",
-  };
-
-  const spiralBottlenecks = countLowestDimensionScores(rows, "spiral_scores", {
-    structure: bottleneckLabels.structure,
-    cell: bottleneckLabels.cell,
-    environment: bottleneckLabels.environment,
-  });
-
-  const energyBottlenecks = countLowestDimensionScores(rows, "energy_scores", {
-    meaning: bottleneckLabels.meaning,
-    power: bottleneckLabels.power,
-    trust: bottleneckLabels.trust,
-  });
-
-  const average = (values: number[]) =>
-    values.length ? Number((values.reduce((sum, value) => sum + value, 0) / values.length).toFixed(1)) : 0;
-
-  const summary: EventSummary = {
-    eventSlug,
-    title: event.title ?? "碳硅共生：AI时代的组织进化工作坊",
-    participantCount: assessmentIds.length,
-    completedCount: rows.length,
-    stageDistribution,
-    spiralBottlenecks,
-    energyBottlenecks,
-    averageChainScore: average(rows.map((row) => Number(row.chain_score ?? 0)).filter(Boolean)),
-    averageCharterScore: average(rows.map((row) => Number(row.charter_score ?? 0)).filter(Boolean)),
-    openAnswerHighlights: (openAnswers ?? [])
-      .map((row: { text_value: string | null }) => row.text_value)
-      .filter((value): value is string => Boolean(value)),
-  };
-
-  // Cache the result for future requests
-  eventSummaryCache.set(eventSlug, summary);
-
-  return summary;
 }
 
 // Test participant filter pattern
@@ -212,110 +224,128 @@ export async function getRunResponses(
     return cached;
   }
 
-  const supabase = createAdminSupabaseClient();
-
-  if (!supabase) {
+  if (!db) {
     return { responses: [], pagination: { page: 1, total: 0, pageSize, totalPages: 0 } };
   }
 
-  const { data: event } = await supabase.from("events").select("id").eq("slug", eventSlug).maybeSingle();
-  if (!event?.id) {
-    return { responses: [], pagination: { page: 1, total: 0, pageSize, totalPages: 0 } };
-  }
+  try {
+    const event = await db.event.findUnique({
+      where: { slug: eventSlug },
+      select: { id: true },
+    });
+    if (!event?.id) {
+      return { responses: [], pagination: { page: 1, total: 0, pageSize, totalPages: 0 } };
+    }
 
-  // Fetch all participants (with optional test filtering)
-  const participantsQuery = supabase
-    .from("participants")
-    .select("id,display_name,role,industry,org_size,company_name,contact,created_at")
-    .eq("event_id", event.id)
-    .order("created_at", { ascending: false });
+    // Fetch all participants (with optional test filtering)
+    const allParticipants = await db.participant.findMany({
+      where: { eventId: event.id },
+      select: {
+        id: true,
+        displayName: true,
+        role: true,
+        industry: true,
+        orgSize: true,
+        companyName: true,
+        contact: true,
+        createdAt: true,
+      },
+      orderBy: { createdAt: "desc" },
+    });
 
-  const { data: allParticipants } = await participantsQuery;
-  const participants = (allParticipants ?? []).filter((p) =>
-    !excludeTest || !isTestParticipant(p.display_name, p.company_name, p.contact),
-  );
+    const participants = allParticipants.filter((p) =>
+      !excludeTest || !isTestParticipant(p.displayName, p.companyName, p.contact),
+    );
 
-  // Fetch all submitted assessments
-  const { data: assessments } = await supabase
-    .from("assessments")
-    .select("id,participant_id,submitted_at")
-    .eq("event_id", event.id)
-    .eq("status", "submitted");
+    // Fetch all submitted assessments
+    const assessments = await db.assessment.findMany({
+      where: { eventId: event.id, status: "submitted" },
+      select: { id: true, participantId: true, submittedAt: true },
+    });
 
-  const assessmentMap = new Map((assessments ?? []).map((a) => [a.participant_id, a]));
+    const assessmentMap = new Map(assessments.map((a) => [a.participantId, a]));
 
-  // Fetch all reports and answers in parallel
-  const submittedAssessmentIds = (assessments ?? []).map((a) => a.id);
-  const [reportsResult, answersResult] = await Promise.all([
-    supabase
-      .from("reports")
-      .select("assessment_id,stage_level,next_level,spiral_scores,energy_scores,chain_score,charter_score,primary_bottleneck")
-      .in("assessment_id", submittedAssessmentIds),
+    // Fetch all reports and answers in parallel
+    const submittedAssessmentIds = assessments.map((a) => a.id);
+    const [reports, answers] = await Promise.all([
+      db.report.findMany({
+        where: { assessmentId: { in: submittedAssessmentIds } },
+        select: {
+          assessmentId: true,
+          stageLevel: true,
+          nextLevel: true,
+          spiralScores: true,
+          energyScores: true,
+          chainScore: true,
+          charterScore: true,
+          primaryBottleneck: true,
+        },
+      }),
 
-    supabase
-      .from("assessment_answers")
-      .select("assessment_id,question_id,numeric_value,text_value")
-      .in("assessment_id", submittedAssessmentIds),
-  ]);
+      db.assessmentAnswer.findMany({
+        where: { assessmentId: { in: submittedAssessmentIds } },
+        select: { assessmentId: true, questionId: true, numericValue: true, textValue: true },
+      }),
+    ]);
 
-  const reports = reportsResult.data;
-  const answers = answersResult.data;
+    const reportMap = new Map(reports.map((r) => [r.assessmentId, r]));
 
-  const reportMap = new Map((reports ?? []).map((r) => [r.assessment_id, r]));
+    const answersByAssessment = new Map<string, Record<string, number | string | null>>();
+    for (const answer of answers) {
+      const existing = answersByAssessment.get(answer.assessmentId) ?? {};
+      existing[answer.questionId] = answer.numericValue ? Number(answer.numericValue) : answer.textValue ?? null;
+      answersByAssessment.set(answer.assessmentId, existing);
+    }
 
-  const answersByAssessment = new Map<string, Record<string, number | string | null>>();
-  for (const answer of answers ?? []) {
-    const existing = answersByAssessment.get(answer.assessment_id) ?? {};
-    existing[answer.question_id] = answer.numeric_value ?? answer.text_value ?? null;
-    answersByAssessment.set(answer.assessment_id, existing);
-  }
+    // Build responses array with explicit typing
+    const responsesRaw: (RunResponse | null)[] = participants.map((participant) => {
+      const assessment = assessmentMap.get(participant.id);
+      if (!assessment) return null;
 
-  // Build responses array with explicit typing
-  const responsesRaw: (RunResponse | null)[] = participants.map((participant) => {
-    const assessment = assessmentMap.get(participant.id);
-    if (!assessment) return null;
+      const report = reportMap.get(assessment.id);
+      if (!report) return null;
 
-    const report = reportMap.get(assessment.id);
-    if (!report) return null;
+      return {
+        assessmentId: assessment.id,
+        participantId: participant.id,
+        participantName: participant.displayName,
+        role: participant.role,
+        industry: participant.industry,
+        orgSize: participant.orgSize,
+        companyName: participant.companyName,
+        submittedAt: assessment.submittedAt?.toISOString() ?? participant.createdAt.toISOString(),
+        stageLevel: report.stageLevel ?? "N/A",
+        nextLevel: report.nextLevel ?? "N/A",
+        spiralScores: (report.spiralScores as { key: string; label: string; score: number }[] | null) ?? [],
+        energyScores: (report.energyScores as { key: string; label: string; score: number }[] | null) ?? [],
+        chainScore: Number(report.chainScore ?? 0),
+        charterScore: Number(report.charterScore ?? 0),
+        primaryBottleneck: report.primaryBottleneck ?? "N/A",
+        answers: answersByAssessment.get(assessment.id) ?? {},
+      };
+    });
 
-    return {
-      assessmentId: assessment.id,
-      participantId: participant.id,
-      participantName: participant.display_name,
-      role: participant.role,
-      industry: participant.industry,
-      orgSize: participant.org_size,
-      companyName: participant.company_name,
-      submittedAt: assessment.submitted_at ?? participant.created_at,
-      stageLevel: report.stage_level ?? "N/A",
-      nextLevel: report.next_level ?? "N/A",
-      spiralScores: (report.spiral_scores as { key: string; label: string; score: number }[] | null) ?? [],
-      energyScores: (report.energy_scores as { key: string; label: string; score: number }[] | null) ?? [],
-      chainScore: Number(report.chain_score ?? 0),
-      charterScore: Number(report.charter_score ?? 0),
-      primaryBottleneck: report.primary_bottleneck ?? "N/A",
-      answers: answersByAssessment.get(assessment.id) ?? {},
+    const responsesList = responsesRaw.filter((r): r is RunResponse => r !== null);
+    responsesList.sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime());
+
+    // Pagination
+    const total = responsesList.length;
+    const totalPages = Math.ceil(total / pageSize);
+    const start = (page - 1) * pageSize;
+    const paginatedResponses = responsesList.slice(start, start + pageSize);
+
+    const result = {
+      responses: paginatedResponses,
+      pagination: { page, total, pageSize, totalPages },
     };
-  });
 
-  const responsesList = responsesRaw.filter((r): r is RunResponse => r !== null);
-  responsesList.sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime());
+    // Cache the result for future requests
+    runResponsesCache.set(cacheKey, result);
 
-  // Pagination
-  const total = responsesList.length;
-  const totalPages = Math.ceil(total / pageSize);
-  const start = (page - 1) * pageSize;
-  const paginatedResponses = responsesList.slice(start, start + pageSize);
-
-  const result = {
-    responses: paginatedResponses,
-    pagination: { page, total, pageSize, totalPages },
-  };
-
-  // Cache the result for future requests
-  runResponsesCache.set(cacheKey, result);
-
-  return result;
+    return result;
+  } catch {
+    return { responses: [], pagination: { page: 1, total: 0, pageSize, totalPages: 0 } };
+  }
 }
 
 // Get question-level distribution analysis
@@ -326,105 +356,109 @@ export async function getQuestionDistributions(eventSlug: string): Promise<Quest
     return cached;
   }
 
-  const supabase = createAdminSupabaseClient();
-
-  if (!supabase) {
+  if (!db) {
     return [];
   }
 
-  const { data: event } = await supabase.from("events").select("id").eq("slug", eventSlug).maybeSingle();
-  if (!event?.id) return [];
+  try {
+    const event = await db.event.findUnique({
+      where: { slug: eventSlug },
+      select: { id: true },
+    });
+    if (!event?.id) return [];
 
-  const { data: assessments } = await supabase
-    .from("assessments")
-    .select("id")
-    .eq("event_id", event.id)
-    .eq("status", "submitted");
-
-  const assessmentIds = (assessments ?? []).map((a: { id: string }) => a.id);
-  if (!assessmentIds.length) return [];
-
-  // Parallelize independent queries (answers + questions)
-  const [answersResult, questionsResult] = await Promise.all([
-    supabase
-      .from("assessment_answers")
-      .select("question_id,numeric_value,text_value")
-      .in("assessment_id", assessmentIds),
-
-    supabase.from("questions").select("id,title,module,dimension,sort_order").order("sort_order"),
-  ]);
-
-  const answers = answersResult.data;
-  const questions = questionsResult.data;
-
-  if (!questions?.length) return [];
-
-  // Group answers by question
-  const answersByQuestion = new Map<string, (number | string | null)[]>();
-  for (const answer of answers ?? []) {
-    const existing = answersByQuestion.get(answer.question_id) ?? [];
-    existing.push(answer.numeric_value ?? answer.text_value ?? null);
-    answersByQuestion.set(answer.question_id, existing);
-  }
-
-  // Module title mapping
-  const moduleTitles: Record<string, string> = {
-    stage: "五级阶梯",
-    spiral: "三螺旋",
-    energy: "意义-权力-信任",
-    chain: "人机链路准备度",
-    charter: "AI 宪章准备度",
-  };
-
-  const distributions = (questions as { id: string; title: string; module: string; dimension?: string; sort_order: number }[])
-    .filter((q) => q.module !== "open")
-    .map((question) => {
-      const questionAnswers = answersByQuestion.get(question.id) ?? [];
-      const numericAnswers = questionAnswers
-        .map((answer) => toDistributionScore(answer, question.module))
-        .filter((answer): answer is number => answer !== null);
-
-      // Calculate distribution (for scale questions, 1-5)
-      const distribution: Record<string, number> = {};
-      for (const answer of numericAnswers) {
-        const key = String(Math.round(answer));
-        distribution[key] = (distribution[key] ?? 0) + 1;
-      }
-
-      // Calculate average
-      const average = numericAnswers.length
-        ? Number((numericAnswers.reduce((sum, v) => sum + v, 0) / numericAnswers.length).toFixed(2))
-        : 0;
-
-      // Detect outliers (questions with very high or low average compared to expected)
-      const outliers: string[] = [];
-      if (average >= 4.5) {
-        outliers.push("平均分极高（≥4.5），可能群体在此问题上普遍较强");
-      } else if (average <= 1.5) {
-        outliers.push("平均分极低（≤1.5），可能群体在此问题上普遍较弱");
-      }
-
-      return {
-        questionId: question.id,
-        questionText: question.title,
-        module: question.module as AssessmentModule,
-        dimension: question.dimension,
-        moduleTitle: moduleTitles[question.module] ?? question.module,
-        sortOrder: question.sort_order,
-        responseCount: questionAnswers.length,
-        distribution,
-        averageScore: average,
-        outliers,
-      };
-    })
-    .sort((a, b) => {
-      const order = ["stage", "spiral", "energy", "chain", "charter"];
-      return order.indexOf(a.module) - order.indexOf(b.module) || a.sortOrder - b.sortOrder;
+    const assessments = await db.assessment.findMany({
+      where: { eventId: event.id, status: "submitted" },
+      select: { id: true },
     });
 
-  // Cache the result before returning
-  questionDistributionsCache.set(eventSlug, distributions);
-  return distributions;
+    const assessmentIds = assessments.map((a) => a.id);
+    if (!assessmentIds.length) return [];
+
+    // Parallelize independent queries (answers + questions)
+    const [answers, questions] = await Promise.all([
+      db.assessmentAnswer.findMany({
+        where: { assessmentId: { in: assessmentIds } },
+        select: { questionId: true, numericValue: true, textValue: true },
+      }),
+
+      db.question.findMany({
+        select: { id: true, title: true, module: true, dimension: true, sortOrder: true },
+        orderBy: { sortOrder: "asc" },
+      }),
+    ]);
+
+    if (!questions?.length) return [];
+
+    // Group answers by question
+    const answersByQuestion = new Map<string, (number | string | null)[]>();
+    for (const answer of answers) {
+      const existing = answersByQuestion.get(answer.questionId) ?? [];
+      existing.push(answer.numericValue ? Number(answer.numericValue) : answer.textValue ?? null);
+      answersByQuestion.set(answer.questionId, existing);
+    }
+
+    // Module title mapping
+    const moduleTitles: Record<string, string> = {
+      stage: "五级阶梯",
+      spiral: "三螺旋",
+      energy: "意义-权力-信任",
+      chain: "人机链路准备度",
+      charter: "AI 宪章准备度",
+    };
+
+    const distributions = questions
+      .filter((q) => q.module !== "open")
+      .map((question) => {
+        const questionAnswers = answersByQuestion.get(question.id) ?? [];
+        const numericAnswers = questionAnswers
+          .map((answer) => toDistributionScore(answer, question.module))
+          .filter((answer): answer is number => answer !== null);
+
+        // Calculate distribution (for scale questions, 1-5)
+        const distribution: Record<string, number> = {};
+        for (const answer of numericAnswers) {
+          const key = String(Math.round(answer));
+          distribution[key] = (distribution[key] ?? 0) + 1;
+        }
+
+        // Calculate average
+        const average = numericAnswers.length
+          ? Number((numericAnswers.reduce((sum, v) => sum + v, 0) / numericAnswers.length).toFixed(2))
+          : 0;
+
+        // Detect outliers (questions with very high or low average compared to expected)
+        const outliers: string[] = [];
+        if (average >= 4.5) {
+          outliers.push("平均分极高（≥4.5），可能群体在此问题上普遍较强");
+        } else if (average <= 1.5) {
+          outliers.push("平均分极低（≤1.5），可能群体在此问题上普遍较弱");
+        }
+
+        return {
+          questionId: question.id,
+          questionText: question.title,
+          module: question.module as AssessmentModule,
+          dimension: question.dimension,
+          moduleTitle: moduleTitles[question.module] ?? question.module,
+          sortOrder: question.sortOrder,
+          responseCount: questionAnswers.length,
+          distribution,
+          averageScore: average,
+          outliers,
+        };
+      })
+      .sort((a, b) => {
+        const order = ["stage", "spiral", "energy", "chain", "charter"];
+        return order.indexOf(a.module) - order.indexOf(b.module) || a.sortOrder - b.sortOrder;
+      });
+
+    // Cache the result before returning
+    questionDistributionsCache.set(eventSlug, distributions);
+    return distributions;
+  } catch {
+    return [];
+  }
 }
 export async function generateInsightsForRun(eventSlug: string): Promise<Insight[]> {
   const summary = await getEventSummary(eventSlug);

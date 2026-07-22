@@ -1,7 +1,7 @@
 import "server-only";
 
 import { getTool, toolLibrary } from "./tool-library";
-import { createAdminSupabaseClient } from "@/lib/supabase/admin";
+import { db } from "@/lib/supabase/pool";
 import { verifyRunAccessCode } from "@/lib/runs/server";
 import { getUserMemberships, isOrganizationAdmin } from "@/lib/auth/server";
 import type { ToolSessionDetail, ToolSessionProfile, ToolSessionReport } from "./session-types";
@@ -75,15 +75,15 @@ export type PreworkReport = {
 
 type ToolSessionRow = {
   id: string;
-  tool_id: string;
+  toolId: string;
   mode?: string;
-  user_id?: string | null;
-  organization_id?: string | null;
-  participant_snapshot: Record<string, string | undefined> | null;
+  userId?: string | null;
+  organizationId?: string | null;
+  participantSnapshot: Record<string, string | undefined> | null;
   context: Record<string, string | undefined> | null;
   responses?: Record<string, string> | null;
   outputs: Record<string, unknown> | null;
-  submitted_at: string;
+  submittedAt: Date;
 };
 
 function getToolDisplayName(toolId: string) {
@@ -162,112 +162,116 @@ export async function createToolSession(toolId: string, input: ToolSessionSubmis
   const tool = getTool(toolId);
   if (!tool) return { ok: false as const, reason: "Tool not found" };
 
-  const supabase = createAdminSupabaseClient();
-  if (!supabase) return { ok: false as const, reason: "Supabase service role is not configured" };
+  if (!db) return { ok: false as const, reason: "Supabase service role is not configured" };
 
-  let event: { id: string; organization_id: string | null } | null = null;
+  let event: { id: string; organizationId: string | null } | null = null;
   let participantId: string | null = null;
 
   if (input.runSlug) {
     const access = await verifyRunAccessCode(input.runSlug, input.accessCode);
     if (!access.ok) return { ok: false as const, reason: access.reason ?? "Run access denied" };
 
-    const eventResult = await supabase
-      .from("events")
-      .select("id,organization_id")
-      .eq("slug", input.runSlug)
-      .maybeSingle();
+    const eventResult = await db.event.findUnique({
+      where: { slug: input.runSlug },
+      select: { id: true, organizationId: true },
+    });
 
-    if (eventResult.error || !eventResult.data) {
-      return { ok: false as const, reason: eventResult.error?.message ?? "Run not found" };
+    if (!eventResult) {
+      return { ok: false as const, reason: "Run not found" };
     }
 
-    event = eventResult.data as { id: string; organization_id: string | null };
+    event = eventResult;
 
-    const participantResult = await supabase
-      .from("participants")
-      .insert({
-        event_id: event.id,
-        user_id: input.userId,
-        organization_id: event.organization_id ?? input.defaultOrganizationId ?? null,
-        display_name: input.profile.displayName,
-        role: input.profile.role || null,
-        industry: null,
-        org_size: null,
-        company_name: input.profile.companyName || null,
-        contact: input.profile.contact || null,
-        contact_consent: Boolean(input.profile.contact),
-      })
-      .select("id")
-      .single();
+    try {
+      const participant = await db.participant.create({
+        data: {
+          eventId: event.id,
+          userId: input.userId,
+          organizationId: event.organizationId ?? input.defaultOrganizationId ?? null,
+          displayName: input.profile.displayName,
+          role: input.profile.role || null,
+          industry: null,
+          orgSize: null,
+          companyName: input.profile.companyName || null,
+          contact: input.profile.contact || null,
+          contactConsent: Boolean(input.profile.contact),
+        },
+        select: { id: true },
+      });
 
-    if (participantResult.error || !participantResult.data) {
-      return { ok: false as const, reason: participantResult.error?.message ?? "Participant insert failed" };
+      participantId = participant.id;
+    } catch (error) {
+      return { ok: false as const, reason: error instanceof Error ? error.message : "Participant insert failed" };
     }
-
-    participantId = (participantResult.data as { id: string }).id;
   }
 
-  const result = await supabase
-    .from("tool_sessions")
-    .insert({
-      tool_id: toolId,
-      event_id: event?.id ?? null,
-      organization_id: event?.organization_id ?? input.defaultOrganizationId ?? null,
-      user_id: input.userId,
-      participant_id: participantId,
-      mode: input.runSlug ? "run" : "standalone",
-      status: "submitted",
-      participant_snapshot: input.profile,
-      context: {
-        ...input.context,
-        runSlug: input.runSlug,
+  try {
+    const result = await db.toolSession.create({
+      data: {
+        toolId,
+        eventId: event?.id ?? null,
+        organizationId: event?.organizationId ?? input.defaultOrganizationId ?? null,
+        userId: input.userId,
+        participantId,
+        mode: input.runSlug ? "run" : "standalone",
+        status: "submitted",
+        participantSnapshot: input.profile,
+        context: {
+          ...input.context,
+          runSlug: input.runSlug,
+        },
+        responses: input.responses,
+        outputs: buildToolOutputs(toolId, input),
       },
-      responses: input.responses,
-      outputs: buildToolOutputs(toolId, input),
-    })
-    .select("id,outputs")
-    .single();
+      select: { id: true, outputs: true },
+    });
 
-  if (result.error || !result.data) {
-    return { ok: false as const, reason: result.error?.message ?? "Tool session insert failed" };
+    return { ok: true as const, id: result.id, outputs: result.outputs as Record<string, unknown> };
+  } catch (error) {
+    return { ok: false as const, reason: error instanceof Error ? error.message : "Tool session insert failed" };
   }
-
-  return { ok: true as const, id: (result.data as { id: string }).id, outputs: (result.data as { outputs: Record<string, unknown> }).outputs };
 }
 
 export async function getToolSessionDetail(userId: string, sessionId: string): Promise<ToolSessionDetail | null> {
-  const supabase = createAdminSupabaseClient();
-  if (!supabase) return null;
+  if (!db) return null;
 
-  const { data, error } = await supabase
-    .from("tool_sessions")
-    .select("id,tool_id,mode,user_id,organization_id,participant_snapshot,context,responses,outputs,submitted_at")
-    .eq("id", sessionId)
-    .maybeSingle();
+  const row = await db.toolSession.findUnique({
+    where: { id: sessionId },
+    select: {
+      id: true,
+      toolId: true,
+      mode: true,
+      userId: true,
+      organizationId: true,
+      participantSnapshot: true,
+      context: true,
+      responses: true,
+      outputs: true,
+      submittedAt: true,
+    },
+  });
 
-  if (error || !data) return null;
-  const row = data as ToolSessionRow;
+  if (!row) return null;
 
-  if (row.user_id !== userId) {
+  if (row.userId !== userId) {
     const memberships = await getUserMemberships(userId);
     const canReadAsAdmin = memberships.some(
-      (membership) => membership.organizationId === row.organization_id && isOrganizationAdmin(membership),
+      (membership) => membership.organizationId === row.organizationId && isOrganizationAdmin(membership),
     );
     if (!canReadAsAdmin) return null;
   }
 
-  const tool = getTool(row.tool_id);
+  const tool = getTool(row.toolId);
   const report = (row.outputs?.report as ToolSessionReport | undefined) ??
-    buildToolReport(row.tool_id, {
+    buildToolReport(row.toolId, {
       userId,
-      defaultOrganizationId: row.organization_id,
+      defaultOrganizationId: row.organizationId,
       profile: {
-        displayName: row.participant_snapshot?.displayName ?? "",
-        role: row.participant_snapshot?.role,
-        companyName: row.participant_snapshot?.companyName,
-        teamName: row.participant_snapshot?.teamName,
-        contact: row.participant_snapshot?.contact,
+        displayName: row.participantSnapshot?.displayName ?? "",
+        role: row.participantSnapshot?.role,
+        companyName: row.participantSnapshot?.companyName,
+        teamName: row.participantSnapshot?.teamName,
+        contact: row.participantSnapshot?.contact,
       },
       context: {
         useCase: row.context?.useCase ?? "",
@@ -282,11 +286,11 @@ export async function getToolSessionDetail(userId: string, sessionId: string): P
 
   return {
     id: row.id,
-    toolId: row.tool_id,
-    toolName: tool?.name ?? row.tool_id,
-    submittedAt: row.submitted_at,
+    toolId: row.toolId,
+    toolName: tool?.name ?? row.toolId,
+    submittedAt: row.submittedAt.toISOString(),
     mode: row.mode ?? "standalone",
-    participantSnapshot: row.participant_snapshot ?? {},
+    participantSnapshot: row.participantSnapshot ?? {},
     context: row.context ?? {},
     responses: row.responses ?? {},
     outputs: row.outputs ?? {},
@@ -295,97 +299,131 @@ export async function getToolSessionDetail(userId: string, sessionId: string): P
 }
 
 export async function getRunToolSessionSummary(runSlug: string): Promise<ToolSessionSummary> {
-  const supabase = createAdminSupabaseClient();
-  if (!supabase) return emptyToolSessionSummary();
+  if (!db) return emptyToolSessionSummary();
 
-  const { data: event } = await supabase.from("events").select("id").eq("slug", runSlug).maybeSingle();
+  const event = await db.event.findUnique({
+    where: { slug: runSlug },
+    select: { id: true },
+  });
   if (!event?.id) return emptyToolSessionSummary();
 
-  const { data, error } = await supabase
-    .from("tool_sessions")
-    .select("id,tool_id,participant_snapshot,context,responses,outputs,submitted_at")
-    .eq("event_id", event.id)
-    .order("submitted_at", { ascending: false });
+  try {
+    const rows = await db.toolSession.findMany({
+      where: { eventId: event.id },
+      select: {
+        id: true,
+        toolId: true,
+        participantSnapshot: true,
+        context: true,
+        responses: true,
+        outputs: true,
+        submittedAt: true,
+      },
+      orderBy: { submittedAt: "desc" },
+    });
 
-  if (error) return emptyToolSessionSummary();
-
-  return summarizeToolSessions((data ?? []) as ToolSessionRow[]);
+    return summarizeToolSessions(rows as ToolSessionRow[]);
+  } catch {
+    return emptyToolSessionSummary();
+  }
 }
 
 export async function getRunPreworkReport(runSlug: string): Promise<PreworkReport> {
-  const supabase = createAdminSupabaseClient();
-  if (!supabase) return emptyPreworkReport();
+  if (!db) return emptyPreworkReport();
 
-  const { data: event } = await supabase.from("events").select("id").eq("slug", runSlug).maybeSingle();
+  const event = await db.event.findUnique({
+    where: { slug: runSlug },
+    select: { id: true },
+  });
   if (!event?.id) return emptyPreworkReport();
 
-  const { data, error } = await supabase
-    .from("tool_sessions")
-    .select("id,tool_id,participant_snapshot,responses,submitted_at")
-    .eq("event_id", event.id)
-    .eq("tool_id", "super-individual-prework")
-    .order("submitted_at", { ascending: false });
+  try {
+    const rows = await db.toolSession.findMany({
+      where: {
+        eventId: event.id,
+        toolId: "super-individual-prework",
+      },
+      select: {
+        id: true,
+        toolId: true,
+        participantSnapshot: true,
+        responses: true,
+        submittedAt: true,
+      },
+      orderBy: { submittedAt: "desc" },
+    });
 
-  if (error) return emptyPreworkReport();
-
-  return summarizePreworkRows((data ?? []) as ToolSessionRow[]);
+    return summarizePreworkRows(rows as ToolSessionRow[]);
+  } catch {
+    return emptyPreworkReport();
+  }
 }
 
 export async function exportRunToolSessionsCsv(runSlug: string) {
-  const supabase = createAdminSupabaseClient();
-  if (!supabase) return { ok: false as const, reason: "Supabase service role is not configured" };
+  if (!db) return { ok: false as const, reason: "Supabase service role is not configured" };
 
-  const { data: event, error: eventError } = await supabase.from("events").select("id,title").eq("slug", runSlug).maybeSingle();
-  if (eventError || !event?.id) return { ok: false as const, reason: eventError?.message ?? "Run not found" };
+  const event = await db.event.findUnique({
+    where: { slug: runSlug },
+    select: { id: true, title: true },
+  });
+  if (!event?.id) return { ok: false as const, reason: "Run not found" };
 
-  const { data, error } = await supabase
-    .from("tool_sessions")
-    .select("id,tool_id,participant_snapshot,context,responses,outputs,submitted_at")
-    .eq("event_id", event.id)
-    .order("submitted_at", { ascending: false });
+  try {
+    const rows = await db.toolSession.findMany({
+      where: { eventId: event.id },
+      select: {
+        id: true,
+        toolId: true,
+        participantSnapshot: true,
+        context: true,
+        responses: true,
+        outputs: true,
+        submittedAt: true,
+      },
+      orderBy: { submittedAt: "desc" },
+    });
 
-  if (error) {
-    if (isMissingToolSessionsTable(error.message)) {
+    const csvRows = (rows as ToolSessionRow[]).map((row) => {
+      return [
+        row.submittedAt.toISOString(),
+        row.toolId,
+        getToolDisplayName(row.toolId),
+        row.participantSnapshot?.displayName ?? "",
+        row.participantSnapshot?.role ?? "",
+        row.participantSnapshot?.companyName ?? "",
+        row.participantSnapshot?.teamName ?? "",
+        row.participantSnapshot?.contact ?? "",
+        row.context?.useCase ?? "",
+        row.context?.dataScope ?? "",
+        row.context?.currentSituation ?? "",
+        row.context?.evidenceSignal ?? "",
+        row.context?.expectedOutput ?? "",
+        formatJson(row.responses ?? {}),
+        row.outputs?.nextAction ?? "",
+        row.outputs?.report ? formatJson(row.outputs.report) : "",
+      ];
+    });
+
+    return {
+      ok: true as const,
+      filename: `${runSlug}-tool-sessions-export.csv`,
+      csv: toolSessionCsv([toolSessionCsvHeader(), ...csvRows]),
+    };
+  } catch (error) {
+    if (error instanceof Error && isMissingToolSessionsTable(error.message)) {
       return {
         ok: true as const,
         filename: `${runSlug}-tool-sessions-export.csv`,
         csv: toolSessionCsv([toolSessionCsvHeader()]),
       };
     }
-    return { ok: false as const, reason: error.message };
+    return { ok: false as const, reason: error instanceof Error ? error.message : "Export failed" };
   }
-
-  const rows = ((data ?? []) as ToolSessionRow[]).map((row) => {
-    return [
-      row.submitted_at,
-      row.tool_id,
-      getToolDisplayName(row.tool_id),
-      row.participant_snapshot?.displayName ?? "",
-      row.participant_snapshot?.role ?? "",
-      row.participant_snapshot?.companyName ?? "",
-      row.participant_snapshot?.teamName ?? "",
-      row.participant_snapshot?.contact ?? "",
-      row.context?.useCase ?? "",
-      row.context?.dataScope ?? "",
-      row.context?.currentSituation ?? "",
-      row.context?.evidenceSignal ?? "",
-      row.context?.expectedOutput ?? "",
-      formatJson(row.responses ?? {}),
-      row.outputs?.nextAction ?? "",
-      row.outputs?.report ? formatJson(row.outputs.report) : "",
-    ];
-  });
-
-  return {
-    ok: true as const,
-    filename: `${runSlug}-tool-sessions-export.csv`,
-    csv: toolSessionCsv([toolSessionCsvHeader(), ...rows]),
-  };
 }
 
 function summarizeToolSessions(rows: ToolSessionRow[]): ToolSessionSummary {
   const counts = new Map<string, number>();
-  rows.forEach((row) => counts.set(row.tool_id, (counts.get(row.tool_id) ?? 0) + 1));
+  rows.forEach((row) => counts.set(row.toolId, (counts.get(row.toolId) ?? 0) + 1));
 
   const byTool = Array.from(counts.entries())
     .map(([toolId, count]) => ({
@@ -400,15 +438,15 @@ function summarizeToolSessions(rows: ToolSessionRow[]): ToolSessionSummary {
     byTool,
     latest: rows.slice(0, 8).map((row) => ({
       id: row.id,
-      toolId: row.tool_id,
-      toolName: getToolDisplayName(row.tool_id),
-      displayName: row.participant_snapshot?.displayName ?? "匿名参与者",
-      companyName: row.participant_snapshot?.companyName,
-      teamName: row.participant_snapshot?.teamName,
+      toolId: row.toolId,
+      toolName: getToolDisplayName(row.toolId),
+      displayName: row.participantSnapshot?.displayName ?? "匿名参与者",
+      companyName: row.participantSnapshot?.companyName,
+      teamName: row.participantSnapshot?.teamName,
       useCase: row.context?.useCase,
       dataScope: row.context?.dataScope,
       nextAction: typeof row.outputs?.nextAction === "string" ? row.outputs.nextAction : undefined,
-      submittedAt: row.submitted_at,
+      submittedAt: row.submittedAt.toISOString(),
     })),
   };
 }
@@ -449,7 +487,7 @@ function emptyPreworkReport(): PreworkReport {
 function summarizePreworkRows(rows: ToolSessionRow[]): PreworkReport {
   const report = emptyPreworkReport();
   report.total = rows.length;
-  report.lastSubmittedAt = rows[0]?.submitted_at;
+  report.lastSubmittedAt = rows[0]?.submittedAt.toISOString();
 
   const singleKeys = ["aiFrequency", "stepclaw", "ima", "obsidian", "bringMaterial"] as const;
   for (const key of singleKeys) {
@@ -474,9 +512,9 @@ function summarizePreworkRows(rows: ToolSessionRow[]): PreworkReport {
 
   report.records = rows.map((row) => ({
     id: row.id,
-    displayName: row.participant_snapshot?.displayName ?? "匿名参与者",
-    role: row.participant_snapshot?.role,
-    submittedAt: row.submitted_at,
+    displayName: row.participantSnapshot?.displayName ?? "匿名参与者",
+    role: row.participantSnapshot?.role,
+    submittedAt: row.submittedAt.toISOString(),
     aiFrequency: responseValue(row, "aiFrequency"),
     aiUses: responseValue(row, "aiUses"),
     stepclaw: responseValue(row, "stepclaw"),
