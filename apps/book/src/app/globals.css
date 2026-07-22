@@ -1,0 +1,72 @@
+@import "tailwindcss";
+
+:root {
+  --background: #07110f;
+  --foreground: #f0fbf6;
+  --muted: #90a79d;
+  --accent: #67f0c7;
+  --panel: rgba(12, 32, 28, 0.72);
+  --line: rgba(139, 255, 219, 0.18);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", system-ui, sans-serif;
+  --font-mono: "SFMono-Regular", "Cascadia Code", "Roboto Mono", Consolas, monospace;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans), "PingFang SC", "Microsoft YaHei", sans-serif;
+}
+
+.input {
+  width: 100%;
+  border-radius: 1rem;
+  border: 1px solid rgba(167, 243, 208, 0.16);
+  background: rgba(0, 0, 0, 0.3);
+  padding: 0.875rem 1rem;
+  color: white;
+  outline: none;
+  transition: border-color 160ms ease, background 160ms ease;
+}
+
+.input:focus {
+  border-color: rgba(110, 231, 183, 0.9);
+  background: rgba(0, 0, 0, 0.42);
+}
+
+.input::placeholder {
+  color: rgba(236, 253, 245, 0.32);
+}
+
+.input option {
+  color: #07110f;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+@media print {
+  body {
+    background: #ffffff;
+    color: #111827;
+  }
+
+  .no-print {
+    display: none !important;
+  }
+
+  .print-page {
+    box-shadow: none !important;
+    border: 0 !important;
+    background: #ffffff !important;
+    color: #111827 !important;
+  }
+}

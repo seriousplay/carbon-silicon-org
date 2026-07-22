@@ -1,0 +1,3151 @@
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 回路OS · Prisma Schema
+// 基于 docs/01-数据模型与表结构.md (v1)
+// 9 主表 + 2 子表 + User + Organization + Membership
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+generator client {
+  provider        = "prisma-client"
+  output          = "../src/generated/prisma"
+  previewFeatures = ["driverAdapters"]
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 枚举（对应 01 文档的字段单选项 + 05 文档的状态枚举）
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+enum Role {
+  ORG_ADMIN
+  ORG_MEMBER
+}
+
+enum OrganizationLifecycleStatus {
+  SETUP
+  ACTIVE
+}
+
+enum InvitationDeliveryMode {
+  HELD
+  IMMEDIATE
+}
+
+enum OrganizationInvitationDeliveryJobStatus {
+  PENDING
+  PROCESSING
+  SENT
+  FAILED
+  CANCELLED
+}
+
+enum OrganizationSetupEventType {
+  SETUP_STARTED
+  SETUP_CHANGED
+  ACTIVATED
+}
+
+enum CircleNumber {
+  ZERO // 战略决策回路
+  ONE // 数据与分词
+  TWO // 预训练
+  THREE // 后训练
+  FOUR // 工程基座
+  CUSTOM
+}
+
+enum CircleType {
+  STRATEGY // 战略
+  PRODUCTION // 生产
+  INFRA // 基座
+  CROSSCUTTING // 横切
+}
+
+enum CircleStatus {
+  NORMAL
+  WARNING
+  HALTED
+  ARCHIVED
+}
+
+enum CirclePhase {
+  PHASE_0
+  PHASE_1
+  PHASE_2
+  PHASE_3
+  PHASE_4
+}
+
+enum RoleOwnershipType {
+  HOME // 主归属角色（承担人的主归属回路 = 本角色所属回路）
+  SUPPORT // 跨回路支援角色（必须有契约）
+  CROSSCUTTING // 横切角色（360 度评估）
+}
+
+enum RoleCategory {
+  CIRCLE_LEAD // 回路负责人
+  EXPERT // 核心专家
+  OPERATIONS // 运营
+  COACH // 教练
+}
+
+enum RoleStatus {
+  ACTIVE
+  PAUSED
+  ARCHIVED
+}
+
+enum AiCoAssigneeStatus {
+  PROPOSED
+  APPROVED
+  SUSPENDED
+  REVOKED
+}
+
+enum AiCapabilityRiskLevel {
+  L0
+  L1
+  L2
+  L3
+  L4
+}
+
+enum AiExecutionAuditEventStatus {
+  RECORDED
+  DENIED
+}
+
+enum CardStatus {
+  UNSIGNED // 未签
+  SIGNED // 已签
+  STRESS_TESTED // 已压力测试
+}
+
+enum TensionType {
+  PROBLEMATIC // 问题性（某事卡住）
+  CONSTRUCTIVE // 建设性（有更好做法）
+  CLARIFYING // 澄清性（角色边界不清）
+}
+
+enum TensionSource {
+  TACTICAL_MEETING // 战术会
+  GOVERNANCE_MEETING // 治理会
+  BOT // 机器人
+  FORM // 表单
+  ANONYMOUS_PULSE // 匿名脉冲
+}
+
+enum ConflictLevel {
+  L0 // 关系层（人际冲突，不可跳过）
+  L0_5 // 紧急路径（生产故障 30min）
+  L1 // 回路内（战术会）
+  L2 // 回路间接口
+  L3 // 治理流程/决策者
+  L4 // 战略级
+}
+
+// 阻塞点状态机（对应 05 文档第四节，10 个状态）
+enum BlockerStatus {
+  OPEN // 已提出，未指派
+  ASSIGNED // 已指派负责人
+  IN_PROGRESS // 处理中
+  BLOCKED // 被外部依赖阻塞
+  ESCALATED_L0_5 // 紧急升级（生产故障）
+  ESCALATED_L2 // 回路间接口升级
+  ESCALATED_L3 // 治理流程/决策者升级
+  ESCALATED_L4 // 战略级升级
+  RESOLVED // 已闭环
+  REJECTED // 不成立/重复
+}
+
+enum InterfaceStatus {
+  READY // 就绪
+  DELAYED // 延迟
+  BLOCKED // 阻塞
+  ARCHIVED // 废弃
+}
+
+enum BusinessLoopStatus {
+  DRAFT
+  ACTIVE
+  ARCHIVED
+}
+
+enum BusinessLoopVersionStatus {
+  DRAFT
+  PUBLISHED
+  SUPERSEDED
+}
+
+enum BusinessLoopActivityType {
+  WORK
+  DECISION
+  HANDOFF
+  SIGNAL
+}
+
+enum BusinessLoopEdgeType {
+  VALUE
+  DATA
+  DECISION_SIGNAL
+  SIGNAL
+  EVIDENCE
+}
+
+enum BusinessLoopEvidenceKind {
+  CIRCLE
+  ROLE
+  CIRCLE_INTERFACE
+  GOAL
+  METRIC
+  PROJECT
+  ACTION
+  TENSION
+  MEETING
+  EXTERNAL_NOTE
+}
+
+enum InterfaceValidationStatus {
+  TO_SUBMIT
+  AWAITING_SMOKE_RUN
+  PASSED
+  FAILED
+  OVERDUE
+  DEFERRED
+  CLOSED
+}
+
+enum InterfaceSmokeRunResult {
+  PASS
+  FAIL
+}
+
+enum InterfaceValidationSlaResult {
+  ACHIEVED
+  MISSED
+}
+
+enum InterfaceTacticalResolution {
+  CREATE_PROJECT
+  CREATE_ACTION
+  GOVERNANCE_CANDIDATE
+  DEFERRED
+}
+
+enum TacticalOutcomeKind {
+  PROJECT
+  ACTION
+}
+
+enum TacticalOutcomeProposalStatus {
+  PROPOSED
+  RETURNED
+  REJECTED
+  APPROVED
+}
+
+enum TensionHandlingMode {
+  UNROUTED
+  TACTICAL
+  GOVERNANCE
+}
+
+enum TacticalOutcomeProvenanceKind {
+  ORDINARY_TENSION
+  INTERFACE_RUN
+}
+
+enum InterfaceWorkflowRunStatus {
+  ACTIVE
+  WAITING
+  COMPLETED
+  TERMINATED
+  PAUSED
+}
+
+enum InterfaceWorkflowCommandStatus {
+  PENDING
+  PROCESSING
+  SUCCEEDED
+  FAILED
+}
+
+enum InterfaceWorkflowArtifactType {
+  TENSION
+  PROJECT
+  ACTION
+  GOVERNANCE_PROPOSAL
+  MEETING
+  ROLE
+}
+
+enum GovernanceDecisionProcessState {
+  READY
+  CLARIFICATION_REQUIRED
+  OBJECTION_PENDING
+  AMENDMENT_REQUIRED
+  NOT_ADOPTED
+  ADOPTED
+}
+
+enum GovernanceDecisionProvenanceKind {
+  ORDINARY_TENSION
+  INTERFACE_RUN
+}
+
+enum GovernanceProposalRevisionSource {
+  INITIAL
+  CLARIFICATION
+  AMENDMENT
+}
+
+enum GovernanceDecisionOperationKind {
+  INITIALIZE
+  SUBMIT_REVISION
+  REQUEST_CLARIFICATION
+  RAISE_OBJECTION
+  ASSESS_OBJECTION
+  RECORD_NON_ADOPTION
+  ADOPT_ROLE
+}
+
+enum GovernanceDecisionOperationStatus {
+  PROCESSING
+  FAILED
+  SUCCEEDED
+}
+
+enum MeetingFacilitationEngine {
+  TACTICAL
+  GOVERNANCE
+}
+
+enum MeetingAgendaStatus {
+  PENDING
+  ACTIVE
+  COMPLETED
+}
+
+enum GovernanceObjectionValidity {
+  VALID
+  INVALID
+  INSUFFICIENT_INFO
+}
+
+enum GovernanceObjectionReviewStatus {
+  ACTIVE
+  INTEGRATED
+  DISMISSED
+}
+
+enum GovernanceObjectionStanceValue {
+  VALID
+  INVALID
+}
+
+enum BrainCommandOperationStatus {
+  PREVIEWED
+  SUCCEEDED
+  REJECTED
+  EXPIRED
+}
+
+enum BrainArtifactStatus {
+  DRAFT
+  READY
+  EXECUTING
+  SUCCEEDED
+  FAILED
+}
+
+enum BrainArtifactAuditEventType {
+  CREATED
+  READY
+  EXECUTION_STARTED
+  SUCCEEDED
+  FAILED
+}
+
+enum DispatchRight {
+  HOME_LEAD // 主回路负责人（默认）
+  CONSUMER_IN_SCOPE // 契约范围内消费回路可派
+}
+
+enum MetricType {
+  LEADING // 领先指标
+  LAGGING // 滞后指标
+}
+
+enum MetricPhase {
+  PHASE_1
+  PHASE_2
+  PHASE_3
+  FINAL
+}
+
+enum AchievementStatus {
+  ON_TRACK // 达标/进行中
+  OFF_TRACK // 未达标
+  AT_RISK // 有风险
+}
+
+enum DecisionType {
+  ROLE_CHANGE // 角色修改
+  STRATEGY_CHANGE // 策略修改
+  CIRCLE_STRUCTURE_CHANGE // 回路结构修改
+  CONFLICT_ADJUDICATION // 冲突裁决
+  CHARTER_AMENDMENT // 宪章修订
+}
+
+enum DecisionStatus {
+  ACTIVE // 生效中
+  SUPERSEDED // 被后续决策取代
+  ARCHIVED // 废弃
+}
+
+enum ChangeType {
+  ROLE_ASSIGNMENT
+  ROLE_UNASSIGNMENT
+  HOME_CHANGE // 归属变更
+  ROLE_CREATED // 角色新增
+  ROLE_MODIFIED // 角色修改
+  ROLE_ARCHIVED // 角色废弃
+  CIRCLE_CREATED // 回路新增
+  CIRCLE_MERGED // 回路合并
+  CIRCLE_SPLIT // 回路拆分
+}
+
+enum MeetingType {
+  TACTICAL // 战术会
+  GOVERNANCE // 治理会
+  STRATEGY // 战略回路
+}
+
+enum BrainMessageRole {
+  USER
+  BRAIN
+}
+
+enum BrainQueryAuditStatus {
+  SUCCEEDED
+  REJECTED
+  FAILED
+}
+
+enum MemoryCandidateStatus {
+  DRAFT
+  SUBMITTED
+  CONFIRMED
+  REJECTED
+  SUPERSEDED
+}
+
+enum RoleAssignmentApplicationStatus {
+  PENDING
+  NOMINATED
+  WITHDRAWN
+  REJECTED
+  ACCEPTED
+}
+
+enum RoleAssignmentHistoryEventType {
+  ASSIGNED
+  RELEASED
+}
+
+enum MemoryCandidateAuthorityRouteKind {
+  GOAL_STRATEGY
+  GOVERNANCE
+  TACTICAL
+  MEETING_RECORD
+  TENSION
+}
+
+enum MemoryCandidateAuditEventType {
+  CREATED
+  SUBMITTED
+  CONFIRMED
+  REJECTED
+  SUPERSEDED
+}
+
+enum CandidateTensionStatus {
+  DETECTED
+  CONFIRMED
+  DISMISSED
+  MERGED
+  FALSE_POSITIVE
+}
+
+enum CandidateTensionSourceKind {
+  GOAL
+  METRIC
+  PROJECT
+  ACTION
+  ROLE
+  BUSINESS_LOOP
+  AI_EXECUTION_AUDIT
+  MEMORY
+  MEETING
+  EXTERNAL_SIGNAL
+}
+
+enum CandidateTensionAuditEventType {
+  DETECTED
+  CONFIRMED
+  DISMISSED
+  MERGED
+  MARKED_FALSE_POSITIVE
+}
+
+enum GoalCycleStatus {
+  PLANNED
+  ACTIVE
+  CLOSED
+  CANCELLED
+}
+
+enum GoalProposalKind {
+  CREATE
+  REPLACE
+  CLOSE
+}
+
+enum GoalProposalStatus {
+  DRAFT
+  SUBMITTED
+  ADOPTED
+  RETURNED
+  DECLINED
+  WITHDRAWN
+}
+
+enum GoalCloseResult {
+  ACHIEVED
+  NOT_ACHIEVED
+}
+
+enum GoalDecisionOutcome {
+  ADOPTED
+  RETURNED
+  DECLINED
+}
+
+enum GoalStatus {
+  ACTIVE
+  SUPERSEDED
+  ACHIEVED
+  NOT_ACHIEVED
+}
+
+enum GoalTargetKind {
+  NUMERIC
+  MILESTONE
+}
+
+enum GoalCheckInAssessment {
+  ON_TRACK
+  AT_RISK
+  OFF_TRACK
+  ACHIEVED
+}
+
+enum GoalWorkLinkKind {
+  PROJECT
+  ACTION
+  BLOCKING_TENSION
+}
+
+enum GoalWorkLinkStatus {
+  ACTIVE
+  REMOVED
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 基础模型
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+// 用户账号（认证身份，独立于组织内的人员档案）
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String?
+  passwordHash  String? // bcrypt，魔法链接登录时可为 null
+  image         String?
+  emailVerified DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // 一个 User 可属于多个组织（多租户预留）
+  memberships            Membership[]
+  sessions               Session[]
+  accounts               Account[]
+  verificationTokens     VerificationToken[]
+  person                 Person? // 反向：User 对应的人员档案
+  consumedInvitations    OrganizationInvitation[] @relation("InvitationConsumer")
+  brainCommandOperations BrainCommandOperation[]  @relation("BrainCommandOperationOwnerUser")
+
+  @@map("users")
+}
+
+model Organization {
+  id                        String                      @id @default(cuid())
+  name                      String // 组织名称
+  slug                      String                      @unique // URL 友好的标识
+  purpose                   String?
+  lifecycleStatus           OrganizationLifecycleStatus @default(SETUP)
+  setupStartedAt            DateTime                    @default(now())
+  activatedAt               DateTime?
+  activatedById             String?
+  activatedByOrganizationId String?
+  createdAt                 DateTime                    @default(now())
+  updatedAt                 DateTime                    @updatedAt
+
+  members                      Membership[]
+  circles                      Circle[]
+  people                       Person[]
+  roles                        RoleDef[]
+  roleAssignmentApplications   RoleAssignmentApplication[]
+  roleAssignmentHistory        RoleAssignmentHistory[]
+  aiRoleCoAssignmentPolicies   AiRoleCoAssignmentPolicy[]
+  aiExecutionAuditEvents       AiExecutionAuditEvent[]
+  tensions                     Tension[]
+  interfaces                   CircleInterface[]
+  businessLoops                BusinessLoop[]
+  businessLoopVersions         BusinessLoopVersion[]
+  businessLoopActivities       BusinessLoopActivity[]
+  businessLoopEdges            BusinessLoopEdge[]
+  businessLoopEvidenceRefs     BusinessLoopEvidenceRef[]
+  metrics                      Metric[]
+  decisions                    DecisionRecord[]
+  changes                      ChangeLog[]
+  meetings                     Meeting[]
+  meetingFacilitationSessions  MeetingFacilitationSession[]
+  meetingFacilitationEvents    MeetingFacilitationEvent[]
+  meetingAgendaItems           MeetingAgendaItem[]
+  meetingRoleRepresentations   MeetingRoleRepresentation[]
+  roleChecklistItems           RoleChecklistItem[]
+  governanceObjectionReviews   GovernanceObjectionReview[]
+  governanceObjectionStances   GovernanceObjectionStance[]
+  notifications                Notification[]
+  governanceLogs               GovernanceLog[] // ★Sprint3: 月度治理日志
+  charters                     Charter[] // ★Sprint3: 组织宪章版本
+  projects                     Project[] // ★V4: 项目
+  proposals                    GovernanceProposal[] // ★V4: 治理提案
+  validationRuns               InterfaceValidationRun[]
+  interfaceWorkbenches         InterfaceWorkbench[]
+  interfaceWorkbenchVersions   InterfaceWorkbenchVersion[]
+  interfaceWorkflowRuns        InterfaceWorkflowRun[]
+  interfaceWorkflowBindings    InterfaceWorkflowRunRoleBinding[]
+  interfaceWorkflowEvents      InterfaceWorkflowRunEvent[]
+  interfaceWorkflowCommands    InterfaceWorkflowCommand[]
+  interfaceWorkflowArtifacts   InterfaceWorkflowArtifact[]
+  tacticalOutcomeProposals     TacticalOutcomeProposal[]
+  governanceDecisionProcesses  GovernanceDecisionProcess[]
+  governanceProposalRevisions  GovernanceProposalRevision[]
+  governanceDecisionOperations GovernanceDecisionOperation[]
+  invitations                  OrganizationInvitation[]
+  invitationDeliveryJobs       OrganizationInvitationDeliveryJob[]
+  brainProfile                 OrganizationBrainProfile?
+  governanceConfigVersions     OrganizationGovernanceConfigVersion[]
+  brainConversations           BrainConversation[]
+  brainMessages                BrainMessage[]
+  brainQueryAudits             BrainQueryAudit[]
+  brainCommandOperations       BrainCommandOperation[]
+  brainArtifacts               BrainArtifact[]
+  brainArtifactAuditEvents     BrainArtifactAuditEvent[]
+  memoryCandidates             MemoryCandidate[]
+  memoryCandidateAuditEvents   MemoryCandidateAuditEvent[]
+  candidateTensions            CandidateTension[]
+  candidateTensionAuditEvents  CandidateTensionAuditEvent[]
+  goalCycles                   GoalCycle[]
+  goalProposals                GoalProposal[]
+  goalProposalRevisions        GoalProposalRevision[]
+  goalProposalTargets          GoalProposalTarget[]
+  goalDecisions                GoalDecision[]
+  goals                        Goal[]
+  goalTargets                  GoalTarget[]
+  goalCheckIns                 GoalCheckIn[]
+  goalWorkLinks                GoalWorkLink[]
+  setupEvents                  OrganizationSetupEvent[]
+  activationSnapshot           OrganizationActivationSnapshot?
+  activatedBy                  Person?                               @relation("OrganizationActivatedBy", fields: [activatedById, activatedByOrganizationId], references: [id, organizationId], onDelete: Restrict)
+  businessLoopNodes            BusinessLoopNode[]
+  businessLoopIterations       BusinessLoopIteration[]
+  businessLoopMemories         BusinessLoopMemory[]
+  meetingMessages              MeetingMessage[]
+  meetingParticipants          MeetingParticipant[]
+
+  @@map("organizations")
+}
+
+model OrganizationSetupEvent {
+  id             String                     @id @default(cuid())
+  organizationId String
+  type           OrganizationSetupEventType
+  actorPersonId  String?
+  payload        Json
+  occurredAt     DateTime                   @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  actor        Person?      @relation("OrganizationSetupEventActor", fields: [actorPersonId, organizationId], references: [id, organizationId], onDelete: Restrict)
+
+  @@unique([id, organizationId])
+  @@index([organizationId, occurredAt, id])
+  @@map("organization_setup_events")
+}
+
+model OrganizationActivationSnapshot {
+  id                   String   @id @default(cuid())
+  organizationId       String   @unique
+  actorPersonId        String
+  schemaVersion        Int      @default(1)
+  readiness            Json
+  organizationSnapshot Json
+  checksum             String
+  activatedAt          DateTime
+  createdAt            DateTime @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  actor        Person       @relation("OrganizationActivationSnapshotActor", fields: [actorPersonId, organizationId], references: [id, organizationId], onDelete: Restrict)
+
+  @@unique([id, organizationId])
+  @@index([organizationId, activatedAt])
+  @@map("organization_activation_snapshots")
+}
+
+model Membership {
+  id             String   @id @default(cuid())
+  userId         String
+  organizationId String
+  role           Role     @default(ORG_MEMBER)
+  createdAt      DateTime @default(now())
+
+  user                   User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization           Organization            @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  brainCommandOperations BrainCommandOperation[] @relation("BrainCommandOperationOwnerMembership")
+
+  @@unique([userId, organizationId])
+  @@map("memberships")
+}
+
+model OrganizationInvitation {
+  id                      String                 @id @default(cuid())
+  organizationId          String
+  email                   String
+  tokenHash               String                 @unique
+  role                    Role                   @default(ORG_MEMBER)
+  homeCircleId            String?
+  createdById             String
+  expiresAt               DateTime
+  revokedAt               DateTime?
+  consumedAt              DateTime?
+  consumedById            String?
+  deliveryTokenCiphertext String?                @db.Text
+  deliveryMode            InvitationDeliveryMode @default(HELD)
+  releasedAt              DateTime?
+  deliveryCompletedAt     DateTime?
+  createdAt               DateTime               @default(now())
+  updatedAt               DateTime               @updatedAt
+
+  organization Organization                       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  homeCircle   Circle?                            @relation("InvitationHomeCircle", fields: [homeCircleId, organizationId], references: [id, organizationId])
+  createdBy    Person                             @relation("InvitationCreator", fields: [createdById, organizationId], references: [id, organizationId])
+  consumedBy   User?                              @relation("InvitationConsumer", fields: [consumedById], references: [id])
+  deliveryJob  OrganizationInvitationDeliveryJob?
+
+  @@unique([id, organizationId])
+  @@index([organizationId, email, consumedAt, revokedAt])
+  @@index([expiresAt])
+  @@map("organization_invitations")
+}
+
+model OrganizationInvitationDeliveryJob {
+  id             String                                  @id @default(cuid())
+  organizationId String
+  invitationId   String                                  @unique
+  status         OrganizationInvitationDeliveryJobStatus @default(PENDING)
+  attemptCount   Int                                     @default(0)
+  maxAttempts    Int                                     @default(3)
+  availableAt    DateTime                                @default(now())
+  leaseToken     String?
+  leaseExpiresAt DateTime?
+  lastErrorCode  String?
+  sentAt         DateTime?
+  createdAt      DateTime                                @default(now())
+  updatedAt      DateTime                                @updatedAt
+
+  organization Organization           @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  invitation   OrganizationInvitation @relation(fields: [invitationId, organizationId], references: [id, organizationId], onDelete: Cascade)
+
+  @@unique([invitationId, organizationId])
+  @@index([organizationId, status, availableAt])
+  @@index([status, leaseExpiresAt])
+  @@map("organization_invitation_delivery_jobs")
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 表 1【回路 Circle】
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+model Circle {
+  id              String       @id @default(cuid())
+  organizationId  String
+  name            String // 回路名称，如"预训练回路"
+  number          CircleNumber // 回路编号
+  type            CircleType // 回路类型
+  purpose         String // ★回路目的(Purpose)：一句话
+  domain          String? // ★回路域(Domain)：排他控制的领域
+  status          CircleStatus @default(NORMAL)
+  phase           CirclePhase  @default(PHASE_0)
+  groupChatId     String? // 飞书群 chat_id（未来可选）
+  tacticalCadence String? // 战术会节奏描述
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  // 自关联：父回路（支持子回路嵌套）
+  parentId String?
+  parent   Circle?  @relation("CircleHierarchy", fields: [parentId, organizationId], references: [id, organizationId], onDelete: NoAction)
+  children Circle[] @relation("CircleHierarchy")
+
+  // 关联
+  leadPersonId             String? // 回路负责人（link→人员）
+  leadPerson               Person?                   @relation("CircleLead", fields: [leadPersonId], references: [id])
+  people                   Person[]                  @relation("PersonHomeCircle")
+  roles                    RoleDef[]                 @relation("RoleInCircle")
+  tensions                 Tension[]                 @relation("TensionCircle")
+  tensionsAsCircle         Tension[]                 @relation("TensionCircleSingle")
+  metricDefs               Metric[]                  @relation("MetricCircle")
+  interfacesFrom           CircleInterface[]         @relation("InterfaceFrom")
+  interfacesTo             CircleInterface[]         @relation("InterfaceTo")
+  businessLoopActivities   BusinessLoopActivity[]
+  businessLoopEdgesFrom    BusinessLoopEdge[]        @relation("BusinessLoopEdgeFromCircle")
+  businessLoopEdgesTo      BusinessLoopEdge[]        @relation("BusinessLoopEdgeToCircle")
+  meetings                 Meeting[]                 @relation("MeetingCircle")
+  projects                 Project[]                 @relation("ProjectCircle") // ★V4
+  tacticalOutcomeProposals TacticalOutcomeProposal[]
+  goalProposals            GoalProposal[]
+  goals                    Goal[]
+  organization             Organization              @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  invitationDefaults       OrganizationInvitation[]  @relation("InvitationHomeCircle")
+
+  @@unique([id, organizationId])
+  @@index([organizationId])
+  @@map("circles")
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 表 2【角色 RoleDef】（★补 Holacracy 三要素）
+// 注意：命名为 RoleDef 避免与 NextAuth 的 Role 枚举冲突
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+model RoleDef {
+  id               String            @id @default(cuid())
+  organizationId   String
+  name             String // 角色名称
+  purpose          String // ★ Holacracy 要素：角色目的
+  domain           String? // ★ Holacracy 要素：角色域
+  accountabilities String // ★ Holacracy 要素：角色职责（多条用换行分隔）
+  ownershipType    RoleOwnershipType @default(HOME)
+  category         RoleCategory
+  status           RoleStatus        @default(ACTIVE)
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+
+  // 所属回路
+  circleId String
+  circle   Circle @relation("RoleInCircle", fields: [circleId], references: [id], onDelete: Cascade)
+
+  // 承担人（可多值）
+  assignees              Person[]                    @relation("PersonRoles")
+  assignmentApplications RoleAssignmentApplication[]
+  assignmentHistory      RoleAssignmentHistory[]
+  aiCoAssignmentPolicies AiRoleCoAssignmentPolicy[]
+  aiExecutionAuditEvents AiExecutionAuditEvent[]
+  candidateTensionsOwned CandidateTension[]          @relation("CandidateTensionOwnerRole")
+
+  // 跨回路支援角色必须有契约（防双线守护）
+  contractId String?
+  contract   CircleInterface? @relation(fields: [contractId], references: [id])
+
+  // ★ 反向：以本角色承担的行动项
+  actions Tension[] @relation("TensionRole")
+
+  interfaceWorkflowBindings InterfaceWorkflowRunRoleBinding[]
+  businessLoopActivities    BusinessLoopActivity[]
+  governanceDecisionOutcome GovernanceDecisionProcess?        @relation("GovernanceDecisionOutcomeRole")
+  proposedGoalRevisions     GoalProposalRevision[]            @relation("GoalProposalRevisionOwnerRole")
+  ownedGoals                Goal[]                            @relation("GoalOwnerRole")
+  businessLoopNodes         BusinessLoopNode[]
+  checklistItems            RoleChecklistItem[]
+  meetingRepresentations    MeetingRoleRepresentation[]
+  meetingAgendaItemsOwned   MeetingAgendaItem[]
+  governanceObjectionsOwned GovernanceObjectionReview[]
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([id, organizationId])
+  @@index([organizationId, circleId])
+  @@map("role_defs")
+}
+
+model RoleAssignmentApplication {
+  id                String                          @id @default(cuid())
+  organizationId    String
+  roleId            String
+  applicantId       String
+  status            RoleAssignmentApplicationStatus @default(PENDING)
+  motivation        String
+  capabilitySummary String
+  commitment        String
+  createdAt         DateTime                        @default(now())
+  updatedAt         DateTime                        @updatedAt
+  withdrawnAt       DateTime?
+  nominatedAt       DateTime?
+  nominatedById     String?
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  role         RoleDef      @relation(fields: [roleId, organizationId], references: [id, organizationId], onDelete: Cascade)
+  applicant    Person       @relation(fields: [applicantId, organizationId], references: [id, organizationId], onDelete: Cascade)
+  nominatedBy  Person?      @relation("RoleApplicationNominator", fields: [nominatedById, organizationId], references: [id, organizationId], onDelete: SetNull)
+
+  @@index([roleId, applicantId, status])
+  @@index([organizationId, status, createdAt])
+  @@index([roleId, status, createdAt])
+  @@map("role_assignment_applications")
+}
+
+model RoleAssignmentHistory {
+  id             String                         @id @default(cuid())
+  organizationId String
+  roleId         String
+  personId       String
+  eventType      RoleAssignmentHistoryEventType
+  effectiveAt    DateTime                       @default(now())
+  decisionId     String?
+  changeLogId    String?
+  createdAt      DateTime                       @default(now())
+
+  organization Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  role         RoleDef         @relation(fields: [roleId, organizationId], references: [id, organizationId], onDelete: Cascade)
+  person       Person          @relation(fields: [personId, organizationId], references: [id, organizationId], onDelete: Cascade)
+  decision     DecisionRecord? @relation(fields: [decisionId], references: [id])
+  changeLog    ChangeLog?      @relation(fields: [changeLogId], references: [id])
+
+  @@index([organizationId, roleId, effectiveAt])
+  @@index([organizationId, personId, effectiveAt])
+  @@map("role_assignment_history")
+}
+
+model AiRoleCoAssignmentPolicy {
+  id                       String                @id @default(cuid())
+  organizationId           String
+  roleId                   String
+  aiPersonId               String
+  accountableHumanPersonId String
+  maxRiskLevel             AiCapabilityRiskLevel @default(L1)
+  status                   AiCoAssigneeStatus    @default(PROPOSED)
+  capabilityScope          Json                  @default("{}")
+  revocationReason         String?
+  createdById              String
+  approvedAt               DateTime?
+  suspendedAt              DateTime?
+  revokedAt                DateTime?
+  createdAt                DateTime              @default(now())
+  updatedAt                DateTime              @updatedAt
+
+  organization     Organization            @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  role             RoleDef                 @relation(fields: [roleId, organizationId], references: [id, organizationId], onDelete: Cascade)
+  aiPerson         Person                  @relation("AiCoAssignmentAgent", fields: [aiPersonId, organizationId], references: [id, organizationId], onDelete: Cascade)
+  accountableHuman Person                  @relation("AiCoAssignmentAccountableHuman", fields: [accountableHumanPersonId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  createdBy        Person                  @relation("AiCoAssignmentCreator", fields: [createdById, organizationId], references: [id, organizationId], onDelete: Restrict)
+  executionAudits  AiExecutionAuditEvent[]
+
+  @@unique([id, organizationId])
+  @@unique([organizationId, roleId, aiPersonId])
+  @@index([organizationId, status, maxRiskLevel])
+  @@index([organizationId, accountableHumanPersonId])
+  @@map("ai_role_co_assignment_policies")
+}
+
+model AiExecutionAuditEvent {
+  id                       String                      @id @default(cuid())
+  organizationId           String
+  roleId                   String
+  policyId                 String
+  aiPersonId               String
+  accountableHumanPersonId String
+  requestedOperationLabel  String
+  sourceProcessType        String?
+  sourceProcessId          String?
+  status                   AiExecutionAuditEventStatus
+  readinessCode            String
+  maxRiskLevel             AiCapabilityRiskLevel
+  metadata                 Json                        @default("{}")
+  recordedById             String
+  occurredAt               DateTime                    @default(now())
+
+  organization     Organization             @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  role             RoleDef                  @relation(fields: [roleId, organizationId], references: [id, organizationId], onDelete: Cascade)
+  policy           AiRoleCoAssignmentPolicy @relation(fields: [policyId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  aiPerson         Person                   @relation("AiExecutionAuditAgent", fields: [aiPersonId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  accountableHuman Person                   @relation("AiExecutionAuditAccountableHuman", fields: [accountableHumanPersonId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  recordedBy       Person                   @relation("AiExecutionAuditRecordedBy", fields: [recordedById, organizationId], references: [id, organizationId], onDelete: Restrict)
+
+  @@unique([id, organizationId])
+  @@index([organizationId, roleId, occurredAt])
+  @@index([organizationId, policyId, occurredAt])
+  @@index([organizationId, status, occurredAt])
+  @@map("ai_execution_audit_events")
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 表 3【人员 Person】（归属唯一硬约束）
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+model Person {
+  id             String  @id @default(cuid())
+  organizationId String
+  name           String // 姓名/智能体名称
+  email          String? // 邮箱（人类用，用于关联 User）
+  user           User?   @relation(fields: [userId], references: [id])
+  userId         String? @unique // 反向在 User.person（仅人类有）
+
+  // ★ V4: 实体类型——碳基(人) vs 硅基(智能体)，治理层面完全平等
+  entityType String @default("HUMAN") // HUMAN / AGENT
+
+  // ★ V4: 智能体独有属性（人类时为 null）
+  agentModel     String? // 模型标识，如 step-3.7-flash / claude-sonnet
+  agentEndpoint  String? // API endpoint
+  agentAbilities String? // 能力边界描述（JSON 或文本）
+  agentConfig    String? // 调用配置（JSON：温度/系统提示等）
+
+  // ★回路制核心硬约束：主归属回路唯一（人 and 智能体均归属）
+  homeCircleId String
+  homeCircle   Circle @relation("PersonHomeCircle", fields: [homeCircleId], references: [id])
+
+  // 归属确认卡（人类需要签字，智能体由治理会定义边界）
+  cardStatus     CardStatus @default(UNSIGNED)
+  signedAt       DateTime?
+  cardAttachment String? // 附件 URL
+
+  // 其他
+  adminHome String? // 非基模行政归属
+  joinedAt  DateTime @default(now())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // 关联
+  leadingCircles                      Circle[]                              @relation("CircleLead") // 作为回路负责人
+  roles                               RoleDef[]                             @relation("PersonRoles") // 承担的角色
+  roleAssignmentApplications          RoleAssignmentApplication[]
+  nominatedRoleApplications           RoleAssignmentApplication[]           @relation("RoleApplicationNominator")
+  roleAssignmentHistory               RoleAssignmentHistory[]
+  aiCoAssignmentPoliciesAsAgent       AiRoleCoAssignmentPolicy[]            @relation("AiCoAssignmentAgent")
+  aiCoAssignmentPoliciesAsAccountable AiRoleCoAssignmentPolicy[]            @relation("AiCoAssignmentAccountableHuman")
+  aiCoAssignmentPoliciesCreated       AiRoleCoAssignmentPolicy[]            @relation("AiCoAssignmentCreator")
+  aiExecutionAuditsAsAgent            AiExecutionAuditEvent[]               @relation("AiExecutionAuditAgent")
+  aiExecutionAuditsAsAccountable      AiExecutionAuditEvent[]               @relation("AiExecutionAuditAccountableHuman")
+  aiExecutionAuditsRecorded           AiExecutionAuditEvent[]               @relation("AiExecutionAuditRecordedBy")
+  governanceConfigVersionsCreated     OrganizationGovernanceConfigVersion[]
+  tensionsRaised                      Tension[]                             @relation("TensionRaiser")
+  tensionsOwned                       Tension[]                             @relation("TensionOwner")
+  interfacesSupported                 CircleInterface[]                     @relation("InterfaceSupportPerson")
+  interfacesOwned                     CircleInterface[]                     @relation("InterfaceOwner") // 作为接口供给方负责人
+  decisionsMade                       DecisionRecord[]                      @relation("DecisionMaker") // 作为决策者
+  changesInitiated                    ChangeLog[]                           @relation("ChangeInitiator") // 作为变更发起人
+  meetingsParticipated                Meeting[] // 作为会议参与人
+  notifications                       Notification[]
+  projectsBorne                       Project[]                             @relation("ProjectBearer")
+  publishedInterfaceWorkbenchVersions InterfaceWorkbenchVersion[]           @relation("InterfaceWorkbenchVersionPublisher")
+  interfaceWorkflowRunsStarted        InterfaceWorkflowRun[]                @relation("InterfaceWorkflowRunStarter")
+  interfaceWorkflowRunsLastActed      InterfaceWorkflowRun[]                @relation("InterfaceWorkflowRunLastActor")
+  interfaceWorkflowBindings           InterfaceWorkflowRunRoleBinding[]     @relation("InterfaceWorkflowBindingPerson")
+  interfaceWorkflowEvents             InterfaceWorkflowRunEvent[]           @relation("InterfaceWorkflowEventActor")
+  interfaceWorkflowCommands           InterfaceWorkflowCommand[]            @relation("InterfaceWorkflowCommandActor")
+  tacticalOutcomeProposalsProposed    TacticalOutcomeProposal[]             @relation("TacticalOutcomeProposer")
+  tacticalOutcomeResultsRecorded      TacticalOutcomeProposal[]             @relation("TacticalOutcomeRecordedBy")
+  tacticalOutcomeResponsibilities     TacticalOutcomeProposal[]             @relation("TacticalOutcomeResponsiblePerson")
+  projectsCompleted                   Project[]                             @relation("ProjectCompletedBy")
+  governanceDecisionProcessesProposed GovernanceDecisionProcess[]           @relation("GovernanceDecisionProposer")
+  governanceDecisionResultsRecorded   GovernanceDecisionProcess[]           @relation("GovernanceDecisionRecorder")
+  governanceProposalRevisionsAuthored GovernanceProposalRevision[]          @relation("GovernanceProposalRevisionAuthor")
+  governanceDecisionOperations        GovernanceDecisionOperation[]         @relation("GovernanceDecisionOperationActor")
+  invitationsCreated                  OrganizationInvitation[]              @relation("InvitationCreator")
+  meetingsEnded                       Meeting[]                             @relation("MeetingEndedBy")
+  governanceLogsConfirmed             GovernanceLog[]                       @relation("GovernanceLogConfirmer")
+  brainConversationsOwned             BrainConversation[]                   @relation("BrainConversationOwner")
+  brainQueryAudits                    BrainQueryAudit[]                     @relation("BrainQueryAuditActor")
+  brainCommandOperations              BrainCommandOperation[]               @relation("BrainCommandOperationActor")
+  brainArtifactsOwned                 BrainArtifact[]                       @relation("BrainArtifactOwner")
+  brainArtifactAuditEvents            BrainArtifactAuditEvent[]             @relation("BrainArtifactAuditActor")
+  memoryCandidatesOwned               MemoryCandidate[]                     @relation("MemoryCandidateOwner")
+  candidateTensionsDetected           CandidateTension[]                    @relation("CandidateTensionDetector")
+  candidateTensionsConfirmed          CandidateTension[]                    @relation("CandidateTensionConfirmer")
+  candidateTensionAuditEvents         CandidateTensionAuditEvent[]          @relation("CandidateTensionAuditActor")
+  goalProposalsProposed               GoalProposal[]                        @relation("GoalProposalProposer")
+  goalProposalRevisionsAuthored       GoalProposalRevision[]                @relation("GoalProposalRevisionAuthor")
+  goalDecisionsRecorded               GoalDecision[]                        @relation("GoalDecisionRecorder")
+  goalCheckInsRecorded                GoalCheckIn[]                         @relation("GoalCheckInRecorder")
+  goalWorkLinksCreated                GoalWorkLink[]                        @relation("GoalWorkLinkCreator")
+  goalWorkLinksRemoved                GoalWorkLink[]                        @relation("GoalWorkLinkRemover")
+  organizationsActivated              Organization[]                        @relation("OrganizationActivatedBy")
+  organizationSetupEvents             OrganizationSetupEvent[]              @relation("OrganizationSetupEventActor")
+  organizationActivationSnapshots     OrganizationActivationSnapshot[]      @relation("OrganizationActivationSnapshotActor")
+  leadLoops                           BusinessLoop[]                        @relation("LoopLead")
+  loopNodes                           BusinessLoopNode[]                    @relation("LoopNodePerson")
+  meetingMessagesSent                 MeetingMessage[]                      @relation("MeetingMessageSender")
+  meetingParticipants                 MeetingParticipant[]                  @relation("MeetingParticipantPerson")
+  meetingFacilitationEvents           MeetingFacilitationEvent[]            @relation("MeetingFacilitationEventActor")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, userId])
+  @@unique([id, organizationId])
+  @@index([organizationId, homeCircleId])
+  @@map("people")
+}
+
+model OrganizationBrainProfile {
+  id                     String    @id @default(cuid())
+  organizationId         String    @unique
+  name                   String
+  avatarUrl              String?
+  tonePreferences        Json      @default("{}")
+  terminologyPreferences Json      @default("{}")
+  enabledCapabilities    String[]  @default([])
+  modelProvider          String    @default("system")
+  modelName              String?
+  modelBaseUrl           String?
+  modelThinkingMode      String    @default("disabled")
+  modelApiKeyCiphertext  String?
+  modelApiKeyUpdatedAt   DateTime?
+  modelConfiguredById    String?
+  createdAt              DateTime  @default(now())
+  updatedAt              DateTime  @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@map("organization_brain_profiles")
+}
+
+model OrganizationGovernanceConfigVersion {
+  id                     String   @id @default(cuid())
+  organizationId         String
+  version                Int
+  terminologyPreferences Json
+  governanceRules        Json
+  effectiveAt            DateTime @default(now())
+  createdAt              DateTime @default(now())
+  createdById            String
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  createdBy    Person       @relation(fields: [createdById, organizationId], references: [id, organizationId], onDelete: Restrict)
+
+  @@unique([organizationId, version])
+  @@index([organizationId, effectiveAt])
+  @@map("organization_governance_config_versions")
+}
+
+model BrainConversation {
+  id             String   @id @default(cuid())
+  organizationId String
+  ownerId        String
+  title          String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization      Organization            @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  owner             Person                  @relation("BrainConversationOwner", fields: [ownerId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  messages          BrainMessage[]
+  queryAudits       BrainQueryAudit[]       @relation("BrainQueryAuditConversation")
+  commandOperations BrainCommandOperation[] @relation("BrainCommandOperationConversation")
+  artifacts         BrainArtifact[]
+  ownerArtifacts    BrainArtifact[]         @relation("BrainArtifactOwnerConversation")
+
+  @@unique([id, organizationId])
+  @@unique([id, organizationId, ownerId])
+  @@index([organizationId, ownerId, updatedAt])
+  @@map("brain_conversations")
+}
+
+model BrainMessage {
+  id             String           @id @default(cuid())
+  organizationId String
+  conversationId String
+  role           BrainMessageRole
+  content        String
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  organization      Organization            @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  conversation      BrainConversation       @relation(fields: [conversationId, organizationId], references: [id, organizationId], onDelete: Cascade)
+  queryAudits       BrainQueryAudit[]       @relation("BrainQueryAuditMessage")
+  commandOperations BrainCommandOperation[] @relation("BrainCommandOperationUserMessage")
+  artifacts         BrainArtifact[]
+
+  @@unique([id, conversationId, organizationId])
+  @@index([organizationId, conversationId, createdAt])
+  @@map("brain_messages")
+}
+
+model BrainCommandOperation {
+  id                   String                      @id @default(cuid())
+  organizationId       String
+  ownerUserId          String
+  actorId              String
+  conversationId       String
+  userMessageId        String
+  commandName          String
+  commandSchemaVersion Int                         @default(1)
+  serverPayload        Json
+  payloadHash          String                      @db.Char(64)
+  sourceBindings       Json
+  sourceBindingHash    String                      @db.Char(64)
+  humanDiff            Json
+  previewExpiresAt     DateTime
+  mutationKey          String?
+  status               BrainCommandOperationStatus @default(PREVIEWED)
+  terminalCode         String?
+  terminalResult       Json?
+  createdAt            DateTime                    @default(now())
+  confirmedAt          DateTime?
+  completedAt          DateTime?
+  updatedAt            DateTime                    @updatedAt
+
+  organization    Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  ownerUser       User              @relation("BrainCommandOperationOwnerUser", fields: [ownerUserId], references: [id], onDelete: Restrict)
+  ownerMembership Membership        @relation("BrainCommandOperationOwnerMembership", fields: [ownerUserId, organizationId], references: [userId, organizationId], onDelete: Restrict)
+  actor           Person            @relation("BrainCommandOperationActor", fields: [actorId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  conversation    BrainConversation @relation("BrainCommandOperationConversation", fields: [conversationId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  userMessage     BrainMessage      @relation("BrainCommandOperationUserMessage", fields: [userMessageId, conversationId, organizationId], references: [id, conversationId, organizationId], onDelete: Restrict)
+  artifacts       BrainArtifact[]
+
+  @@unique([organizationId, mutationKey])
+  @@unique([id, organizationId])
+  @@index([ownerUserId, createdAt])
+  @@index([organizationId, status, previewExpiresAt])
+  @@index([organizationId, conversationId, userMessageId])
+  @@map("brain_command_operations")
+}
+
+model BrainArtifact {
+  id                       String              @id @default(cuid())
+  organizationId           String
+  ownerPersonId            String
+  conversationId           String?
+  sourceMessageId          String?
+  linkedCommandOperationId String?
+  supersedesArtifactId     String?
+  artifactType             String
+  schemaVersion            Int                 @default(1)
+  payload                  Json
+  sourceRefs               Json
+  status                   BrainArtifactStatus @default(DRAFT)
+  expiresAt                DateTime?
+  failureCode              String?
+  terminalResult           Json?
+  createdAt                DateTime            @default(now())
+  updatedAt                DateTime            @updatedAt
+  readyAt                  DateTime?
+  executionStartedAt       DateTime?
+  completedAt              DateTime?
+
+  organization           Organization              @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  owner                  Person                    @relation("BrainArtifactOwner", fields: [ownerPersonId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  conversation           BrainConversation?        @relation(fields: [conversationId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  ownerConversation      BrainConversation?        @relation("BrainArtifactOwnerConversation", fields: [conversationId, organizationId, ownerPersonId], references: [id, organizationId, ownerId], onDelete: Restrict)
+  sourceMessage          BrainMessage?             @relation(fields: [sourceMessageId, conversationId, organizationId], references: [id, conversationId, organizationId], onDelete: Restrict)
+  linkedCommandOperation BrainCommandOperation?    @relation(fields: [linkedCommandOperationId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  supersedesArtifact     BrainArtifact?            @relation("BrainArtifactSupersession", fields: [supersedesArtifactId, organizationId, ownerPersonId], references: [id, organizationId, ownerPersonId], onDelete: Restrict)
+  supersededArtifacts    BrainArtifact[]           @relation("BrainArtifactSupersession")
+  auditEvents            BrainArtifactAuditEvent[]
+
+  @@unique([id, organizationId])
+  @@unique([id, organizationId, ownerPersonId])
+  @@index([organizationId, ownerPersonId, status, updatedAt])
+  @@index([organizationId, conversationId, createdAt])
+  @@index([organizationId, linkedCommandOperationId])
+  @@map("brain_artifacts")
+}
+
+model BrainArtifactAuditEvent {
+  id             String                      @id @default(cuid())
+  organizationId String
+  artifactId     String
+  type           BrainArtifactAuditEventType
+  actor          Json
+  actorPersonId  String
+  reason         String?
+  occurredAt     DateTime                    @default(now())
+
+  organization Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  actorPerson  Person        @relation("BrainArtifactAuditActor", fields: [actorPersonId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  artifact     BrainArtifact @relation(fields: [artifactId, organizationId], references: [id, organizationId], onDelete: Cascade)
+
+  @@index([organizationId, artifactId, occurredAt])
+  @@map("brain_artifact_audit_events")
+}
+
+model BrainQueryAudit {
+  id             String                @id @default(cuid())
+  organizationId String
+  actorId        String
+  conversationId String?
+  messageId      String?
+  purpose        String
+  scope          Json
+  resultCount    Int                   @default(0)
+  status         BrainQueryAuditStatus
+  errorCode      String?
+  createdAt      DateTime              @default(now())
+
+  organization Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  actor        Person             @relation("BrainQueryAuditActor", fields: [actorId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  conversation BrainConversation? @relation("BrainQueryAuditConversation", fields: [conversationId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  message      BrainMessage?      @relation("BrainQueryAuditMessage", fields: [messageId, conversationId, organizationId], references: [id, conversationId, organizationId], onDelete: Restrict)
+
+  @@index([organizationId, actorId, createdAt])
+  @@index([organizationId, conversationId, createdAt])
+  @@map("brain_query_audits")
+}
+
+model MemoryCandidate {
+  id                  String                            @id @default(cuid())
+  organizationId      String
+  ownerPersonId       String
+  claim               String
+  rationale           String
+  sourceRefs          Json
+  authorityRouteKind  MemoryCandidateAuthorityRouteKind
+  authorityRouteLabel String
+  authorityRouteUrl   String
+  status              MemoryCandidateStatus             @default(DRAFT)
+  submittedBy         Json?
+  confirmedBy         Json?
+  supersededBy        Json?
+  validFrom           DateTime?
+  validUntil          DateTime?
+  createdAt           DateTime                          @default(now())
+  updatedAt           DateTime                          @updatedAt
+
+  organization Organization                @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  owner        Person                      @relation("MemoryCandidateOwner", fields: [ownerPersonId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  auditEvents  MemoryCandidateAuditEvent[]
+
+  @@unique([id, organizationId])
+  @@index([organizationId, ownerPersonId, status, updatedAt])
+  @@index([organizationId, authorityRouteKind, status, updatedAt])
+  @@map("memory_candidates")
+}
+
+model MemoryCandidateAuditEvent {
+  id             String                        @id @default(cuid())
+  organizationId String
+  candidateId    String
+  type           MemoryCandidateAuditEventType
+  actor          Json
+  reason         String?
+  occurredAt     DateTime                      @default(now())
+
+  organization Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  candidate    MemoryCandidate @relation(fields: [candidateId, organizationId], references: [id, organizationId], onDelete: Cascade)
+
+  @@index([organizationId, candidateId, occurredAt])
+  @@map("memory_candidate_audit_events")
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 表 4【张力 Tension】（从原混合表拆出，独立成表）
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+model Tension {
+  id                   String               @id @default(cuid())
+  organizationId       String
+  title                String
+  description          String
+  type                 TensionType // 问题性/建设性/澄清性
+  source               TensionSource
+  conflictLevel        ConflictLevel?
+  aiTranslation        String? // 教练 Agent 翻译结果（需人确认落库）
+  handlingMode         TensionHandlingMode  @default(UNROUTED)
+  aiHandlingSuggestion TensionHandlingMode?
+  translationAccepted  Boolean?             @default(false) // ★ AI翻译是否被用户采纳（准确率追踪）
+  createdAt            DateTime             @default(now())
+  updatedAt            DateTime             @updatedAt
+
+  // ── 感知层（谁提出）──────────────────────────────
+  raiserId String
+  raiser   Person @relation("TensionRaiser", fields: [raiserId], references: [id])
+
+  // 涉及回路（可多值，感知阶段）
+  circles Circle[] @relation("TensionCircle")
+
+  // ── 行动层（合并自 Blocker，分配行动后填）──────────
+  status             BlockerStatus @default(OPEN) // 统一用 10 状态机
+  acceptanceCriteria String? // 验收标准（禁止"可能/大概/争取"）
+  deadline           DateTime? // DDL（分配行动后填）
+  resolvedAt         DateTime? // RESOLVED 时填
+  rootCause          String? // 未闭环时必填
+  consecutiveMissed  Int           @default(0) // ≥2 触发治理会介入
+
+  // 负责人（分配行动后填）
+  ownerId String?
+  owner   Person? @relation("TensionOwner", fields: [ownerId], references: [id])
+
+  // 主归属回路（分配行动后填，单值）
+  circleId String?
+  circle   Circle? @relation("TensionCircleSingle", fields: [circleId], references: [id])
+
+  // 以什么角色承担（Holacracy 核心：行动归属到角色）
+  roleId        String?
+  role          RoleDef? @relation("TensionRole", fields: [roleId], references: [id])
+  actionContext String? // 行动落在角色的哪条具体职责上
+
+  // 跨回路依赖
+  interfaceDependencyId String?
+  interfaceDependency   CircleInterface? @relation("TensionInterfaceDep", fields: [interfaceDependencyId], references: [id])
+
+  // ── 流转关系 ──────────────────────────────────────
+  relatedDecisions    DecisionRecord[] @relation("DecisionFromTension")
+  resolvedByDecisions DecisionRecord[] @relation("DecisionForTension")
+
+  // ★ V4: 归属项目
+  projectId String?
+  project   Project? @relation("TensionProject", fields: [projectId], references: [id])
+
+  // ★ V4: 作为提案的来源张力
+  proposals GovernanceProposal[] @relation("ProposalSourceTension")
+
+  // ★ V4: 作为项目的来源张力（反向，不持有外键）
+  sourceProject Project? @relation("ProjectSourceTension")
+
+  tacticalOutcomeProposal       TacticalOutcomeProposal?    @relation("TacticalOutcomeSourceTension")
+  tacticalOutcomeActionProposal TacticalOutcomeProposal?    @relation("TacticalOutcomeAction")
+  meetingAgendaItems            MeetingAgendaItem[]         @relation("MeetingAgendaTension")
+  goalWorkLinks                 GoalWorkLink[]
+  governanceDecisionProcesses   GovernanceDecisionProcess[]
+
+  validationRunsAsSource       InterfaceValidationRun[] @relation("ValidationSourceTension")
+  validationRunsCreated        InterfaceValidationRun[] @relation("ValidationCreatedTension")
+  validationRunsAsSourceAction InterfaceValidationRun[] @relation("ValidationSourceAction")
+  validationRunsCreatedActions InterfaceValidationRun[] @relation("ValidationCreatedAction")
+  confirmedFromCandidate       CandidateTension?        @relation("CandidateTensionConfirmedTension")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([id, organizationId])
+  @@index([organizationId, status])
+  @@index([organizationId, ownerId])
+  @@map("tensions")
+}
+
+model CandidateTension {
+  id                 String                     @id @default(cuid())
+  organizationId     String
+  title              String
+  evidenceSummary    String
+  sourceKind         CandidateTensionSourceKind
+  sourceRef          Json
+  ownerRoleId        String
+  detectedById       String
+  status             CandidateTensionStatus     @default(DETECTED)
+  suggestedMode      TensionHandlingMode?
+  confirmedTensionId String?
+  confirmedById      String?
+  confirmedAt        DateTime?
+  terminalReason     String?
+  mergedIntoId       String?
+  detectedAt         DateTime                   @default(now())
+  updatedAt          DateTime                   @updatedAt
+
+  organization     Organization                 @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  ownerRole        RoleDef                      @relation("CandidateTensionOwnerRole", fields: [ownerRoleId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  detectedBy       Person                       @relation("CandidateTensionDetector", fields: [detectedById, organizationId], references: [id, organizationId], onDelete: Restrict)
+  confirmedBy      Person?                      @relation("CandidateTensionConfirmer", fields: [confirmedById, organizationId], references: [id, organizationId], onDelete: Restrict)
+  confirmedTension Tension?                     @relation("CandidateTensionConfirmedTension", fields: [confirmedTensionId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  mergedInto       CandidateTension?            @relation("CandidateTensionMerge", fields: [mergedIntoId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  mergedCandidates CandidateTension[]           @relation("CandidateTensionMerge")
+  auditEvents      CandidateTensionAuditEvent[]
+
+  @@unique([id, organizationId])
+  @@unique([confirmedTensionId, organizationId])
+  @@index([organizationId, status, detectedAt])
+  @@index([organizationId, ownerRoleId, status])
+  @@index([organizationId, sourceKind])
+  @@map("candidate_tensions")
+}
+
+model CandidateTensionAuditEvent {
+  id             String                         @id @default(cuid())
+  organizationId String
+  candidateId    String
+  type           CandidateTensionAuditEventType
+  actorPersonId  String
+  payload        Json                           @default("{}")
+  occurredAt     DateTime                       @default(now())
+
+  organization Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  candidate    CandidateTension @relation(fields: [candidateId, organizationId], references: [id, organizationId], onDelete: Cascade)
+  actor        Person           @relation("CandidateTensionAuditActor", fields: [actorPersonId, organizationId], references: [id, organizationId], onDelete: Restrict)
+
+  @@index([organizationId, candidateId, occurredAt])
+  @@map("candidate_tension_audit_events")
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 表 6【回路间接口 CircleInterface】
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+model CircleInterface {
+  id                   String          @id @default(cuid())
+  organizationId       String
+  name                 String // 接口名称
+  contractContent      String // 契约内容
+  sla                  String // ★SLA（冲突升级判断依赖）
+  acceptanceCriteria   String
+  status               InterfaceStatus @default(READY)
+  dispatchRight        DispatchRight   @default(HOME_LEAD) // 派活权归属
+  supportScope         String? // 支援工作范围
+  nextDeliveryAt       DateTime?
+  recentDelayRootCause String?
+  startDate            DateTime?
+  endDate              DateTime?
+  createdAt            DateTime        @default(now())
+  updatedAt            DateTime        @updatedAt
+
+  // 供给回路与消费回路
+  fromCircleId String
+  fromCircle   Circle @relation("InterfaceFrom", fields: [fromCircleId], references: [id])
+  toCircleId   String
+  toCircle     Circle @relation("InterfaceTo", fields: [toCircleId], references: [id])
+
+  // 负责人（供给方）
+  ownerId String
+  owner   Person @relation("InterfaceOwner", fields: [ownerId], references: [id])
+
+  // 支援人员
+  supportPeople Person[] @relation("InterfaceSupportPerson")
+
+  // 反向：被哪些阻塞点依赖
+  dependentTensions Tension[] @relation("TensionInterfaceDep")
+
+  // 关联的跨回路支援角色
+  supportRoles RoleDef[]
+
+  // Data -> Pretraining 等接口验证/烟测记录
+  validationRuns    InterfaceValidationRun[]
+  workbenches       InterfaceWorkbench[]
+  businessLoopEdges BusinessLoopEdge[]
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([id, organizationId])
+  @@index([organizationId, status])
+  @@map("circle_interfaces")
+}
+
+model BusinessLoop {
+  id             String             @id @default(cuid())
+  organizationId String
+  name           String
+  purpose        String?
+  status         BusinessLoopStatus @default(DRAFT)
+
+  // ── 回路层级 ──
+  parentId String?
+  parent   BusinessLoop?  @relation("LoopHierarchy", fields: [parentId, organizationId], references: [id, organizationId], onDelete: NoAction)
+  children BusinessLoop[] @relation("LoopHierarchy")
+
+  // ── 锚定价值与指标 ──
+  coreMetrics        Json    @default("[]") // [{name, target, current, unit, trend}]
+  cadence            String? // WEEKLY | BIWEEKLY | MONTHLY | CONTINUOUS
+  cadenceDetail      String? // 运转节奏描述
+  inputs             Json    @default("[]") // [{label, source, format, volume}]
+  outputs            Json    @default("[]") // [{label, consumer, format, cadence}]
+  acceptanceCriteria Json    @default("[]") // [{condition, measure, threshold}]
+
+  // ── 负责人 ──
+  leadPersonId  String?
+  leadPerson    Person? @relation("LoopLead", fields: [leadPersonId, organizationId], references: [id, organizationId], onDelete: SetNull)
+  leadRoleLabel String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  organization Organization              @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  versions     BusinessLoopVersion[]
+  activities   BusinessLoopActivity[]
+  edges        BusinessLoopEdge[]
+  evidenceRefs BusinessLoopEvidenceRef[]
+  nodes        BusinessLoopNode[]
+  iterations   BusinessLoopIteration[]
+  memories     BusinessLoopMemory[]
+
+  @@unique([id, organizationId])
+  @@index([organizationId, status, updatedAt])
+  @@index([organizationId, parentId])
+  @@map("business_loops")
+}
+
+model BusinessLoopVersion {
+  id             String                    @id @default(cuid())
+  organizationId String
+  businessLoopId String
+  version        Int
+  status         BusinessLoopVersionStatus @default(DRAFT)
+  summary        String?
+  publishedAt    DateTime?
+  createdAt      DateTime                  @default(now())
+
+  organization Organization              @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  businessLoop BusinessLoop              @relation(fields: [businessLoopId, organizationId], references: [id, organizationId], onDelete: Cascade)
+  activities   BusinessLoopActivity[]
+  edges        BusinessLoopEdge[]
+  evidenceRefs BusinessLoopEvidenceRef[]
+
+  @@unique([id, organizationId])
+  @@unique([businessLoopId, organizationId, version])
+  @@index([organizationId, businessLoopId, status])
+  @@map("business_loop_versions")
+}
+
+model BusinessLoopActivity {
+  id             String                   @id @default(cuid())
+  organizationId String
+  businessLoopId String
+  versionId      String?
+  circleId       String?
+  ownerRoleId    String?
+  name           String
+  activityType   BusinessLoopActivityType @default(WORK)
+  description    String?
+  position       Int                      @default(0)
+  createdAt      DateTime                 @default(now())
+  updatedAt      DateTime                 @updatedAt
+
+  organization Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  businessLoop BusinessLoop         @relation(fields: [businessLoopId, organizationId], references: [id, organizationId], onDelete: Cascade)
+  version      BusinessLoopVersion? @relation(fields: [versionId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  circle       Circle?              @relation(fields: [circleId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  ownerRole    RoleDef?             @relation(fields: [ownerRoleId, organizationId], references: [id, organizationId], onDelete: Restrict)
+
+  @@unique([id, organizationId])
+  @@index([organizationId, businessLoopId, position])
+  @@index([organizationId, circleId])
+  @@index([organizationId, ownerRoleId])
+  @@map("business_loop_activities")
+}
+
+model BusinessLoopEdge {
+  id             String               @id @default(cuid())
+  organizationId String
+  businessLoopId String
+  versionId      String?
+  fromCircleId   String?
+  toCircleId     String?
+  interfaceId    String?
+  fromNodeId     String?
+  toNodeId       String?
+  edgeType       BusinessLoopEdgeType
+  label          String
+  description    String?
+  cadence        String?
+  volume         String?
+  sla            String?
+  position       Int                  @default(0)
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt
+
+  organization Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  businessLoop BusinessLoop         @relation(fields: [businessLoopId, organizationId], references: [id, organizationId], onDelete: Cascade)
+  version      BusinessLoopVersion? @relation(fields: [versionId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  fromCircle   Circle?              @relation("BusinessLoopEdgeFromCircle", fields: [fromCircleId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  toCircle     Circle?              @relation("BusinessLoopEdgeToCircle", fields: [toCircleId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  interface    CircleInterface?     @relation(fields: [interfaceId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  fromNode     BusinessLoopNode?    @relation("EdgeFromNode", fields: [fromNodeId, organizationId], references: [id, organizationId], onDelete: SetNull)
+  toNode       BusinessLoopNode?    @relation("EdgeToNode", fields: [toNodeId, organizationId], references: [id, organizationId], onDelete: SetNull)
+
+  @@unique([id, organizationId])
+  @@index([organizationId, businessLoopId, position])
+  @@index([organizationId, edgeType])
+  @@index([organizationId, interfaceId])
+  @@map("business_loop_edges")
+}
+
+model BusinessLoopEvidenceRef {
+  id             String                   @id @default(cuid())
+  organizationId String
+  businessLoopId String
+  versionId      String?
+  kind           BusinessLoopEvidenceKind
+  targetId       String
+  label          String?
+  sourceUrl      String?
+  createdAt      DateTime                 @default(now())
+
+  organization Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  businessLoop BusinessLoop         @relation(fields: [businessLoopId, organizationId], references: [id, organizationId], onDelete: Cascade)
+  version      BusinessLoopVersion? @relation(fields: [versionId, organizationId], references: [id, organizationId], onDelete: Restrict)
+
+  @@index([organizationId, businessLoopId, kind])
+  @@index([organizationId, kind, targetId])
+  @@map("business_loop_evidence_refs")
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 业务回路节点（人机协同角色）
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+model BusinessLoopNode {
+  id             String       @id @default(cuid())
+  organizationId String
+  loopId         String
+  loop           BusinessLoop @relation(fields: [loopId, organizationId], references: [id, organizationId], onDelete: Cascade)
+
+  name     String // 节点名称
+  nodeType String @default("HUMAN_ROLE") // HUMAN_ROLE | AI_AGENT
+
+  // 关联组织角色/人员（可选）
+  roleId   String?
+  role     RoleDef? @relation(fields: [roleId, organizationId], references: [id, organizationId], onDelete: SetNull)
+  personId String?
+  person   Person?  @relation("LoopNodePerson", fields: [personId, organizationId], references: [id, organizationId], onDelete: SetNull)
+
+  // AI 智能体专属
+  agentModel        String?
+  agentPrompt       String?
+  agentCapabilities String?
+
+  // 职责交付
+  responsibility String @default("")
+  deliverables   Json   @default("[]")
+
+  position  Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  organization  Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  outgoingEdges BusinessLoopEdge[] @relation("EdgeFromNode")
+  incomingEdges BusinessLoopEdge[] @relation("EdgeToNode")
+
+  @@unique([id, organizationId])
+  @@index([organizationId, loopId, position])
+  @@map("business_loop_nodes")
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 业务回路迭代记录
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+model BusinessLoopIteration {
+  id             String       @id @default(cuid())
+  organizationId String
+  loopId         String
+  loop           BusinessLoop @relation(fields: [loopId, organizationId], references: [id, organizationId], onDelete: Cascade)
+
+  iterationNumber Int
+  whatChanged     String  @default("")
+  whyChanged      String  @default("")
+  expectedOutcome String  @default("")
+  actualOutcome   String?
+  metricsDelta    Json?
+  lessonsLearned  String?
+  aiSummary       String?
+
+  startedAt   DateTime  @default(now())
+  completedAt DateTime?
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([id, organizationId])
+  @@index([organizationId, loopId, iterationNumber])
+  @@map("business_loop_iterations")
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 业务回路组织记忆
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+model BusinessLoopMemory {
+  id             String       @id @default(cuid())
+  organizationId String
+  loopId         String
+  loop           BusinessLoop @relation(fields: [loopId, organizationId], references: [id, organizationId], onDelete: Cascade)
+
+  entryType String @default("INSIGHT") // INSIGHT | DECISION | PATTERN | WARNING | RULE
+  title     String
+  content   String @default("")
+
+  sourceIterationId String?
+  sourceTensionId   String?
+  sourceMeetingId   String?
+
+  aiGenerated   Boolean @default(false)
+  aiConfidence  Float?
+  humanReviewed Boolean @default(false)
+
+  tags String[] @default([])
+
+  createdAt DateTime @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, loopId, entryType])
+  @@index([organizationId, tags])
+  @@map("business_loop_memories")
+}
+
+model InterfaceWorkbench {
+  id              String   @id @default(cuid())
+  organizationId  String
+  interfaceId     String
+  draft           Json
+  draftLayout     Json     @default("{}")
+  draftHash       String
+  draftRevision   Int      @default(0)
+  activeVersionId String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  organization  Organization                @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  interface     CircleInterface             @relation(fields: [interfaceId, organizationId], references: [id, organizationId], onDelete: Cascade)
+  versions      InterfaceWorkbenchVersion[] @relation("InterfaceWorkbenchVersions")
+  activeVersion InterfaceWorkbenchVersion?  @relation("InterfaceWorkbenchActiveVersion", fields: [activeVersionId, id, organizationId], references: [id, workbenchId, organizationId], onDelete: Restrict)
+  workflowRuns  InterfaceWorkflowRun[]      @relation("InterfaceWorkflowRuns")
+
+  @@unique([interfaceId])
+  @@unique([id, organizationId])
+  @@unique([activeVersionId, id, organizationId])
+  @@index([organizationId])
+  @@index([activeVersionId])
+  @@map("interface_workbenches")
+}
+
+model InterfaceWorkbenchVersion {
+  id                      String   @id @default(cuid())
+  organizationId          String
+  workbenchId             String
+  version                 Int
+  parentVersionId         String?
+  publisherId             String
+  sourceSnapshot          Json
+  compiledSnapshot        Json
+  editorLayout            Json
+  validationResult        Json
+  sourceHash              String
+  compiledHash            String
+  definitionSchemaVersion Int
+  compilerVersion         String
+  publishedAt             DateTime @default(now())
+
+  organization Organization                @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  workbench    InterfaceWorkbench          @relation("InterfaceWorkbenchVersions", fields: [workbenchId, organizationId], references: [id, organizationId], onDelete: Cascade)
+  activeFor    InterfaceWorkbench?         @relation("InterfaceWorkbenchActiveVersion")
+  publisher    Person                      @relation("InterfaceWorkbenchVersionPublisher", fields: [publisherId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  parent       InterfaceWorkbenchVersion?  @relation("InterfaceWorkbenchVersionLineage", fields: [parentVersionId, workbenchId, organizationId], references: [id, workbenchId, organizationId], onDelete: Restrict)
+  children     InterfaceWorkbenchVersion[] @relation("InterfaceWorkbenchVersionLineage")
+  workflowRuns InterfaceWorkflowRun[]      @relation("InterfaceWorkflowRunVersion")
+
+  @@unique([workbenchId, version])
+  @@unique([workbenchId, sourceHash])
+  @@unique([id, workbenchId, organizationId])
+  @@index([organizationId, workbenchId])
+  @@index([publisherId, organizationId])
+  @@index([parentVersionId])
+  @@map("interface_workbench_versions")
+}
+
+model InterfaceWorkflowRun {
+  id                   String                     @id @default(cuid())
+  organizationId       String
+  workbenchId          String
+  versionId            String
+  status               InterfaceWorkflowRunStatus @default(ACTIVE)
+  currentNodeId        String
+  currentNodeVisit     Int                        @default(0)
+  evidence             Json                       @default("{}")
+  revision             Int                        @default(0)
+  starterId            String
+  lastActorId          String?
+  waitingRoleBindingId String?
+  createdAt            DateTime                   @default(now())
+  updatedAt            DateTime                   @updatedAt
+
+  organization                Organization                      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  workbench                   InterfaceWorkbench                @relation("InterfaceWorkflowRuns", fields: [workbenchId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  version                     InterfaceWorkbenchVersion         @relation("InterfaceWorkflowRunVersion", fields: [versionId, workbenchId, organizationId], references: [id, workbenchId, organizationId], onDelete: Restrict)
+  starter                     Person                            @relation("InterfaceWorkflowRunStarter", fields: [starterId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  lastActor                   Person?                           @relation("InterfaceWorkflowRunLastActor", fields: [lastActorId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  waitingRoleBinding          InterfaceWorkflowRunRoleBinding?  @relation("InterfaceWorkflowRunWaitingBinding", fields: [waitingRoleBindingId, id, organizationId], references: [id, runId, organizationId], onDelete: NoAction)
+  roleBindings                InterfaceWorkflowRunRoleBinding[] @relation("InterfaceWorkflowRunRoleBindings")
+  events                      InterfaceWorkflowRunEvent[]
+  commands                    InterfaceWorkflowCommand[]
+  artifacts                   InterfaceWorkflowArtifact[]
+  tacticalOutcomeProposals    TacticalOutcomeProposal[]
+  governanceDecisionProcesses GovernanceDecisionProcess[]
+
+  @@unique([id, organizationId])
+  @@unique([waitingRoleBindingId, id, organizationId])
+  @@index([organizationId, status])
+  @@index([workbenchId, versionId])
+  @@index([starterId, organizationId])
+  @@index([lastActorId, organizationId])
+  @@map("interface_workflow_runs")
+}
+
+model InterfaceWorkflowRunRoleBinding {
+  id             String   @id @default(cuid())
+  organizationId String
+  runId          String
+  roleId         String
+  personId       String?
+  roleDefId      String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization  Organization          @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  run           InterfaceWorkflowRun  @relation("InterfaceWorkflowRunRoleBindings", fields: [runId, organizationId], references: [id, organizationId], onDelete: Cascade)
+  person        Person?               @relation("InterfaceWorkflowBindingPerson", fields: [personId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  roleDef       RoleDef?              @relation(fields: [roleDefId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  waitingForRun InterfaceWorkflowRun? @relation("InterfaceWorkflowRunWaitingBinding")
+
+  @@unique([runId, roleId])
+  @@unique([id, runId, organizationId])
+  @@index([organizationId, personId])
+  @@index([organizationId, roleDefId])
+  @@map("interface_workflow_run_role_bindings")
+}
+
+model InterfaceWorkflowRunEvent {
+  id             String   @id @default(cuid())
+  organizationId String
+  runId          String
+  sequence       Int
+  type           String
+  nodeId         String
+  nodeVisit      Int
+  actorId        String?
+  payload        Json
+  createdAt      DateTime @default(now())
+
+  organization Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  run          InterfaceWorkflowRun @relation(fields: [runId, organizationId], references: [id, organizationId], onDelete: Cascade)
+  actor        Person?              @relation("InterfaceWorkflowEventActor", fields: [actorId, organizationId], references: [id, organizationId], onDelete: Restrict)
+
+  @@unique([runId, sequence])
+  @@index([organizationId, runId])
+  @@index([actorId, organizationId])
+  @@map("interface_workflow_run_events")
+}
+
+model InterfaceWorkflowCommand {
+  id                   String                         @id @default(cuid())
+  organizationId       String
+  runId                String
+  nodeId               String
+  nodeVisit            Int
+  kind                 String
+  clientIdempotencyKey String
+  actorId              String
+  payload              Json                           @default("{}")
+  attempts             Int                            @default(0)
+  status               InterfaceWorkflowCommandStatus @default(PENDING)
+  error                String?
+  createdAt            DateTime                       @default(now())
+  updatedAt            DateTime                       @updatedAt
+
+  organization Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  run          InterfaceWorkflowRun @relation(fields: [runId, organizationId], references: [id, organizationId], onDelete: Cascade)
+  actor        Person               @relation("InterfaceWorkflowCommandActor", fields: [actorId, organizationId], references: [id, organizationId], onDelete: Restrict)
+
+  @@unique([runId, clientIdempotencyKey])
+  @@unique([runId, nodeId, nodeVisit, kind])
+  @@index([organizationId, status])
+  @@index([actorId, organizationId])
+  @@map("interface_workflow_commands")
+}
+
+model InterfaceWorkflowArtifact {
+  id             String                        @id @default(cuid())
+  organizationId String
+  runId          String
+  artifactType   InterfaceWorkflowArtifactType
+  artifactId     String
+  relation       String
+  metadata       Json                          @default("{}")
+  createdAt      DateTime                      @default(now())
+
+  organization                             Organization                @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  run                                      InterfaceWorkflowRun        @relation(fields: [runId, organizationId], references: [id, organizationId], onDelete: Cascade)
+  tacticalOutcomeSourceProposals           TacticalOutcomeProposal[]   @relation("TacticalOutcomeSourceArtifact")
+  tacticalOutcomeRouteProposals            TacticalOutcomeProposal[]   @relation("TacticalOutcomeRouteArtifact")
+  governanceDecisionSourceTensionProcesses GovernanceDecisionProcess[] @relation("GovernanceDecisionSourceTensionArtifact")
+  governanceDecisionProposalProcesses      GovernanceDecisionProcess[] @relation("GovernanceDecisionProposalArtifact")
+  governanceDecisionRouteProcesses         GovernanceDecisionProcess[] @relation("GovernanceDecisionRouteArtifact")
+
+  @@unique([runId, artifactType, artifactId, relation])
+  @@unique([id, organizationId, runId])
+  @@index([organizationId, artifactType, artifactId])
+  @@map("interface_workflow_artifacts")
+}
+
+model TacticalOutcomeProposal {
+  id                      String                        @id @default(cuid())
+  organizationId          String
+  tensionId               String                        @unique
+  provenanceKind          TacticalOutcomeProvenanceKind
+  runId                   String?
+  meetingId               String
+  sourceTensionArtifactId String?
+  routeArtifactId         String?
+  proposerId              String
+  kind                    TacticalOutcomeKind
+  title                   String
+  expectedResult          String?
+  acceptanceCriteria      String?
+  circleId                String
+  responsiblePersonId     String
+  deadline                DateTime?
+  status                  TacticalOutcomeProposalStatus @default(PROPOSED)
+  revision                Int                           @default(1)
+  recordedById            String?
+  meetingDecisionNote     String?
+  recordedAt              DateTime?
+  outcomeProjectId        String?                       @unique
+  outcomeActionId         String?                       @unique
+  lastMutationKey         String?
+  lastMutationResult      Json?
+  createdAt               DateTime                      @default(now())
+  updatedAt               DateTime                      @updatedAt
+
+  organization          Organization               @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  sourceTension         Tension                    @relation("TacticalOutcomeSourceTension", fields: [tensionId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  run                   InterfaceWorkflowRun?      @relation(fields: [runId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  meeting               Meeting                    @relation(fields: [meetingId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  sourceTensionArtifact InterfaceWorkflowArtifact? @relation("TacticalOutcomeSourceArtifact", fields: [sourceTensionArtifactId, organizationId, runId], references: [id, organizationId, runId], onDelete: Restrict)
+  routeArtifact         InterfaceWorkflowArtifact? @relation("TacticalOutcomeRouteArtifact", fields: [routeArtifactId, organizationId, runId], references: [id, organizationId, runId], onDelete: Restrict)
+  proposer              Person                     @relation("TacticalOutcomeProposer", fields: [proposerId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  recordedBy            Person?                    @relation("TacticalOutcomeRecordedBy", fields: [recordedById, organizationId], references: [id, organizationId], onDelete: Restrict)
+  circle                Circle                     @relation(fields: [circleId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  responsiblePerson     Person                     @relation("TacticalOutcomeResponsiblePerson", fields: [responsiblePersonId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  outcomeProject        Project?                   @relation("TacticalOutcomeProject", fields: [outcomeProjectId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  outcomeAction         Tension?                   @relation("TacticalOutcomeAction", fields: [outcomeActionId, organizationId], references: [id, organizationId], onDelete: Restrict)
+
+  @@unique([tensionId, organizationId])
+  @@unique([outcomeProjectId, organizationId])
+  @@unique([outcomeActionId, organizationId])
+  @@unique([organizationId, lastMutationKey])
+  @@index([organizationId, meetingId, status])
+  @@index([organizationId, proposerId])
+  @@index([organizationId, responsiblePersonId])
+  @@index([organizationId, runId])
+  @@map("tactical_outcome_proposals")
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 表 7【指标 Metric】
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+model Metric {
+  id             String            @id @default(cuid())
+  organizationId String
+  name           String
+  type           MetricType // ★领先/滞后
+  phase          MetricPhase
+  targetValue    String
+  actualValue    String?
+  status         AchievementStatus @default(AT_RISK)
+  dataSource     String?
+  milestone      String? // 关联里程碑描述
+  updatedAt      DateTime          @updatedAt
+  createdAt      DateTime          @default(now())
+
+  circleId String
+  circle   Circle @relation("MetricCircle", fields: [circleId], references: [id], onDelete: Cascade)
+
+  organization        Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  proposedGoalTargets GoalProposalTarget[]
+  goalTargets         GoalTarget[]
+
+  @@unique([id, organizationId])
+  @@index([organizationId, circleId])
+  @@map("metrics")
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 表 8【决策记录 DecisionRecord】（★新增，review 指出缺失）
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+model DecisionRecord {
+  id             String         @id @default(cuid())
+  organizationId String
+  title          String
+  type           DecisionType
+  content        String
+  rationale      String // 决策依据
+  status         DecisionStatus @default(ACTIVE)
+  effectiveAt    DateTime
+  createdAt      DateTime       @default(now())
+
+  // 决策者
+  decisionMakerId String?
+  decisionMaker   Person? @relation("DecisionMaker", fields: [decisionMakerId], references: [id])
+
+  // 产生于哪次会议
+  meetingId String?
+  meeting   Meeting? @relation("MeetingDecisions", fields: [meetingId], references: [id])
+
+  // 关联张力与阻塞点
+  relatedTensions  Tension[] @relation("DecisionFromTension")
+  resolvedTensions Tension[] @relation("DecisionForTension")
+
+  // 关联变更（经此决策批准的变更）
+  relatedChanges ChangeLog[] @relation("ChangeDecision")
+
+  // 被后续决策取代
+  supersededById String?         @unique
+  supersededBy   DecisionRecord? @relation("DecisionSupersede", fields: [supersededById], references: [id])
+  supersedes     DecisionRecord? @relation("DecisionSupersede")
+
+  // ★V4: 从提案采纳而来的决策
+  fromProposal              GovernanceProposal?        @relation("DecisionFromProposal")
+  governanceDecisionOutcome GovernanceDecisionProcess? @relation("GovernanceDecisionOutcomeDecision")
+  roleAssignmentHistory     RoleAssignmentHistory[]
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([id, organizationId])
+  @@index([organizationId, status])
+  @@map("decision_records")
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 表 9【变更审计 ChangeLog】（★新增，review 指出缺失）
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+model ChangeLog {
+  id               String     @id @default(cuid())
+  organizationId   String
+  type             ChangeType
+  objectDesc       String // 变更对象描述
+  beforeValue      String
+  afterValue       String
+  impactAssessment String // ★ review 治理 P1-1：影响评估
+  effectiveAt      DateTime
+  createdAt        DateTime   @default(now())
+
+  // 发起人
+  initiatorId String
+  initiator   Person @relation("ChangeInitiator", fields: [initiatorId], references: [id])
+
+  // 关联决策（经治理会批准的变更）
+  decisionId                String?
+  decision                  DecisionRecord?            @relation("ChangeDecision", fields: [decisionId], references: [id])
+  governanceDecisionOutcome GovernanceDecisionProcess? @relation("GovernanceDecisionOutcomeChangeLog")
+  roleAssignmentHistory     RoleAssignmentHistory[]
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([id, organizationId])
+  @@index([organizationId, type])
+  @@map("change_logs")
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 子表 S2【会议纪要 Meeting】
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+model Meeting {
+  id             String      @id @default(cuid())
+  organizationId String
+  title          String
+  type           MeetingType
+  agenda         String // 机器人会前自动生成
+  notes          String? // 纪要正文
+  notesRevision  Int         @default(0)
+  aiGuardReport  String? // 会后 AI 守护者报告
+  durationMin    Int // 时长（战术会≤30，治理会≤90）
+  startedAt      DateTime
+  endedAt        DateTime?
+  endedById      String?
+  createdAt      DateTime    @default(now())
+
+  // 所属回路（战术会必填）
+  circleId String?
+  circle   Circle? @relation("MeetingCircle", fields: [circleId], references: [id])
+
+  // 参与人（反向在 Person.meetingsParticipated）
+  participants Person[]
+  endedBy      Person?  @relation("MeetingEndedBy", fields: [endedById, organizationId], references: [id, organizationId])
+
+  // 会议智能体消息流
+  messages            MeetingMessage[]
+  // 会议参与角色状态
+  meetingParticipants MeetingParticipant[]
+  facilitationSession MeetingFacilitationSession?
+  facilitationEvents  MeetingFacilitationEvent[]
+  facilitationAgenda  MeetingAgendaItem[]
+  roleRepresentations MeetingRoleRepresentation[]
+  objectionReviews    GovernanceObjectionReview[]
+  // 当前教练阶段
+  currentPhase        String? // PROPOSAL | CLARIFY | RESPONSE | AMEND | VOTE | JUDGE | INTEGRATE | SUMMARY
+
+  // 该会议产生的决策（反向在 DecisionRecord.meeting）
+  decisions                    DecisionRecord[]              @relation("MeetingDecisions")
+  proposals                    GovernanceProposal[]          @relation("MeetingProposals") // ★V4
+  validationResolutions        InterfaceValidationRun[]      @relation("ValidationResolutionMeeting")
+  tacticalOutcomeProposals     TacticalOutcomeProposal[]
+  governanceDecisionProcesses  GovernanceDecisionProcess[]
+  governanceDecisionOperations GovernanceDecisionOperation[]
+  goalDecisions                GoalDecision[]
+  goalCheckIns                 GoalCheckIn[]
+  goalWorkLinksCreated         GoalWorkLink[]                @relation("GoalWorkLinkCreatedMeeting")
+  goalWorkLinksRemoved         GoalWorkLink[]                @relation("GoalWorkLinkRemovedMeeting")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([id, organizationId])
+  @@index([organizationId, startedAt])
+  @@map("meetings")
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 会议智能体消息（对话流）
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+model MeetingMessage {
+  id             String  @id @default(cuid())
+  organizationId String
+  meetingId      String
+  meeting        Meeting @relation(fields: [meetingId, organizationId], references: [id, organizationId], onDelete: Cascade)
+
+  // 发送者（null = 会议教练）
+  senderId   String?
+  sender     Person? @relation("MeetingMessageSender", fields: [senderId, organizationId], references: [id, organizationId], onDelete: SetNull)
+  // 发送者角色标签，如"客户成功负责人"
+  senderRole String?
+
+  // 消息类型
+  role    String @default("USER") // USER | COACH | SYSTEM
+  content String
+
+  // 当前所处阶段
+  phase String // PROPOSAL | CLARIFY | RESPONSE | AMEND | VOTE | JUDGE | INTEGRATE | SUMMARY | OPENING
+
+  // 结构化数据（教练消息携带提案摘要、表决状态等）
+  metadata Json?
+
+  createdAt DateTime @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, meetingId, createdAt])
+  @@map("meeting_messages")
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 会议参与角色状态
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+model MeetingParticipant {
+  id             String  @id @default(cuid())
+  organizationId String
+  meetingId      String
+  meeting        Meeting @relation(fields: [meetingId, organizationId], references: [id, organizationId], onDelete: Cascade)
+
+  personId  String
+  person    Person @relation("MeetingParticipantPerson", fields: [personId, organizationId], references: [id, organizationId], onDelete: Cascade)
+  // 参会角色标签
+  roleLabel String @default("")
+
+  // 在线状态
+  status   String    @default("INVITED") // INVITED | ONLINE | LEFT
+  joinedAt DateTime?
+
+  // Step 5: 并行反对表决
+  voteStatus      String? // null = 未表态 | APPROVE | OBJECT
+  voteReason      String? // 反对理由
+  voteSuggestion  String? // 整合建议
+  voteSubmittedAt DateTime?
+
+  // 参与质量评分（0-1）
+  participationScore Float?    @default(0.5)
+  // 最后活跃时间
+  lastActiveAt       DateTime?
+
+  createdAt DateTime @default(now())
+
+  organization     Organization                @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  representedRoles MeetingRoleRepresentation[]
+  ownedAgendaItems MeetingAgendaItem[]
+  raisedObjections GovernanceObjectionReview[]
+  objectionStances GovernanceObjectionStance[]
+
+  @@unique([organizationId, meetingId, personId])
+  @@unique([id, organizationId])
+  @@index([organizationId, meetingId, status])
+  @@map("meeting_participants")
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// AI 原生会议主持：状态快照、增量事件、结构化议程和分布式反对复核
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+model MeetingFacilitationSession {
+  id                 String                    @id @default(cuid())
+  organizationId     String
+  meetingId          String
+  engineType         MeetingFacilitationEngine
+  phase              String
+  phaseState         Json                      @default("{}")
+  activeAgendaItemId String?
+  paused             Boolean                   @default(false)
+  revision           Int                       @default(0)
+  lastEventSequence  Int                       @default(0)
+  startedAt          DateTime                  @default(now())
+  completedAt        DateTime?
+  createdAt          DateTime                  @default(now())
+  updatedAt          DateTime                  @updatedAt
+
+  organization     Organization                @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  meeting          Meeting                     @relation(fields: [meetingId, organizationId], references: [id, organizationId], onDelete: Cascade)
+  events           MeetingFacilitationEvent[]
+  agendaItems      MeetingAgendaItem[]
+  objectionReviews GovernanceObjectionReview[]
+
+  @@unique([meetingId, organizationId])
+  @@unique([id, organizationId])
+  @@index([organizationId, engineType, phase])
+  @@map("meeting_facilitation_sessions")
+}
+
+model MeetingFacilitationEvent {
+  id             String   @id @default(cuid())
+  organizationId String
+  meetingId      String
+  sessionId      String
+  sequence       Int
+  stateRevision  Int
+  actorId        String?
+  type           String
+  payload        Json     @default("{}")
+  createdAt      DateTime @default(now())
+
+  organization Organization               @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  meeting      Meeting                    @relation(fields: [meetingId, organizationId], references: [id, organizationId], onDelete: Cascade)
+  session      MeetingFacilitationSession @relation(fields: [sessionId, organizationId], references: [id, organizationId], onDelete: Cascade)
+  actor        Person?                    @relation("MeetingFacilitationEventActor", fields: [actorId, organizationId], references: [id, organizationId], onDelete: Restrict)
+
+  @@unique([sessionId, sequence])
+  @@index([organizationId, meetingId, sequence])
+  @@index([actorId, organizationId])
+  @@map("meeting_facilitation_events")
+}
+
+model MeetingAgendaItem {
+  id                  String                    @id @default(cuid())
+  organizationId      String
+  meetingId           String
+  sessionId           String
+  engineType          MeetingFacilitationEngine
+  ownerParticipantId  String
+  ownerRoleId         String
+  label               String
+  position            Int
+  status              MeetingAgendaStatus       @default(PENDING)
+  linkedTensionId     String?
+  linkedProposalId    String?
+  need                String?
+  candidateOutput     Json?
+  confirmedOutputType String?
+  confirmedOutputId   String?
+  startedAt           DateTime?
+  completedAt         DateTime?
+  createdAt           DateTime                  @default(now())
+  updatedAt           DateTime                  @updatedAt
+
+  organization     Organization                @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  meeting          Meeting                     @relation(fields: [meetingId, organizationId], references: [id, organizationId], onDelete: Cascade)
+  session          MeetingFacilitationSession  @relation(fields: [sessionId, organizationId], references: [id, organizationId], onDelete: Cascade)
+  ownerParticipant MeetingParticipant          @relation(fields: [ownerParticipantId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  ownerRole        RoleDef                     @relation(fields: [ownerRoleId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  linkedTension    Tension?                    @relation("MeetingAgendaTension", fields: [linkedTensionId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  linkedProposal   GovernanceProposal?         @relation("MeetingAgendaGovernanceProposal", fields: [linkedProposalId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  objectionReviews GovernanceObjectionReview[]
+
+  @@unique([id, organizationId])
+  @@unique([sessionId, position])
+  @@index([organizationId, meetingId, status, position])
+  @@index([ownerParticipantId, organizationId])
+  @@index([ownerRoleId, organizationId])
+  @@index([linkedTensionId, organizationId])
+  @@index([linkedProposalId, organizationId])
+  @@map("meeting_agenda_items")
+}
+
+model MeetingRoleRepresentation {
+  id             String   @id @default(cuid())
+  organizationId String
+  meetingId      String
+  participantId  String
+  roleId         String
+  createdAt      DateTime @default(now())
+
+  organization Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  meeting      Meeting            @relation(fields: [meetingId, organizationId], references: [id, organizationId], onDelete: Cascade)
+  participant  MeetingParticipant @relation(fields: [participantId, organizationId], references: [id, organizationId], onDelete: Cascade)
+  role         RoleDef            @relation(fields: [roleId, organizationId], references: [id, organizationId], onDelete: Restrict)
+
+  @@unique([organizationId, meetingId, participantId, roleId])
+  @@index([participantId, organizationId])
+  @@index([roleId, organizationId])
+  @@map("meeting_role_representations")
+}
+
+model RoleChecklistItem {
+  id             String   @id @default(cuid())
+  organizationId String
+  roleId         String
+  label          String
+  cadence        String?
+  position       Int      @default(0)
+  active         Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  role         RoleDef      @relation(fields: [roleId, organizationId], references: [id, organizationId], onDelete: Cascade)
+
+  @@unique([roleId, label])
+  @@index([organizationId, roleId, active, position])
+  @@map("role_checklist_items")
+}
+
+model GovernanceObjectionReview {
+  id                    String                          @id @default(cuid())
+  organizationId        String
+  meetingId             String
+  sessionId             String
+  agendaItemId          String
+  proposalId            String
+  processId             String?
+  proposalRevision      Int
+  sequence              Int
+  objectorParticipantId String
+  objectorRoleId        String
+  statement             String
+  criteria              Json                            @default("{}")
+  aiValidity            GovernanceObjectionValidity?
+  aiRationale           String?
+  aiConfidence          Float?
+  aiEvidenceRefs        Json?
+  status                GovernanceObjectionReviewStatus @default(ACTIVE)
+  integratedAt          DateTime?
+  createdAt             DateTime                        @default(now())
+  updatedAt             DateTime                        @updatedAt
+
+  organization        Organization                @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  meeting             Meeting                     @relation(fields: [meetingId, organizationId], references: [id, organizationId], onDelete: Cascade)
+  session             MeetingFacilitationSession  @relation(fields: [sessionId, organizationId], references: [id, organizationId], onDelete: Cascade)
+  agendaItem          MeetingAgendaItem           @relation(fields: [agendaItemId, organizationId], references: [id, organizationId], onDelete: Cascade)
+  proposal            GovernanceProposal          @relation(fields: [proposalId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  process             GovernanceDecisionProcess?  @relation(fields: [processId, proposalId, organizationId], references: [id, proposalId, organizationId], onDelete: Restrict)
+  objectorParticipant MeetingParticipant          @relation(fields: [objectorParticipantId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  objectorRole        RoleDef                     @relation(fields: [objectorRoleId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  stances             GovernanceObjectionStance[]
+
+  @@unique([id, organizationId])
+  @@unique([sessionId, proposalId, proposalRevision, sequence])
+  @@index([organizationId, meetingId, status])
+  @@index([agendaItemId, organizationId])
+  @@index([objectorParticipantId, organizationId])
+  @@index([objectorRoleId, organizationId])
+  @@index([processId, proposalId, organizationId])
+  @@map("governance_objection_reviews")
+}
+
+model GovernanceObjectionStance {
+  id             String                         @id @default(cuid())
+  organizationId String
+  objectionId    String
+  participantId  String
+  validity       GovernanceObjectionStanceValue
+  reason         String
+  createdAt      DateTime                       @default(now())
+  updatedAt      DateTime                       @updatedAt
+
+  organization Organization              @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  objection    GovernanceObjectionReview @relation(fields: [objectionId, organizationId], references: [id, organizationId], onDelete: Cascade)
+  participant  MeetingParticipant        @relation(fields: [participantId, organizationId], references: [id, organizationId], onDelete: Restrict)
+
+  @@unique([objectionId, participantId])
+  @@index([organizationId, objectionId, validity])
+  @@index([participantId, organizationId])
+  @@map("governance_objection_stances")
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 通知（站内 inbox）
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+model Notification {
+  id             String    @id @default(cuid())
+  organizationId String
+  recipientId    String
+  recipient      Person    @relation(fields: [recipientId], references: [id], onDelete: Cascade)
+  type           String // 如 'blocker_overdue', 'escalation', 'meeting_reminder'
+  title          String
+  body           String
+  targetUrl      String? // ★ 点击跳转目标
+  readAt         DateTime?
+  createdAt      DateTime  @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([recipientId, readAt])
+  @@map("notifications")
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// ★ Sprint3 新增：治理日志（月度，AI 起草）
+// 基于 docs/06 机制建设者：从追踪表+会议+变更提取模式
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+model GovernanceLog {
+  id               String    @id @default(cuid())
+  organizationId   String
+  period           String // 如 "2026-07"（YYYY-MM）
+  title            String
+  content          String // 日志正文（AI 起草 + 人工复核）
+  patterns         String // 提取的重复模式（JSON 字符串或结构化文本）
+  risks            String? // 下月重点系统性风险
+  status           String    @default("draft") // draft/published
+  credibilityScore Float?    @default(0.5) // 可信度评分（docs/06 质量保证）
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  publishedAt      DateTime?
+  confirmedById    String?
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  confirmedBy  Person?      @relation("GovernanceLogConfirmer", fields: [confirmedById, organizationId], references: [id, organizationId], onDelete: Restrict)
+
+  @@unique([organizationId, period])
+  @@index([organizationId, status])
+  @@index([organizationId, confirmedById])
+  @@map("governance_logs")
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// ★ Sprint3 新增：组织宪章（季度版本化）
+// 基于 docs/00 L4 进化层：每季度从运转中提取规则，≤1页纸，像 DNA
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+model Charter {
+  id             String    @id @default(cuid())
+  organizationId String
+  version        String // 如 "v2026Q3"
+  content        String // 宪章正文（≤1页纸，规则列表）
+  changeSummary  String? // 本版本相对上版的变更摘要
+  status         String    @default("draft") // draft/ratified/archived
+  ratifiedAt     DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  // 版本链：前一版本
+  previousVersionId String?
+  previousVersion   Charter?  @relation("CharterVersion", fields: [previousVersionId], references: [id])
+  nextVersion       Charter[] @relation("CharterVersion")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, version])
+  @@index([organizationId, status])
+  @@map("charters")
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// ★ V4 新增：项目（战术会产出，回路的工作容器）
+// 项目有始有终，包含多个行动项（张力）
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+model Project {
+  id                String    @id @default(cuid())
+  organizationId    String
+  name              String
+  goal              String // 项目目标（兼容旧字段）
+  expectedResult    String? // G1 项目最小字段：预期结果
+  linkedDataVersion String? // G1 项目最小字段：关联数据版本
+  status            String    @default("ACTIVE") // ACTIVE / COMPLETED / PAUSED
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  completedAt       DateTime?
+  completedById     String?
+  completedBy       Person?   @relation("ProjectCompletedBy", fields: [completedById, organizationId], references: [id, organizationId], onDelete: Restrict)
+
+  // 归属回路
+  circleId String
+  circle   Circle @relation("ProjectCircle", fields: [circleId], references: [id])
+
+  // 项目承担人
+  bearerId String?
+  bearer   Person? @relation("ProjectBearer", fields: [bearerId], references: [id])
+
+  // 来源张力（发起此项目的张力）
+  sourceTensionId String?  @unique
+  sourceTension   Tension? @relation("ProjectSourceTension", fields: [sourceTensionId], references: [id])
+
+  // 项目下的行动项
+  tensions Tension[] @relation("TensionProject")
+
+  validationRunsAsSource  InterfaceValidationRun[] @relation("ValidationSourceProject")
+  validationRunsCreated   InterfaceValidationRun[] @relation("ValidationCreatedProject")
+  tacticalOutcomeProposal TacticalOutcomeProposal? @relation("TacticalOutcomeProject")
+  goalWorkLinks           GoalWorkLink[]
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([id, organizationId])
+  @@index([organizationId, status])
+  @@index([organizationId, bearerId])
+  @@map("projects")
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// G1 新增：接口验证 / 烟测运行记录
+// 用于 Data -> Pretraining 的 24h SLA 验证闭环
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+model InterfaceValidationRun {
+  id             String @id @default(cuid())
+  organizationId String
+  interfaceId    String
+
+  dataVersion             String
+  dataLocation            String
+  changeSummary           String
+  dataScopeScale          String
+  knownRisks              String?
+  suggestedSmokeRunConfig String?
+
+  submittedAt DateTime?
+  status      InterfaceValidationStatus @default(TO_SUBMIT)
+
+  smokeRunResult            InterfaceSmokeRunResult?
+  lossSummary               String?
+  throughputSummary         String?
+  abnormalSampleRate        Float?
+  representativeSampleTrace String?
+  trainingScheduleImpact    String?
+  slaResult                 InterfaceValidationSlaResult?
+  closedAt                  DateTime?
+  deferReason               String?
+  tacticalResolution        InterfaceTacticalResolution?
+
+  sourceTensionId     String?
+  createdTensionId    String?
+  sourceProjectId     String?
+  createdProjectId    String?
+  sourceActionId      String?
+  createdActionId     String?
+  resolutionMeetingId String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  organization Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  interface    CircleInterface @relation(fields: [interfaceId], references: [id], onDelete: Cascade)
+
+  sourceTension     Tension? @relation("ValidationSourceTension", fields: [sourceTensionId], references: [id])
+  createdTension    Tension? @relation("ValidationCreatedTension", fields: [createdTensionId], references: [id])
+  sourceAction      Tension? @relation("ValidationSourceAction", fields: [sourceActionId], references: [id])
+  createdAction     Tension? @relation("ValidationCreatedAction", fields: [createdActionId], references: [id])
+  sourceProject     Project? @relation("ValidationSourceProject", fields: [sourceProjectId], references: [id])
+  createdProject    Project? @relation("ValidationCreatedProject", fields: [createdProjectId], references: [id])
+  resolutionMeeting Meeting? @relation("ValidationResolutionMeeting", fields: [resolutionMeetingId], references: [id])
+
+  @@index([organizationId, status])
+  @@index([interfaceId, status])
+  @@index([dataVersion])
+  @@index([resolutionMeetingId])
+  @@map("interface_validation_runs")
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// ★ V4 新增：治理提案（治理会产出，可自动修改结构）
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+model GovernanceProposal {
+  id             String    @id @default(cuid())
+  organizationId String
+  type           String // ROLE_CREATED / ROLE_MODIFIED / ROLE_ARCHIVED / CIRCLE_CREATED / CIRCLE_MODIFIED / HOME_CHANGE
+  targetId       String? // 修改对象 ID（新增时为 null）
+  proposedChange String // JSON：具体修改内容
+  rationale      String // 提案理由
+  status         String    @default("PROPOSED") // PROPOSED / ADOPTED / OBJECTED / WITHDRAWN
+  adoptedAt      DateTime?
+  createdAt      DateTime  @default(now())
+
+  // 来源张力
+  tensionId String
+  tension   Tension @relation("ProposalSourceTension", fields: [tensionId], references: [id])
+
+  // 在哪次会议讨论
+  meetingId String?
+  meeting   Meeting? @relation("MeetingProposals", fields: [meetingId], references: [id])
+
+  // 采纳后生成的决策记录
+  decisionId                   String?                       @unique
+  decision                     DecisionRecord?               @relation("DecisionFromProposal", fields: [decisionId], references: [id])
+  governanceDecisionProcess    GovernanceDecisionProcess?
+  governanceProposalRevisions  GovernanceProposalRevision[]
+  governanceDecisionOperations GovernanceDecisionOperation[]
+  meetingAgendaItems           MeetingAgendaItem[]           @relation("MeetingAgendaGovernanceProposal")
+  objectionReviews             GovernanceObjectionReview[]
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([id, organizationId])
+  @@index([organizationId, status])
+  @@map("governance_proposals")
+}
+
+model GovernanceDecisionProcess {
+  id                      String                           @id @default(cuid())
+  organizationId          String
+  proposalId              String                           @unique
+  sourceTensionId         String
+  provenanceKind          GovernanceDecisionProvenanceKind
+  runId                   String?
+  meetingId               String
+  sourceTensionArtifactId String?
+  proposalArtifactId      String?
+  routeArtifactId         String?
+  proposerId              String
+  state                   GovernanceDecisionProcessState   @default(READY)
+  currentRevision         Int                              @default(1)
+  currentRevisionId       String?
+  activeClarification     Json?
+  activeObjection         Json?
+  activeObjectionSequence Int?
+  recordedById            String?
+  recordedAt              DateTime?
+  resultNote              String?
+  outcomeRoleId           String?                          @unique
+  outcomeObjectId         String?
+  outcomeChangeType       String?
+  decisionId              String?                          @unique
+  changeLogId             String?                          @unique
+  applicationAttempts     Int                              @default(0)
+  lastApplicationError    String?
+  createdAt               DateTime                         @default(now())
+  updatedAt               DateTime                         @updatedAt
+
+  organization          Organization                  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  proposal              GovernanceProposal            @relation(fields: [proposalId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  sourceTension         Tension                       @relation(fields: [sourceTensionId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  run                   InterfaceWorkflowRun?         @relation(fields: [runId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  meeting               Meeting                       @relation(fields: [meetingId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  sourceTensionArtifact InterfaceWorkflowArtifact?    @relation("GovernanceDecisionSourceTensionArtifact", fields: [sourceTensionArtifactId, organizationId, runId], references: [id, organizationId, runId], onDelete: Restrict)
+  proposalArtifact      InterfaceWorkflowArtifact?    @relation("GovernanceDecisionProposalArtifact", fields: [proposalArtifactId, organizationId, runId], references: [id, organizationId, runId], onDelete: Restrict)
+  routeArtifact         InterfaceWorkflowArtifact?    @relation("GovernanceDecisionRouteArtifact", fields: [routeArtifactId, organizationId, runId], references: [id, organizationId, runId], onDelete: Restrict)
+  proposer              Person                        @relation("GovernanceDecisionProposer", fields: [proposerId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  currentRevisionRecord GovernanceProposalRevision?   @relation("GovernanceDecisionCurrentRevision", fields: [currentRevisionId, id, proposalId, organizationId, currentRevision], references: [id, processId, proposalId, organizationId, revision], onDelete: NoAction)
+  recordedBy            Person?                       @relation("GovernanceDecisionRecorder", fields: [recordedById, organizationId], references: [id, organizationId], onDelete: Restrict)
+  outcomeRole           RoleDef?                      @relation("GovernanceDecisionOutcomeRole", fields: [outcomeRoleId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  decision              DecisionRecord?               @relation("GovernanceDecisionOutcomeDecision", fields: [decisionId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  changeLog             ChangeLog?                    @relation("GovernanceDecisionOutcomeChangeLog", fields: [changeLogId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  revisions             GovernanceProposalRevision[]  @relation("GovernanceDecisionRevisions")
+  operations            GovernanceDecisionOperation[]
+  objectionReviews      GovernanceObjectionReview[]
+
+  @@unique([id, organizationId])
+  @@unique([id, proposalId, organizationId])
+  @@unique([proposalId, organizationId])
+  @@unique([currentRevisionId, id, proposalId, organizationId, currentRevision])
+  @@unique([outcomeRoleId, organizationId])
+  @@unique([decisionId, organizationId])
+  @@unique([changeLogId, organizationId])
+  @@index([organizationId, meetingId, state])
+  @@index([organizationId, runId])
+  @@index([organizationId, outcomeChangeType])
+  @@index([proposerId, organizationId])
+  @@index([recordedById, organizationId])
+  @@map("governance_decision_processes")
+}
+
+model GovernanceProposalRevision {
+  id                String                           @id @default(cuid())
+  organizationId    String
+  processId         String
+  proposalId        String
+  revision          Int
+  authoredById      String
+  currentStructure  String
+  proposedStructure String
+  rationale         String
+  expectedImpact    String
+  typedChange       Json
+  sourceKind        GovernanceProposalRevisionSource
+  createdAt         DateTime                         @default(now())
+
+  organization Organization               @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  process      GovernanceDecisionProcess  @relation("GovernanceDecisionRevisions", fields: [processId, proposalId, organizationId], references: [id, proposalId, organizationId], onDelete: Cascade)
+  proposal     GovernanceProposal         @relation(fields: [proposalId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  authoredBy   Person                     @relation("GovernanceProposalRevisionAuthor", fields: [authoredById, organizationId], references: [id, organizationId], onDelete: Restrict)
+  currentFor   GovernanceDecisionProcess? @relation("GovernanceDecisionCurrentRevision")
+
+  @@unique([processId, revision])
+  @@unique([proposalId, revision])
+  @@unique([id, processId, proposalId, organizationId, revision])
+  @@index([organizationId, proposalId])
+  @@index([authoredById, organizationId])
+  @@map("governance_proposal_revisions")
+}
+
+model GovernanceDecisionOperation {
+  id                   String                            @id @default(cuid())
+  organizationId       String
+  proposalId           String
+  processId            String?
+  meetingId            String
+  actorId              String
+  revision             Int
+  operation            GovernanceDecisionOperationKind
+  operationScope       String
+  mutationKey          String
+  canonicalPayloadHash String
+  status               GovernanceDecisionOperationStatus @default(PROCESSING)
+  attempt              Int                               @default(1)
+  leaseToken           String
+  leaseExpiresAt       DateTime
+  failureCode          String?
+  resultEnvelope       Json?
+  createdAt            DateTime                          @default(now())
+  updatedAt            DateTime                          @updatedAt
+
+  organization Organization               @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  proposal     GovernanceProposal         @relation(fields: [proposalId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  process      GovernanceDecisionProcess? @relation(fields: [processId, proposalId, organizationId], references: [id, proposalId, organizationId], onDelete: Restrict)
+  meeting      Meeting                    @relation(fields: [meetingId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  actor        Person                     @relation("GovernanceDecisionOperationActor", fields: [actorId, organizationId], references: [id, organizationId], onDelete: Restrict)
+
+  @@unique([organizationId, proposalId, meetingId, revision, operation, operationScope])
+  @@unique([organizationId, mutationKey])
+  @@index([status, leaseExpiresAt])
+  @@index([organizationId, meetingId, operation])
+  @@index([organizationId, proposalId])
+  @@index([processId, organizationId])
+  @@index([actorId, organizationId])
+  @@map("governance_decision_operations")
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// NextAuth 所需模型（v5 + Prisma Adapter）
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  user User @relation(fields: [identifier], references: [id], onDelete: Cascade)
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}
+
+model GoalCycle {
+  id                 String          @id @default(cuid())
+  organizationId     String
+  name               String
+  status             GoalCycleStatus @default(PLANNED)
+  startAt            DateTime
+  endAt              DateTime
+  checkInCadenceDays Int
+  activatedAt        DateTime?
+  closedAt           DateTime?
+  cancelledAt        DateTime?
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
+
+  organization Organization   @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  proposals    GoalProposal[]
+  goals        Goal[]
+
+  @@unique([id, organizationId])
+  @@index([organizationId, startAt, endAt])
+  @@map("goal_cycles")
+}
+
+model GoalProposal {
+  id              String             @id @default(cuid())
+  organizationId  String
+  cycleId         String
+  circleId        String
+  proposerId      String
+  kind            GoalProposalKind
+  status          GoalProposalStatus @default(DRAFT)
+  replacedGoalId  String?
+  currentRevision Int
+  submittedAt     DateTime?
+  terminalAt      DateTime?
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+
+  organization          Organization           @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  cycle                 GoalCycle              @relation(fields: [cycleId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  circle                Circle                 @relation(fields: [circleId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  proposer              Person                 @relation("GoalProposalProposer", fields: [proposerId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  replacedGoal          Goal?                  @relation("GoalProposalReplacedGoal", fields: [replacedGoalId, organizationId, cycleId, circleId], references: [id, organizationId, cycleId, circleId], onDelete: Restrict)
+  currentRevisionRecord GoalProposalRevision   @relation("GoalProposalCurrentRevision", fields: [organizationId, id, currentRevision], references: [organizationId, proposalId, revision], onDelete: Restrict)
+  revisions             GoalProposalRevision[] @relation("GoalProposalRevisions")
+  decisions             GoalDecision[]
+
+  @@unique([id, organizationId])
+  @@unique([organizationId, id, currentRevision])
+  @@index([organizationId, cycleId, circleId, status])
+  @@index([organizationId, proposerId, status])
+  @@map("goal_proposals")
+}
+
+model GoalProposalRevision {
+  organizationId  String
+  proposalId      String
+  revision        Int
+  title           String?
+  intendedOutcome String?
+  ownerRoleId     String?
+  parentGoalId    String?
+  closeResult     GoalCloseResult?
+  conclusion      String?
+  authoredById    String
+  createdAt       DateTime         @default(now())
+
+  organization       Organization         @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  proposal           GoalProposal         @relation("GoalProposalRevisions", fields: [proposalId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  currentForProposal GoalProposal?        @relation("GoalProposalCurrentRevision")
+  ownerRole          RoleDef?             @relation("GoalProposalRevisionOwnerRole", fields: [ownerRoleId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  parentGoal         Goal?                @relation("GoalProposalRevisionParentGoal", fields: [parentGoalId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  authoredBy         Person               @relation("GoalProposalRevisionAuthor", fields: [authoredById, organizationId], references: [id, organizationId], onDelete: Restrict)
+  targets            GoalProposalTarget[]
+  decisions          GoalDecision[]
+
+  @@id([organizationId, proposalId, revision])
+  @@index([organizationId, authoredById, createdAt])
+  @@map("goal_proposal_revisions")
+}
+
+model GoalProposalTarget {
+  id                 String         @id @default(cuid())
+  organizationId     String
+  proposalId         String
+  revision           Int
+  position           Int
+  label              String
+  kind               GoalTargetKind
+  baselineValue      Decimal?       @db.Decimal(30, 10)
+  desiredValue       Decimal?       @db.Decimal(30, 10)
+  unit               String?
+  acceptanceCriteria String?
+  metricId           String?
+  createdAt          DateTime       @default(now())
+
+  organization    Organization         @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  revisionRecord  GoalProposalRevision @relation(fields: [organizationId, proposalId, revision], references: [organizationId, proposalId, revision], onDelete: Restrict)
+  metric          Metric?              @relation(fields: [metricId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  canonicalTarget GoalTarget?
+
+  @@unique([id, organizationId])
+  @@unique([organizationId, proposalId, revision, position])
+  @@index([organizationId, metricId])
+  @@map("goal_proposal_targets")
+}
+
+model GoalDecision {
+  id             String              @id @default(cuid())
+  organizationId String
+  proposalId     String
+  revision       Int
+  outcome        GoalDecisionOutcome
+  meetingId      String
+  recorderId     String
+  mutationKey    String
+  note           String?
+  decidedAt      DateTime            @default(now())
+
+  organization   Organization         @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  proposal       GoalProposal         @relation(fields: [proposalId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  revisionRecord GoalProposalRevision @relation(fields: [organizationId, proposalId, revision], references: [organizationId, proposalId, revision], onDelete: Restrict)
+  meeting        Meeting              @relation(fields: [meetingId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  recorder       Person               @relation("GoalDecisionRecorder", fields: [recorderId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  adoptedGoal    Goal?                @relation("GoalAdoptionDecision")
+  terminalGoal   Goal?                @relation("GoalTerminalDecision")
+
+  @@unique([id, organizationId])
+  @@unique([organizationId, proposalId, revision])
+  @@unique([organizationId, mutationKey])
+  @@index([organizationId, meetingId, decidedAt])
+  @@map("goal_decisions")
+}
+
+model Goal {
+  id                 String     @id @default(cuid())
+  organizationId     String
+  cycleId            String
+  circleId           String
+  title              String
+  intendedOutcome    String
+  ownerRoleId        String
+  parentGoalId       String?
+  status             GoalStatus @default(ACTIVE)
+  adoptedDecisionId  String     @unique
+  terminalDecisionId String?    @unique
+  createdAt          DateTime   @default(now())
+  terminalAt         DateTime?
+
+  organization              Organization           @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  cycle                     GoalCycle              @relation(fields: [cycleId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  circle                    Circle                 @relation(fields: [circleId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  ownerRole                 RoleDef                @relation("GoalOwnerRole", fields: [ownerRoleId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  parentGoal                Goal?                  @relation("GoalParentSupport", fields: [parentGoalId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  childGoals                Goal[]                 @relation("GoalParentSupport")
+  adoptedDecision           GoalDecision           @relation("GoalAdoptionDecision", fields: [adoptedDecisionId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  terminalDecision          GoalDecision?          @relation("GoalTerminalDecision", fields: [terminalDecisionId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  replacementProposals      GoalProposal[]         @relation("GoalProposalReplacedGoal")
+  proposalRevisionsAsParent GoalProposalRevision[] @relation("GoalProposalRevisionParentGoal")
+  targets                   GoalTarget[]
+  checkIns                  GoalCheckIn[]
+  workLinks                 GoalWorkLink[]
+
+  @@unique([id, organizationId])
+  @@unique([id, organizationId, cycleId, circleId])
+  @@unique([adoptedDecisionId, organizationId])
+  @@unique([terminalDecisionId, organizationId])
+  @@index([organizationId, cycleId, circleId, status])
+  @@index([organizationId, parentGoalId])
+  @@map("goals")
+}
+
+model GoalTarget {
+  id                     String         @id @default(cuid())
+  organizationId         String
+  goalId                 String
+  sourceProposalTargetId String
+  position               Int
+  label                  String
+  kind                   GoalTargetKind
+  baselineValue          Decimal?       @db.Decimal(30, 10)
+  desiredValue           Decimal?       @db.Decimal(30, 10)
+  unit                   String?
+  acceptanceCriteria     String?
+  metricId               String?
+  createdAt              DateTime       @default(now())
+
+  organization         Organization       @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  goal                 Goal               @relation(fields: [goalId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  sourceProposalTarget GoalProposalTarget @relation(fields: [sourceProposalTargetId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  metric               Metric?            @relation(fields: [metricId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  checkIns             GoalCheckIn[]
+
+  @@unique([id, organizationId])
+  @@unique([id, organizationId, goalId])
+  @@unique([sourceProposalTargetId, organizationId])
+  @@unique([organizationId, goalId, position])
+  @@index([organizationId, metricId])
+  @@map("goal_targets")
+}
+
+model GoalCheckIn {
+  id                  String                @id @default(cuid())
+  organizationId      String
+  goalId              String
+  targetId            String
+  fact                String
+  evidenceSummary     String
+  currentValue        Decimal?              @db.Decimal(30, 10)
+  milestoneCompleted  Boolean?
+  acceptanceEvidence  String?
+  assessment          GoalCheckInAssessment
+  recorderId          String
+  meetingId           String?
+  sourceUrl           String?
+  supersedesCheckInId String?               @unique
+  recordedAt          DateTime              @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  goal         Goal         @relation(fields: [goalId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  target       GoalTarget   @relation(fields: [targetId, organizationId, goalId], references: [id, organizationId, goalId], onDelete: Restrict)
+  recorder     Person       @relation("GoalCheckInRecorder", fields: [recorderId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  meeting      Meeting?     @relation(fields: [meetingId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  supersedes   GoalCheckIn? @relation("GoalCheckInCorrection", fields: [supersedesCheckInId, organizationId, goalId, targetId], references: [id, organizationId, goalId, targetId], onDelete: Restrict)
+  supersededBy GoalCheckIn? @relation("GoalCheckInCorrection")
+
+  @@unique([id, organizationId])
+  @@unique([id, organizationId, goalId, targetId])
+  @@unique([supersedesCheckInId, organizationId, goalId, targetId])
+  @@index([organizationId, goalId, targetId, recordedAt, id])
+  @@map("goal_check_ins")
+}
+
+model GoalWorkLink {
+  id               String             @id @default(cuid())
+  organizationId   String
+  goalId           String
+  kind             GoalWorkLinkKind
+  status           GoalWorkLinkStatus @default(ACTIVE)
+  projectId        String?
+  tensionId        String?
+  createdById      String
+  createdMeetingId String?
+  createdAt        DateTime           @default(now())
+  removedById      String?
+  removedMeetingId String?
+  removedAt        DateTime?
+  removalReason    String?
+
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  goal           Goal         @relation(fields: [goalId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  project        Project?     @relation(fields: [projectId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  tension        Tension?     @relation(fields: [tensionId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  createdBy      Person       @relation("GoalWorkLinkCreator", fields: [createdById, organizationId], references: [id, organizationId], onDelete: Restrict)
+  createdMeeting Meeting?     @relation("GoalWorkLinkCreatedMeeting", fields: [createdMeetingId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  removedBy      Person?      @relation("GoalWorkLinkRemover", fields: [removedById, organizationId], references: [id, organizationId], onDelete: Restrict)
+  removedMeeting Meeting?     @relation("GoalWorkLinkRemovedMeeting", fields: [removedMeetingId, organizationId], references: [id, organizationId], onDelete: Restrict)
+
+  @@unique([id, organizationId])
+  @@index([organizationId, goalId, status])
+  @@index([organizationId, projectId])
+  @@index([organizationId, tensionId])
+  @@map("goal_work_links")
+}

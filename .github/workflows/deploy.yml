@@ -1,0 +1,57 @@
+name: Deploy to Aliyun
+
+on:
+  workflow_dispatch:
+    inputs:
+      app:
+        description: "Application to deploy (all, book, loop-designer, loopos, workshops)"
+        required: true
+        type: choice
+        default: "all"
+        options:
+          - all
+          - book
+          - loop-designer
+          - loopos
+          - workshops
+
+jobs:
+  deploy:
+    name: Deploy to Aliyun ECS
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.28.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: "pnpm"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build apps
+        run: |
+          if [ "${{ github.event.inputs.app }}" = "all" ]; then
+            pnpm run build
+          else
+            pnpm run build --filter=@carbon-silicon/${{ github.event.inputs.app }}
+          fi
+
+      - name: Setup SSH
+        uses: shimataro/ssh-key-action@v2
+        with:
+          key: ${{ secrets.ALIYUN_SSH_KEY }}
+          known_hosts: ${{ secrets.ALIYUN_KNOWN_HOSTS }}
+
+      - name: Deploy to Aliyun
+        run: bash scripts/deploy-all.sh ${{ github.event.inputs.app }}
+        env:
+          ALIYUN_HOST: ${{ secrets.ALIYUN_HOST }}
+          ALIYUN_USER: ${{ secrets.ALIYUN_USER }}

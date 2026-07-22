@@ -1,0 +1,13 @@
+.env*
+!.env.example
+
+.next/
+node_modules/
+logs/
+supabase/.temp/
+
+feishu-dist/
+feishu-publish/
+
+*.log
+.DS_Store

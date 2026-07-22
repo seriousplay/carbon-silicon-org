@@ -1,0 +1,618 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>LoopOS Progress Dashboard</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #18211f;
+      --muted: #5a6561;
+      --line: #c9d3cf;
+      --paper: #f5f7f4;
+      --panel: #ffffff;
+      --active: #12615b;
+      --done: #6b7d2c;
+      --planned: #465f85;
+      --blocked: #a3422e;
+      --evidence: #8a5b12;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      background: var(--paper);
+      color: var(--ink);
+      font-family: "Avenir Next", "Helvetica Neue", sans-serif;
+      line-height: 1.5;
+    }
+
+    main {
+      width: min(1180px, calc(100vw - 32px));
+      margin: 0 auto;
+      padding: 28px 0 48px;
+    }
+
+    header {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 20px;
+      align-items: end;
+      padding-bottom: 18px;
+      border-bottom: 2px solid var(--ink);
+    }
+
+    h1,
+    h2,
+    h3,
+    p {
+      margin: 0;
+    }
+
+    h1 {
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: clamp(32px, 5vw, 58px);
+      font-weight: 700;
+      letter-spacing: 0;
+      line-height: 0.95;
+    }
+
+    h2 {
+      font-size: 15px;
+      text-transform: uppercase;
+      letter-spacing: 0;
+    }
+
+    h3 {
+      font-size: 18px;
+    }
+
+    .updated {
+      color: var(--muted);
+      font-size: 14px;
+      text-align: right;
+    }
+
+    .status-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+      margin: 22px 0;
+    }
+
+    .status-cell,
+    .milestone,
+    .evidence-panel,
+    .blocker-panel {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 16px;
+    }
+
+    .label {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0;
+    }
+
+    .value {
+      margin-top: 8px;
+      font-size: 20px;
+      font-weight: 700;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      min-height: 24px;
+      padding: 2px 9px;
+      border-radius: 999px;
+      color: #fff;
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+
+    .badge.active {
+      background: var(--active);
+    }
+
+    .badge.done {
+      background: var(--done);
+    }
+
+    .badge.planned {
+      background: var(--planned);
+    }
+
+    .section {
+      margin-top: 28px;
+    }
+
+    .milestones {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .milestone {
+      min-height: 190px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .milestone p {
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .progress-line {
+      height: 10px;
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: #e7ece8;
+    }
+
+    .progress-line span {
+      display: block;
+      height: 100%;
+      background: var(--active);
+    }
+
+    .two-col {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    ul {
+      margin: 12px 0 0;
+      padding-left: 18px;
+    }
+
+    li {
+      margin: 8px 0;
+    }
+
+    .blocker-panel strong {
+      color: var(--blocked);
+    }
+
+    .evidence-panel strong {
+      color: var(--evidence);
+    }
+
+    footer {
+      margin-top: 34px;
+      padding-top: 14px;
+      border-top: 1px solid var(--line);
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    @media (max-width: 880px) {
+      header,
+      .status-grid,
+      .milestones,
+      .two-col {
+        grid-template-columns: 1fr;
+      }
+
+      .updated {
+        text-align: left;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <div>
+        <h1>LoopOS Progress Dashboard</h1>
+      </div>
+        <p class="updated">Last updated: 2026-07-14<br>Source: GOALS.md</p>
+    </header>
+
+    <section class="status-grid" aria-label="Current status">
+      <div class="status-cell">
+        <p class="label">Active goal</p>
+        <p class="value">RTW1 - Real-Team Weekly Loop Recovery</p>
+      </div>
+      <div class="status-cell">
+        <p class="label">Active delegation</p>
+        <p class="value">RTW1-S4 designated real-team weekly run</p>
+      </div>
+      <div class="status-cell">
+        <p class="label">Completion rule</p>
+        <p class="value">Evidence required before milestone close</p>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>Milestones</h2>
+      <div class="milestones">
+        <article class="milestone">
+          <span class="badge done">Done</span>
+          <h3>G0 - Coordination Baseline</h3>
+          <p>Route map, coordination protocol, worker contract, and evidence gates are established.</p>
+          <div class="progress-line" aria-label="G0 complete"><span style="width: 100%"></span></div>
+        </article>
+        <article class="milestone">
+          <span class="badge done">Done</span>
+          <h3>G1 - Interface Workbench Pilot</h3>
+          <p>First Data to Pretraining weekly governance rhythm is implemented, verified, audited, and closed.</p>
+          <div class="progress-line" aria-label="G1 complete"><span style="width: 100%"></span></div>
+        </article>
+        <article class="milestone">
+          <span class="badge done">Done</span>
+          <h3>G2 - Pilot Hardening and Review</h3>
+          <p>G1 audit blockers were hardened, reviewed, rehearsed, and closed for real weekly pilot use.</p>
+          <div class="progress-line" aria-label="G2 complete"><span style="width: 100%"></span></div>
+        </article>
+        <article class="milestone">
+          <span class="badge active">Active</span>
+          <h3>RTW1 - Real-Team Weekly Loop Recovery</h3>
+          <p>RTW1-S0 through RTW1-S3 are closed and product-owner accepted. RTW1-S4 engineering, scripted browser rehearsal, independent review, and production deployment are delivered; one real-team weekly run remains.</p>
+          <div class="progress-line" aria-label="RTW1 active"><span style="width: 88%"></span></div>
+        </article>
+        <article class="milestone">
+          <span class="badge planned">Paused</span>
+          <h3>G3/G4 - Generalize and Evolve</h3>
+          <p>I2C-2 and the GD1 domain foundation are preserved. G3 generalization, GD1 Slice 3, I2C-3, and second-interface migration remain inactive until RTW1 produces real-team weekly evidence.</p>
+          <div class="progress-line" aria-label="G3 paused"><span style="width: 12%"></span></div>
+        </article>
+      </div>
+    </section>
+
+    <section class="section two-col">
+      <div class="evidence-panel">
+        <h2>G1 Evidence Gate</h2>
+        <ul>
+          <li><strong>Engineering:</strong> typecheck passes; lint has no blocking errors or documented accepted warnings.</li>
+          <li><strong>Browser:</strong> local run shows the workbench entry point and five SLA columns.</li>
+          <li><strong>Workflow:</strong> submit, smoke-run result, pass close, fail tension draft, tactical meeting four-outcome resolution, and weekly candidate-set verification are verified.</li>
+          <li><strong>Audit:</strong> G1-A3D recommended closing G1 and activating G2.</li>
+        </ul>
+      </div>
+      <div class="blocker-panel">
+        <h2>G2 Watchlist</h2>
+        <ul>
+          <li><strong>Lint:</strong> full lint exits cleanly with warnings only.</li>
+          <li><strong>Audit fixes:</strong> overdue notifications, org-scope checks, and abnormal sample rate enforcement were verified.</li>
+          <li><strong>Weekly review:</strong> governance candidate review route is integrated and verified.</li>
+          <li><strong>Runtime:</strong> existing port 3001 has been stale during verification; accepted browser evidence used isolated temporary runtimes on 3002.</li>
+          <li><strong>Pilot blocker:</strong> mandatory pilot permission rules were implemented and verified before rehearsal.</li>
+          <li><strong>Verification:</strong> G1-I3-L1 remains stuck on approval/environment access, but G1-I3 is accepted through main-checkout local thread G1-I3-L2.</li>
+          <li><strong>Routes:</strong> /onboarding now exists as the recoverable route for authenticated users without a person record; RTW1-S1 independent review passed.</li>
+          <li><strong>Mobile:</strong> MobileNav exists but is not rendered in app layout.</li>
+          <li><strong>Model/docs:</strong> docs and implementation disagree on Feishu framing and Tension/Blocker boundaries.</li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="section two-col">
+      <div class="evidence-panel">
+        <h2>Implementation Slices</h2>
+        <ul>
+          <li><strong>G1-W1:</strong> implementation breakdown completed by temporary subagent Hubble.</li>
+          <li><strong>G1-I1:</strong> complete; schema, migration, notification targetUrl persistence, /app/projects/new, /app/projects/[id], and Project G1 fields are visible.</li>
+          <li><strong>G1-I1 evidence:</strong> main thread verified Prisma validate and tsc pass; lint remains blocked outside this slice.</li>
+          <li><strong>G1-I2:</strong> implementation complete; /app/interfaces/data-pretraining route, actions, and nav link are visible.</li>
+          <li><strong>G1-I2 evidence:</strong> main thread verified tsc and scoped lint pass; full lint remains blocked outside this slice.</li>
+          <li><strong>G1-L1:</strong> complete in local thread 019f453a-e111-7dd0-b6fc-9e49591ec2a0.</li>
+          <li><strong>G1-L1 evidence:</strong> 3002 isolated runtime rendered the workbench, five SLA columns, next-action detail, new-run submit form, PASS close with SLA ACHIEVED, FAIL state, and linked tension draft.</li>
+          <li><strong>G1-I3:</strong> implementation complete in worktree thread 019f4547-cdab-7573-9653-da37bc0f9758 and integrated into the main checkout by 019f455d-dcba-7862-83ca-7850819c8b4b.</li>
+          <li><strong>G1-I3 evidence:</strong> integration worker reported byte parity for 11 requested files plus Prisma validate/generate, tsc, and scoped lint pass; G1-I3-L2 accepted evidence covers four UI submissions, exactly one persisted tactical resolution per run, project/action minimum fields, No time commitment, and workbench detail links.</li>
+          <li><strong>G1-I4:</strong> weekly review route added by thread 019f4581-02ff-7291-b3e7-4ffbcaa0c62b and integrated by 019f4588-f537-7a83-94f7-1e049afdcf73.</li>
+          <li><strong>G1-I4 evidence:</strong> integration worker reported source/target file parity, tsc pass, scoped lint pass, and Prisma validate pass; G1-I4-L3 accepted DB/browser evidence confirms one structural candidate and three tactical exclusions.</li>
+          <li><strong>G1-F1:</strong> audit blocker fixes completed in thread 019f45c0-36bc-7923-ae40-de391290a115.</li>
+          <li><strong>G1-F1 evidence:</strong> worker reported tsc pass, Prisma validate pass, touched-file scoped lint pass, overdue notification wiring, abnormal sample rate enforcement, and org-scope checks for relationship writes.</li>
+          <li><strong>G1-A2:</strong> complete in thread 019f45cc-8853-72b0-83c6-b49a4285631b; accepted G1-F1 functional fixes and isolated full lint as the remaining closure blocker.</li>
+        </ul>
+      </div>
+      <div class="blocker-panel">
+        <h2>Next Delegation</h2>
+        <ul>
+          <li><strong>G1-I4-L1:</strong> failed with system-error state before producing a worker report.</li>
+          <li><strong>G1-I4-L2:</strong> failed with system-error state before producing a worker report.</li>
+          <li><strong>G1-I4-S1:</strong> temporary subagent verification failed before producing evidence because the workspace hit its usage limit.</li>
+          <li><strong>G1-I4-L3:</strong> complete; verified proposal cmrd3nifi00016eycvzxs503m from run cmrd3fs330005wzycq6xx5652 and excluded project/action/defer records.</li>
+          <li><strong>Screenshot:</strong> /tmp/loopos-g1-i4-weekly-3002.png.</li>
+          <li><strong>G1-A1:</strong> complete; recommended keeping G1 open.</li>
+          <li><strong>G1-F1:</strong> complete; full lint still fails only outside touched files according to worker report.</li>
+          <li><strong>G1-A2:</strong> complete; functional audit blockers are verified fixed.</li>
+          <li><strong>G1-F2:</strong> partial; thread 019f45cf-5b48-7901-b2d0-28deef2175e7 edited six JSX text files but stalled before validation.</li>
+          <li><strong>G1-F2B:</strong> complete by current checkout evidence; eslint exits 0 with warnings only, and typecheck exits 0.</li>
+          <li><strong>G1-A3:</strong> incomplete; verified command gates and static consistency but did not return a final recommendation.</li>
+          <li><strong>G1-A3B:</strong> incomplete; found no obvious contradiction but did not return final recommendation.</li>
+          <li><strong>G1-A3C:</strong> incomplete; could not inspect GOALS.md.</li>
+          <li><strong>G1-A3D:</strong> complete; recommended closing G1 and activating G2.</li>
+          <li><strong>G2-W1:</strong> incomplete; identified meeting queue over-breadth but did not return final breakdown.</li>
+          <li><strong>G2-W1B:</strong> complete in thread 019f45de-12dd-7a93-8245-94864d4e7b08; recommended four slices: meeting queue narrowing, pilot permission rules, audit trace hardening, and weekly review friction pass.</li>
+          <li><strong>G2-I1:</strong> incomplete; thread 019f45e1-29b8-79c2-a909-0bc6731064e7 was replaced after no final report and a main-thread read-only check still found the broad org OPEN tension query.</li>
+          <li><strong>G2-I1B:</strong> incomplete; thread 019f45e3-4b0f-79e1-ac66-d3839dec992a identified the relation-filter direction but the current file still lacked the promised query patch.</li>
+          <li><strong>G2-I1C:</strong> incomplete; thread 019f45e5-f737-7421-845e-9b6d89f59e07 identified the old query but did not land the patch or return final evidence.</li>
+          <li><strong>G2-I1D:</strong> static patch complete in thread 019f45e7-d260-71f0-8202-6a184fe3a9ee; tactical meetings now use validationRunsCreated.some with FAILED/OVERDUE and tacticalResolution null for Data to Pretraining, and main-thread tsc plus scoped eslint passed.</li>
+          <li><strong>G2-I1D-L1:</strong> incomplete in thread 019f45ea-60a1-7020-9f9b-8d4a66c5edc1; reused 3001 and DB sanity check matched only includedTensionId cmrd88fyz0005yiycbc4bs9i3, but no browser screenshot/assertion was completed.</li>
+          <li><strong>G2-I1D-L2:</strong> incomplete in thread 019f45ef-0af7-7640-b885-510c58feef4c; reused 3001 but remained on login/app error and produced no meeting-card assertions or screenshot.</li>
+          <li><strong>G2-I1D-L3:</strong> incomplete in thread 019f45f1-d5a0-7c71-89b7-3a97e2e8e573; reused 3001, created test user/member/person codex-g2-i1d@loopos.dev, login reached /app, and the exact meeting URL did not redirect to login.</li>
+          <li><strong>G2-I1D-L3 blocker:</strong> the meeting detail page rendered `This page couldn’t load`; Prisma Client rejected `include.proposals` on `Meeting`, so included/ordinary/resolved DOM assertions could not prove queue behavior. Screenshot: /Users/heyiqing/LLM/loopos/tmp-g2-i1d-meeting-authenticated.png.</li>
+          <li><strong>G2-I1D-F1:</strong> incomplete in thread 019f45f6-ce5d-74b2-97a8-7216189b0647; no code/schema/client/runtime changes, confirmed schema and generated Meeting type contain proposals, and identified stale 3001 Prisma runtime as likely cause.</li>
+          <li><strong>G2-I1D-F1B:</strong> incomplete in thread 019f45f8-f124-7493-bc53-9c28744f54e1; reported PID 75855 on 3001 and unauthenticated 307 to login, but did not run prisma generate, restart runtime, tsc, lint, or authenticated meeting-detail verification.</li>
+          <li><strong>G2-I1D-F1C:</strong> incomplete in thread 019f45fa-afea-7f11-abdb-cf9c03dcdb0d; confirmed PID 75855 but did not run prisma generate, restart runtime, tsc, lint, or authenticated fixture URL verification.</li>
+          <li><strong>G2-I1D-F1D:</strong> incomplete in thread 019f45fc-7d5a-7fc1-9831-a52f00305083; ran prisma generate successfully, stopped old parent PID 75849, cleared 3001, and started pnpm dev starter PID 70763, but did not confirm new listener, run tsc, or verify authenticated fixture URL.</li>
+          <li><strong>G2-I1D-F1E:</strong> complete in thread 019f45ff-06f4-7253-8551-be29ad2dbcf3; verified 3001 listener PID 87982 in /Users/heyiqing/LLM/loopos, tsc passed, real login reached meeting detail h1 G2-I1D tactical meeting queue narrowing G2I1D-1783584624219, include.proposals disappeared, browser error logs were empty, and server logs showed fixture 200 with no Prisma error.</li>
+          <li><strong>G2-I1D-L4:</strong> complete in thread 019f4604-470c-7a32-b9de-41521542756c; authenticated browser assertions passed on 3001 PID 87982, included fixture cmrd88fyz0005yiycbc4bs9i3 was present, ordinary/resolved fixtures were absent, browser error logs were empty, and screenshot was saved to /tmp/loopos-g2-i1d-authenticated-queue-assertions-2026-07-09.png.</li>
+          <li><strong>G2-I2:</strong> incomplete in thread 019f4607-8c1b-7771-aabb-e5f075678596; identified same-org over-permission and modified src/lib/permissions.ts, but did not return action integration, typecheck, scoped lint, or permission evidence.</li>
+          <li><strong>G2-I2B:</strong> incomplete in thread 019f460b-4a46-7dd3-afe3-364f8a5fe1e5; audited the partial change but made no edits, confirmed supportPeople is not an acceptable owner substitute, action files lack helper integration, generic meeting actions can bypass claim permission, and no verification commands were run.</li>
+          <li><strong>G2-I2C:</strong> incomplete in thread 019f460e-3620-7961-a6d9-711c21012300; inspected the code and confirmed helper/action gaps but made no edits and ran no verification.</li>
+          <li><strong>G2-I2D1:</strong> complete in thread 019f4610-aa99-7151-a907-97504e94c7ae; helper actor sets now exclude supportPeople, preserve org-scoped interface lookup, and worker reported tsc plus scoped eslint pass.</li>
+          <li><strong>G2-I2D2:</strong> complete in thread 019f4613-7459-7630-bf58-dc1476d6103b; wired helper into submit-validation, record-smoke-run, and create-failure-tension actions, preserving org checks, with worker-reported tsc and scoped eslint pass.</li>
+          <li><strong>G2-I2D3:</strong> complete in thread 019f4647-60a7-7e01-9cec-14785b890e11; wired claim-tactical-outcome permission into meeting validation outcome actions and generic validation-linked tension mutation paths, with worker-reported tsc and scoped eslint pass.</li>
+          <li><strong>G2-I2D4:</strong> incomplete in thread 019f464b-2e00-7061-a314-2bc17c842844; read the task boundary but returned no final evidence after checkpoint and hard-stop prompts.</li>
+          <li><strong>G2-I2D4A:</strong> incomplete in thread 019f46ae-df2a-7100-8b19-ea05d536b7d9; reported it would verify the helper with mocked dependencies but returned no final matrix evidence after checkpoint and hard stop.</li>
+          <li><strong>G2-I2D4A1:</strong> complete in thread 019f46b0-8ee3-73a1-a48d-92c7f3a7dab4; read-only source audit passed, with exact line evidence for helper export, org-scoped lookup, actor sets, rejection throw, and no supportPeople/supportPersonIds matches.</li>
+          <li><strong>G2-I2D4A2:</strong> incomplete in thread 019f46b2-7da8-7060-ae83-790ceb21cfbd; planned a temporary tsx harness but returned no final pass/fail matrix after checkpoint and hard stop.</li>
+          <li><strong>G2-I2D4A2B:</strong> complete; helper behavior matrix passed 28/28 via `./node_modules/.bin/tsx scripts/verify-g2-i2d4a2-permissions.ts`, and the temporary harness was removed.</li>
+          <li><strong>G2-I2D4B1:</strong> incomplete in thread 019f46b7-305a-7c11-a60b-4dac82cbdb4f; confirmed the three helper gates but returned no runtime evidence after checkpoint and hard stop.</li>
+          <li><strong>G2-I2D4B1A:</strong> incomplete in thread 019f46b9-3f90-7d32-b7e5-b26f9ca7a9bd; began narrowing to submitValidationAction but returned no runtime evidence after checkpoint and hard stop.</li>
+          <li><strong>G2-I2D4B1B:</strong> complete; main-thread read-only source audit confirmed submitValidationAction gate wiring at line 145 and org-scoped lookup at lines 138-144, but this is not runtime evidence.</li>
+          <li><strong>G2-I2D4B1C:</strong> incomplete in thread 019f46bd-2be1-7a81-b538-ae934e5c453b; confirmed static shape but did not attempt runtime harness execution or exercise fixtures.</li>
+          <li><strong>G2-I2D4B1D:</strong> incomplete in thread 019f46bf-176a-71e0-847f-c753e52d7b5c; identified a TS harness path but returned no command, invocation evidence, proven case, or blocker after checkpoint and hard stop.</li>
+          <li><strong>G2-I2D4B1E:</strong> incomplete in thread 019f46c1-3501-7823-aee1-1283dc7b4fae; read static wiring but produced no runtime URL, browser submission, fixture IDs, persistence, or rejection evidence.</li>
+          <li><strong>G2-I2D4B1F:</strong> incomplete in thread 019f46c3-613e-77e1-8dd3-fd6274506abb; confirmed form/action source shape but explicitly did not attempt runtime/browser submission and returned no runtime blocker.</li>
+          <li><strong>G2-I2D4B1G:</strong> incomplete in thread 019f46c6-d9ab-7721-abb1-f9d2a944061d; stayed in progress after checkpoint and hard-stop prompts and returned no A/B/C decision.</li>
+          <li><strong>G2-I2D4B1H:</strong> incomplete in thread 019f46c8-aa48-71d1-b97b-4c438a30379a; confirmed the form/session requirements but stopped before runtime startup, authentication, submission, harness invocation, or persistence query.</li>
+          <li><strong>G2-I2D4B1I:</strong> incomplete in thread 019f46ca-c02c-7c83-988a-0afe664c4d4f; executed port inspection, found no app server on 3000/3001 and Postgres on 127.0.0.1:5432, then got stuck waiting on approval while starting isolated runtime.</li>
+          <li><strong>G2-I2D4B1J:</strong> incomplete in thread 019f46cd-2265-7300-9fa0-855ea0d1f60d; confirmed harness feasibility but did not create or run the no-approval harness after checkpoint and hard-stop prompts.</li>
+          <li><strong>G2-I2D4B1K:</strong> incomplete in thread 019f46cf-200d-7880-83a9-b018bcbb7619; created a temporary bootstrap harness, but the first harness run was blocked before user code by tsx IPC EPERM under the macOS temp path; cleanup check found the temp harness absent.</li>
+          <li><strong>G2-I2D4B1L:</strong> incomplete in thread 019f46d1-add8-7ed3-873f-7f1fb37981c2; acknowledged the no-tsx path but returned no no-tsx command output, persistence evidence, or final blocker; cleanup check found no temporary harness files.</li>
+          <li><strong>G2-I2D4B1M:</strong> complete; decision is to add a first-class repo-owned verification seam/command rather than accept static evidence or repeat ad hoc harness workers.</li>
+          <li><strong>G2-I2D4B1N:</strong> incomplete in thread 019f46d4-b031-7971-8d93-ed2335afca91; inspected the intended seam but made no file changes, added no command, and produced no persistence proof.</li>
+          <li><strong>G2-I2D4B1O:</strong> incomplete in thread 019f46d7-f212-7473-a2be-f30ff89b9dc2; created only a placeholder verification script that threw, then did not complete the seam; the placeholder was removed.</li>
+          <li><strong>G2-I2D4B1P:</strong> incomplete in thread 019f46da-658a-7241-838e-d5a854ba1054; applied no patch, changed no files, created no verification script, did not prove `requirePilotInterfacePermission` callable from a script, and produced no persistence proof.</li>
+          <li><strong>G2-I2D4B1Q:</strong> incomplete in thread 019f46de-ff83-7391-9842-df7d0427a39b; returned after hard stop with no implementation, no changed files, no permission-boundary invocation, and no persistence proof.</li>
+          <li><strong>G2-I2D4B1R:</strong> complete; decision is to stop repeating identical script-seam implementation threads and use a local browser/session runtime evidence thread instead.</li>
+          <li><strong>G2-I2D4B1S:</strong> incomplete in thread 019f46e2-224d-7b11-a92e-52b00c894785; hard stop confirmed no runtime, browser session, authenticated actor, fixture selection, submission, database query, console/network evidence, product blocker, or persistence proof.</li>
+          <li><strong>G2-I2D4B1T:</strong> complete via main-thread supervised bootstrap; runtime PID 86197 serves http://localhost:3001, `/` and `/login` return 200, `/app/interfaces/data-pretraining` redirects to login, DB reachability passed, and fixture/interface candidates were identified.</li>
+          <li><strong>G2-I2D4B1U:</strong> complete via main-thread supervised browser evidence; system Chrome submitted `g2-i2d4b1u-browser-1783601217470`, final URL `/app/interfaces/data-pretraining?run=cmrdi44r00000id649k4armzw`, screenshot `/tmp/loopos-g2-i2d4b1u-submit-1783601217470.png`, DB row persisted with status `AWAITING_SMOKE_RUN`, no failed browser requests, and the temporary actor was removed.</li>
+          <li><strong>G2-I2D4B2:</strong> complete via main-thread supervised browser evidence; system Chrome submitted PASS smoke-run values for run `cmrdi44r00000id649k4armzw`, screenshot `/tmp/loopos-g2-i2d4b2-smoke-1783601419533.png`, DB row updated to `PASSED`, no failed browser requests, and the temporary actor was removed.</li>
+          <li><strong>G2-I2D4B3:</strong> complete via main-thread supervised browser evidence; system Chrome created failed run `cmrdicsk20001id648bfuu0b1`, submitted failure tension `cmrdicuyc0002id6414ye2akp`, screenshot `/tmp/loopos-g2-i2d4b3-failure-tension-1783601621622.png`, DB linked `createdTensionId`, no failed browser requests, and the actor was retained as `raiserId` for audit integrity.</li>
+          <li><strong>G2-I2D4B4:</strong> complete via main-thread supervised browser evidence; system Chrome claimed `CREATE_ACTION` for run `cmrdicsk20001id648bfuu0b1`, screenshot `/tmp/loopos-g2-i2d4b4-tactical-action-1783601877906.png`, DB set `tacticalResolution=CREATE_ACTION` and updated tension `cmrdicuyc0002id6414ye2akp` to `ASSIGNED`, no failed browser requests, and the temporary B4 actor was removed.</li>
+          <li><strong>G2-I2D4C:</strong> complete; accumulated helper/source/matrix/browser evidence is sufficient to close the G2-I2 pilot permission blocker.</li>
+          <li><strong>G2-I3:</strong> read-only audit complete in thread 019f46f6-ec8c-7ea2-bb2d-e19f63097773; mutual exclusion is enforced, but project/action/defer outcomes need stronger persistent trace display and meeting/workbench backlink evidence.</li>
+          <li><strong>G2-I3A:</strong> complete; source, migration, DB, and browser display evidence now close the outcome trace gap. Local checks passed (`prisma validate`, `prisma generate`, `tsc --noEmit`, scoped eslint), migration `20260709160000_g2_trace_links` was applied locally, action/defer fixtures show `resolutionMeetingId`, and screenshots `/tmp/loopos-g2-i3a-action-trace-20260709-v2.png` plus `/tmp/loopos-g2-i3a-defer-trace-20260709.png` prove trace visibility.</li>
+          <li><strong>G2-I4:</strong> complete; governance page now links to weekly review, governance-candidate actions revalidate the weekly route, DB evidence shows exactly one governance candidate and tactical exclusions (`CREATE_PROJECT=2`, `CREATE_ACTION=3`, `DEFERRED=2`), and browser evidence at `/tmp/loopos-g2-i4-weekly-review-20260709-final.png` confirms the entry, candidate, source tension, suggested change, and excluded tactical counts.</li>
+          <li><strong>G2-A1:</strong> complete; independent review thread 019f4718-9b6d-7cc3-b9cc-8f547c5e1cda returned two P1 findings, both were fixed and reverified, and browser rehearsal `g2-a1-rehearsal-1783604403333` proved submit → failed smoke → failure tension → tactical governance candidate → weekly review. Screenshots include `/tmp/loopos-g2-a1-weekly-final-1783604403333.png` and post-fix `/tmp/loopos-g2-a1-post-p1-weekly-1783604403333.png`.</li>
+          <li><strong>G3-W1:</strong> complete; planning thread 019f4722-0c4c-77b2-a2fd-d0f6dbdd3847 recommended `Pretraining → Evaluation` and template-first, with no DB-level generic configuration until two templates have browser evidence.</li>
+          <li><strong>G3-I1:</strong> complete; implementation thread 019f48e7-66fd-7a81-a64b-47bbfbb65cae changed only src/lib/org-templates.ts, adding `评测回路` and `Base Model 评测准入` for `Pretraining → Evaluation` while preserving existing `数据就绪 D3` for `Data → Pretraining`.</li>
+          <li><strong>G3-I1 evidence:</strong> tsc and scoped eslint passed; local browser evidence on existing runtime http://localhost:3017 showed `/app/setup` contains `评测回路`, `Base Model 评测准入`, and `数据就绪 D3`, and `/app/interfaces/data-pretraining` still loads with no failed browser requests. Screenshots: /tmp/loopos-g3-i1-setup-1783634912258.png and /tmp/loopos-g3-i1-data-pretraining-1783634912258.png.</li>
+          <li><strong>G3-I2:</strong> approved umbrella; the user selected a deeply configurable visual workbench with admin-only authoring, immutable published versions, version-pinned runs, and system-provided safe nodes.</li>
+          <li><strong>G3-I2 design:</strong> approved in docs/plans/2026-07-10-generic-interface-workbench-design.md; delivery is split into foundation, designer, runtime, migration/configuration, and two-interface rehearsal/audit slices.</li>
+          <li><strong>G3-I2A plan:</strong> worker 019f493f-0059-74c1-bee2-63dc7d30a721 completed the additive schema, immutable version, safe-node protocol, deterministic compiler, policy, migration, rollback, and focused-test scope.</li>
+          <li><strong>G3-I2A boundary:</strong> no current routes, InterfaceValidationRun behavior, visual designer, runtime engine, AI drafting, or arbitrary scripts change in this slice.</li>
+          <li><strong>G3-I2A implementation:</strong> worker 019f4941-ad33-70b0-89b4-8b76bb254095 owns only the additive Prisma foundation, safe-node protocol, compiler, pure admin policy, and focused tests.</li>
+          <li><strong>G3-I2A evidence:</strong> Prisma validate/generate, 19 focused tests, tsc, scoped eslint, and diff check pass; a fresh temporary PostgreSQL 14 cluster proved full migration apply, immutable-version trigger rejection, reviewed rollback, and clean reapply.</li>
+          <li><strong>G3-I2A gate:</strong> closed after implementation, isolated database evidence, review corrections, and final independent confirmation.</li>
+          <li><strong>G3-I2A review:</strong> reviewer 019f4955-faa2-7510-8724-04bdb4531f4d found P1 delete/cascade loss despite append-only claims and P2 locale-sensitive canonical ordering; correction and re-verification are required.</li>
+          <li><strong>G3-I2A correction:</strong> both findings are fixed; 21 tests and static checks pass, and isolated PostgreSQL proves UPDATE, direct DELETE, and cascade DELETE rejection plus rollback/reapply. Final independent confirmation is pending.</li>
+          <li><strong>G3-I2A close:</strong> final reviewer 019f4974-f6b9-7e40-9d26-a9a25a60b869 found no P0/P1/P2 and confirmed both earlier findings closed.</li>
+          <li><strong>G3-I2B plan:</strong> worker 019f4977-3f53-7743-ae6a-01861eeff5f5 completed the administrator designer, concurrency, validation, comparison, atomic publication, lifecycle, and browser-evidence plan.</li>
+          <li><strong>G3-I2B1:</strong> complete; tenant/admin data boundary, layout persistence, draft CAS, structural diff, and atomic immutable publication passed all gates.</li>
+          <li><strong>G3-I2B1 delegation:</strong> worker 019f4979-d7db-7443-a392-6cc016dd9237 owns the additive layout migration, admin/data boundary, draft CAS, diff, publication service, focused tests, and minimal server routes.</li>
+          <li><strong>G3-I2B1 evidence:</strong> 38 tests and static/build checks pass; isolated PostgreSQL proves real CAS, two atomic publications, active-parent lineage, immutable layout snapshot, layout migration rollback, and reapply. Independent review remains.</li>
+          <li><strong>G3-I2B1 review:</strong> reviewer 019f4995-1ac5-76a1-81df-a446c64cf57c found a P1 compiler resource-bound gap and three P2 issues in visible form outcomes, migration default drift, and late-failure rollback proof. B1 remains open for correction.</li>
+          <li><strong>G3-I2B1 correction:</strong> shared compiler limits, lock-outside preparation, locked hash verification, visible status outcomes, default alignment, and true late-failure rollback are implemented and reverified; final independent confirmation remains.</li>
+          <li><strong>G3-I2B1 close:</strong> final reviewer 019f49fd-112b-77a3-8c89-c31453d13b97 found no P0/P1/P2 and confirmed all four review findings closed.</li>
+          <li><strong>G3-I2B2:</strong> complete; administrator React Flow designer, palette, inspector, validation, lifecycle, version comparison, and responsive mobile tabs are implemented.</li>
+          <li><strong>G3-I2B2 delegation:</strong> worker 019f49ff-06de-7f11-a8fb-d4ca9c200143 owns only the visual designer pages/components, admin navigation, prefixed styles, and pure editor projection tests.</li>
+          <li><strong>G3-I2B2 evidence:</strong> 55 focused tests and static/build checks pass; real Chrome verifies desktop/mobile authoring, nonblank canvas, save/reload, publication history, diff, invalid draft persistence, stale conflict, member 404, and Data → Pretraining regression with no console/request errors.</li>
+          <li><strong>G3-I2B2 review:</strong> reviewer 019f4b46-432d-7cf0-aeab-1ebe75bf849d found one P1 and two P2; correction worker 019f4b3f-b702-76f2-b3e3-63fa2be37069 closed all findings, and final review found no P0/P1/P2.</li>
+          <li><strong>G3-I2B3:</strong> complete; bounded structured AI proposals, server validation and diff, explicit client apply, provider fallback, stale protection, stable layout, and concurrency cost protection passed all gates.</li>
+          <li><strong>G3-I2B3 delegation:</strong> worker 019f4b4b-f86b-7d02-afbc-d08b397b6467 owns only the proposal service/tests, narrow server action, designer proposal UI, and prefixed styles.</li>
+          <li><strong>G3-I2B3 evidence:</strong> 65 tests, TypeScript, ESLint, diff check, production build, Provider-unavailable Chrome fallback, and final no-P0/P1/P2 review pass. Stale proposals cannot overwrite edits, stable layouts survive apply, and user/organization advisory locks protect concurrent model cost.</li>
+          <li><strong>G3-I2B3 browser close:</strong> a zero-repository-change fetch interceptor exercised the real OpenAI adapter and `/responses`; four diffs were reviewed, explicit apply produced an unsaved local draft, stable layout remained fixed, database state stayed unchanged, and reload restored the server draft.</li>
+          <li><strong>G3-I2B3 audit:</strong> auditor 019f4c60-5146-7941-a633-3846c32d2c50 found every evidence gate satisfied and recommended closure.</li>
+          <li><strong>G3-I2C plan:</strong> planning worker 019f4c6c-f030-7c51-93b3-f3eb4fbd7b5a completed a three-slice runtime plan with a visible member page first, shared domain side effects second, and attachment/AI completion third.</li>
+          <li><strong>G3-I2C-1:</strong> implementation, verification, review closure, independent audit, and product-owner page acceptance are complete as of 2026-07-11.</li>
+          <li><strong>G3-I2C-2 planning:</strong> independent task 019f4e47-2ffd-7e61-809f-c0c9ae534ec6 mapped the domain writes and refined the first slice after the coordinator found that generic tensions were excluded from tactical meetings. No schema migration is needed.</li>
+          <li><strong>G3-I2C-2A implementation:</strong> task 019f4e51-21cc-7b61-94f6-daa837a18120 completed confirmed tension creation, explicit routing to one existing tactical meeting, exact meeting-only processing, five-minute command leases, idempotent retries, artifact provenance, tenant isolation, and responsive member UX. Its historical acceptance fixture ran on port 3107 and was removed after acceptance.</li>
+          <li><strong>G3-I2C-2A review:</strong> reviewer 019f4e68-cce2-7813-9200-8ff60a532afb found two P1 authority defects: runtime tensions remained visible in non-tactical meetings, and convertTensionToDecision could bypass exact route and meeting-type checks. The single concentrated correction then addressed both findings.</li>
+          <li><strong>G3-I2C-2A correction:</strong> the single correction unified provenance and mutation authorization, removed runtime tensions from governance/strategy queues, limited legacy decision conversion to ordinary tensions in governance meetings, and proved zero-write rejection. 49 focused tests, 6 direct boundary tests, real database probes, four-meeting browser isolation, 390px layout, and all static/build gates pass.</li>
+          <li><strong>G3-I2C-2A review closure:</strong> reviewer 019f4e68-cce2-7813-9200-8ff60a532afb confirmed both original P1 findings closed with no P0/P1/P2.</li>
+          <li><strong>G3-I2C-2A audit:</strong> independent audit 019f4e76-68dc-7d91-98ba-c32ab2db284d matched implementation and evidence, found only stale roadmap/dashboard status and an outdated broad-suite count, then returned PASS after synchronization.</li>
+          <li><strong>G3-I2C-2A acceptance:</strong> the product owner opened and tested the retained fixture, then explicitly replied 确认 on 2026-07-11. The dedicated 3107 service and disposable database were cleaned up after acceptance.</li>
+          <li><strong>G3-I2C-2B planning:</strong> independent task 019f4ecf-b225-72a0-8894-f61f1b524248 completed the read-only plan. It recommends one minimal TacticalOutcomeProposal table, proposer-owned revisions, one atomic Project-or-Action claim, runtime evidence-only authority, and no post-assignment veto.</li>
+          <li><strong>G3-I2C-2B authority correction:</strong> the product owner rejected the different-person approval rule. After the meeting process passes, any process-authorized participant, including the proposer, may record the approved result. Authority comes from the meeting process; coach, circle lead, administrator, recorder, and proposer identities do not independently grant approval power.</li>
+          <li><strong>G3-I2C-2B implementation:</strong> local implementation and browser task 019f4ee0-5f0c-7111-9750-47bc2d3422a4 delivered proposal persistence, meeting-process result recording, atomic Project-or-Action creation, bypass guards, trace links, migration/tests, and a retained visible acceptance fixture, then entered system-error state before its final report.</li>
+          <li><strong>G3-I2C-2B evidence recovery:</strong> main-thread and correction verification passed Prisma validate/generate, TypeScript, 54 focused tests, 10 direct behavioral/action-boundary tests, scoped ESLint, production build, diff check, all-14 migration apply plus new-migration rollback/reapply, four direct database constraints, retained outcome queries, proposer/non-participant browser checks, desktop and 390x844 layout, and zero browser warnings/errors.</li>
+          <li><strong>G3-I2C-2B review closure:</strong> reviewer 019f4f84-d43b-7c73-ab65-b925f1a26877 found two P1 authorization defects and one P2 behavioral-test gap. The single correction 019f4f8a-7774-7c83-a16e-ab3e3da09f70 closed all three; the same reviewer returned PASS with no P0/P1/P2.</li>
+          <li><strong>G3-I2C-2B audit:</strong> auditor 019f4f9c-546d-78a3-87d7-6688bf35d015 verified implementation, evidence, review closure, active-goal uniqueness, and the retained environment; its only initial FAIL reason was stale roadmap/dashboard text, and the same auditor returned PASS after synchronization.</li>
+          <li><strong>G3-I2C-2B acceptance:</strong> the product owner opened the retained page and explicitly replied 确认 on 2026-07-11. G3-I2C-2B is complete; tmux session loopos_g3_i2c2b_1783735586 stopped, port 3108 is clear, and the disposable database was removed.</li>
+          <li><strong>G3-I2C-2C planning:</strong> independent task 019f4fe4-493b-7473-ba1e-6c9c2ac11aa3 completed the read-only plan. It recommends no migration, one CANDIDATE record, nullable meetingId for unrouted state, one exact governance-route artifact, an OPEN source tension, and no governance decision or structure mutation.</li>
+          <li><strong>G3-I2C-2C boundary:</strong> all six product-owner design decisions are confirmed. Governance adoption/objection/coaching, organization-structure mutation, pilot weekly rollup changes, I2C-3, and second-interface migration remain inactive.</li>
+          <li><strong>G3-I2C-2C decision 1:</strong> product owner accepted option A: reuse GovernanceProposal(status=CANDIDATE), nullable meetingId, and one exact route artifact; no schema migration.</li>
+          <li><strong>G3-I2C-2C decision 2:</strong> product owner accepted option A: role, circle, authority, accountability, policy, and circle/interface relationships are structural; home-circle reassignment is tactical unless structure changes; policy/interface drafts may remain non-executable.</li>
+          <li><strong>G3-I2C-2C decision 3:</strong> product owner accepted option A: the proposer must be in the selected governance meeting; any actual participant may route, including the proposer; coach, lead, and admin have no override.</li>
+          <li><strong>G3-I2C-2C decision 4:</strong> product owner accepted option A: candidate creation and meeting routing are separate; route failure preserves the unrouted candidate for audited retry and never auto-selects a meeting.</li>
+          <li><strong>G3-I2C-2C decision 5:</strong> product owner accepted option A: generic candidates stay outside the pilot weekly rollup and appear read-only in the selected governance meeting; adoption, objection, and structure mutation remain deferred.</li>
+          <li><strong>G3-I2C-2C decision 6:</strong> product owner accepted option A: store a bounded non-executable structural draft now and defer executable typed mutation fields to the later governance-decision slice.</li>
+          <li><strong>G3-I2C-2C implementation:</strong> local implementation/browser task 019f500f-af8c-7922-b391-b494668a0ab9 completed candidate creation, explicit governance routing, read-only meeting display, behavior/database/static gates, and the 3110 acceptance fixture.</li>
+          <li><strong>G3-I2C-2C initial evidence:</strong> the pre-review 86 interface-workbench, 11 domain/persistence, and 10 I2C-2B results and fixture loopos_g3_i2c2c_1783755348 are historical and superseded by the corrected evidence.</li>
+          <li><strong>G3-I2C-2C corrected evidence:</strong> normal focused gate passed 100/100; total regression passed 118/118 = 100 focused + 4 valid foundation persistence + 10 I2C-2B action regressions + 4 tactical persistence. The reviewer's separate 16-file selection passed 120/120. Static/build checks, all-14 migration application, real negative database probes, retry-attempt-2, desktop/390px, and zero browser errors pass.</li>
+          <li><strong>G3-I2C-2C review:</strong> reviewer 019f503a-58b7-76f0-8531-48979f6a3ff4 found two P1 defects in participant routing access and terminal replay authorization plus two P2 defects in exact provenance and behavioral-test fidelity.</li>
+          <li><strong>G3-I2C-2C correction:</strong> the only correction task 019f5042-0488-71e1-93a1-ae9665bfee64 closed participant routing, terminal replay, exact provenance, persisted retry-key, and real action-boundary coverage.</li>
+          <li><strong>G3-I2C-2C review closure:</strong> same reviewer 019f503a-58b7-76f0-8531-48979f6a3ff4 returned PASS with no P0/P1/P2. The 100/118/120 counts refer to the focused gate, total regression formula, and a separate reviewer selection respectively.</li>
+          <li><strong>G3-I2C-2C audit:</strong> auditor 019f5088-ed94-78a3-b456-20b359811564 passed implementation/review/runtime evidence and returned FAIL only because roadmap/dashboard synchronization was stale. The same auditor passed after synchronization.</li>
+          <li><strong>G3-I2C-2C product acceptance:</strong> the product owner opened http://127.0.0.1:3110/app/meetings/cmrg4eh74000z5i640yvvgksf and explicitly replied 确认 on 2026-07-11, accepting the visible read-only governance-candidate routing slice.</li>
+          <li><strong>G3-I2C-2C cleanup:</strong> tmux loopos_g3_i2c2c_1783759584 stopped, port 3110 is clear, and disposable database loopos_g3_i2c2c_1783759584 is absent.</li>
+          <li><strong>G3-I2C-2C closure audit:</strong> independent task 019f510f-51d2-7381-ab84-c68a03a5b890 returned PASS after fresh 54/54 focused tests, TypeScript, scoped ESLint with zero errors and two existing warnings, and diff checks. It found no P0/P1/P2 and closed both 2C and the I2C-2 umbrella; the same task returned final synchronization PASS after five stale historical statements were corrected.</li>
+          <li><strong>RTW1 historical Slice 0 audit gate:</strong> at that point, RTW1 was active at the Slice 0 independent roadmap/current-state audit gate. Browser reclosure was evidenced, but final Slice 0 closure was not yet claimed.</li>
+          <li><strong>RTW1 design and plan:</strong> product owner approved the recovery architecture, end-to-end data flow, implementation boundary, and evidence standard. Design commit 1ecb61a and plan commit 5158be6 preserve distributed proposal ownership, exact participant result authority, proposer-participant adoption recording, AI non-authority, and direct provenance without fake runtime records.</li>
+          <li><strong>RTW1 first plan audit:</strong> independent task 019f55da-6fc0-71a1-be03-e4f0020e8311 returned FAIL with no P0, two P1 state findings, and one P2 Slice 0 text-scope finding. The coordinator correction is complete and awaits same-auditor recheck.</li>
+          <li><strong>RTW1 bypass inventory:</strong> read-only subagent 019f55db-9571-7971-a333-49f700e0c404 returned FAIL with four P0 bypass classes and two P1 findings. The corrected security stop now covers legacy governance, direct structure and charter actions, standalone Projects, direct Action/decision/candidate handlers, and responsible-person-only lifecycle authority.</li>
+          <li><strong>RTW1 recheck:</strong> the same auditor closed both original P1 findings and the meeting-page P2, then returned FAIL with no P0, two P1, and no P2. Remaining corrections are historical GD1 tense cleanup and exact S0-C ownership for tracker authorization, edit, transition, and UI controls.</li>
+          <li><strong>RTW1 historical activation gate:</strong> final same-auditor closure against commit 836e6e3 returned PASS with no P0/P1/P2. It confirmed historical GD1 wording, exact non-overlapping work-package ownership, preservation of both dirty governance files, tracker proposal/owner authority, and no regression in earlier closures. Slice 0 implementation became active at that point and is now closed.</li>
+          <li><strong>RTW1-S0 delegation:</strong> S0-A task 019f55ec-23d8-7ce3-b8ef-21bc8311bf07 owns the legacy governance stop; S0-B task 019f55ec-6bef-7c93-b3da-6f2c20889e47 owns direct structure bypasses; S0-C task 019f55ec-b94e-7b60-b747-e9a4aa04a64f owns direct tactical and tracker bypasses. All run in separate worktrees with non-overlapping ownership.</li>
+          <li><strong>RTW1-S0 integration:</strong> S0-A worker 08aaf720 integrated byte-identically as 2577e12, S0-B d46422df as 64772a6, and S0-C 2433c0a1 as 273421d. TypeScript, changed-file ESLint, Prisma validate, bypass scans, and diff checks passed. The initially reported 28/28 and 199/199 counts were invalidated because the runner skipped literal [id] paths.</li>
+          <li><strong>RTW1-S0 review:</strong> independent task 019f55fa-1819-7930-995d-229cb777f82a returned FAIL with two P1 findings. The concentrated correction must add a literal-path full-suite runner and direct Server Action/disposable-database coverage for pristine setup, rollback/concurrency, tracker denials, and responsible-owner success.</li>
+          <li><strong>RTW1-S0 correction:</strong> worker 019f5603-4bc2-76f0-bcd4-a86e73d2f62b owns the single concentrated evidence correction. Its scope excludes new domain behavior, Prisma schema/migrations, and roadmap files.</li>
+          <li><strong>RTW1-S0 correction evidence:</strong> commit dd8de1e is integrated. Main-checkout execution reported 28/28 files and 216/216 tests, but same-reviewer reclosure found its Node 22 summary used `ℹ tests N`; the parser accepted only `# tests N` and exited 1. This runner count remains unaccepted pending a portability fix.</li>
+          <li><strong>RTW1-S0 database reclosure:</strong> the same reviewer closed the direct-action/database P1 after independently applying all 15 migrations to a fresh disposable database and passing setup 5/5 plus tracker 7/7. Cleanup, TypeScript, scoped ESLint, Prisma validate, and diff checks passed. Only the runner portability P1 remains.</li>
+          <li><strong>RTW1-S0 runner fix:</strong> commits 62cdedd and 0c88e74 force TAP reporting, validate complete counts, and isolate reporter fixtures from inherited Node test context. Both runner regressions pass 2/2, and the full runner passes 28/28 files with 216/216 tests including every literal [id] path. Final same-reviewer reclosure is pending.</li>
+          <li><strong>RTW1-S0 final reclosure:</strong> the same reviewer returned PASS with no P0/P1/P2 against 3f90ef0 after independently passing both runner regressions, 28/28 source files with 216/216 tests, scoped ESLint, and diff checks. Browser evidence remains unproven.</li>
+          <li><strong>RTW1-S0 local acceptance:</strong> task 019f5619-0cfd-7e92-83f0-fa4dc4f63588 is active against clean main e600d40 using an isolated port and disposable database. It is read-only over the repository and must report any unreachable product state as a blocker.</li>
+          <li><strong>RTW1-S0 browser retry:</strong> the first attempt was blocked before product interaction because an early connection refusal trapped the in-app browser on a nonrecoverable error page. Cleanup passed and no acceptance evidence was credited. The same task is retrying with database, fixture, production server, and curl readiness completed before creating any browser tab.</li>
+          <li><strong>RTW1-S0 browser result:</strong> the retry against f5d4e7d returned FAIL after proving one-time setup, canonical tactical Action/Project, governance candidate routing/read-only display, owner lifecycle, four denial classes with zero writes, desktop coherence, clean application console, and full cleanup. It found the pristine dashboard still exposed 手动建立回路 to /app/circles/new. Mobile viewport and complete failed-request evidence were unavailable from the in-app Browser and remain unproven.</li>
+          <li><strong>RTW1-S0 browser correction:</strong> task 019f563e-90a6-7b22-956a-fe052571d362 is active in an isolated worktree and owns only the pristine dashboard direct-circle link removal plus its focused regression test.</li>
+          <li><strong>RTW1-S0 browser correction integration:</strong> worker 67c79d9 is integrated as main 99fb107. Focused 1/1, full source 29/29 files with 217/217 tests, TypeScript, scoped ESLint, and diff checks pass. Same-reviewer correction review is active.</li>
+          <li><strong>RTW1-S0 browser correction review:</strong> the same reviewer returned PASS with no P0/P1/P2, confirming the unsafe link/copy absent, setup and historical read navigation preserved, and all focused/full/static gates green. The later local Playwright reclosure closed the mobile and complete network evidence gap.</li>
+          <li><strong>RTW1-S0 final browser reclosure:</strong> main-thread local Playwright reclosure passed against current main f242fd1 after rebuilding stale production output. Evidence used isolated server http://127.0.0.1:3197 and disposable database loopos_rtw1_s0_main_1783860017, both cleaned up afterward. Dashboard had setup CTA, zero /app/circles/new links, and no 手动建立回路; dashboard/setup/meeting/tracker each proved innerWidth=390, no document horizontal overflow, and no visible key-control overflow. Tracker showed approved Action owner edit/status controls and proposal provenance.</li>
+          <li><strong>RTW1-S0 browser ledger:</strong> complete Playwright ledger recorded 34 requestfailed entries, all classified as explained Next _rsc prefetch cancellations; unexplained local failed requests, response status &gt;=400, console warnings/errors, and pageerror were all zero. Screenshots: /tmp/loopos-rtw1-s0-main-reclosure-1783861129503-dashboard-desktop.png, /tmp/loopos-rtw1-s0-main-reclosure-1783861129503-dashboard-390.png, /tmp/loopos-rtw1-s0-main-reclosure-1783861129503-setup-390.png, /tmp/loopos-rtw1-s0-main-reclosure-1783861129503-meeting-390.png, and /tmp/loopos-rtw1-s0-main-reclosure-1783861129503-tracker-390.png.</li>
+          <li><strong>RTW1-S0 closure audit:</strong> independent audit 019f566b-4692-7983-b0b4-8caea1aa9058 found only stale implementation-plan/dashboard status text; after targeted synchronization, same-scope recheck 019f566e-5e05-75d2-b456-b9661c2cab32 returned PASS with no findings. Slice 0 is closed.</li>
+          <li><strong>RTW1-S1 historical activation:</strong> Slice 1 became active after Slice 0 closed. Its target was admin invitation, two invited joins into the same organization, recoverable onboarding, three-account meeting participants, shared notes with optimistic concurrency, and participant-authorized meeting completion; Slice 1 is now closed.</li>
+          <li><strong>RTW1-S1 implementation:</strong> team entry and meeting collaboration implementation is in the main checkout. It adds hashed organization invitations, invitation acceptance, recoverable onboarding, participant selection/maintenance, optimistic shared notes, and participant-authorized meeting completion.</li>
+          <li><strong>RTW1-S1 static evidence:</strong> focused tests passed 9/9; full source runner passed 31/31 files with 226/226 tests; TypeScript, Prisma validate, production build, and scoped ESLint passed. Scoped ESLint had zero errors and two pre-existing warnings in ai-buttons.tsx.</li>
+          <li><strong>RTW1-S1 migration evidence:</strong> disposable PostgreSQL apply succeeded for all 16 migrations including the S1 migration; organization_invitations and meetings notesRevision/endedAt/endedById existed after apply; rollback removed the table and columns; fresh reapply succeeded.</li>
+          <li><strong>RTW1-S1 browser evidence:</strong> local Playwright against production server http://127.0.0.1:3198 proved admin registration, two invitations, two invited joins into the same organization, three-account people list, three-participant meeting creation, stale shared-notes conflict, participant ending the meeting, and 390px meeting usability.</li>
+          <li><strong>RTW1-S1 database/browser cleanup:</strong> browser proof used disposable database loopos_rtw1_s1_browser_1783894895. Database checks showed exactly one RTW1 S1 Org 1783894895b with 3 memberships, 3 people, two consumed invitations, and an ended three-participant meeting at notesRevision 1. The server was stopped, port 3198 was unreachable, and the disposable database was dropped.</li>
+          <li><strong>RTW1-S1 review:</strong> independent reviewer 019f586f-d0b1-7360-99ed-88da783a8c3a initially found one P1 forged cross-tenant circleId defect and one P2 test-depth risk. The concentrated correction added current-organization, non-archived circle validation before meeting creation and a focused assertion; the same reviewer returned PASS with no findings.</li>
+          <li><strong>RTW1-S1 audit:</strong> auditor 019f5873-b94f-7273-9835-64b875834444 initially found only stale-status wording; after targeted corrections, the same auditor returned PASS with no findings.</li>
+          <li><strong>RTW1-S1 product acceptance:</strong> the product owner directed 继续实行slice 2 on 2026-07-13. Slice 1 is closed.</li>
+          <li><strong>RTW1-S2 historical activation:</strong> Slice 2 became the sole active slice after Slice 1 closed. It connected ordinary member-raised tactical tensions to the correct tactical meeting, distributed participant approval, durable Project or Action creation, and responsible-person closure while preserving existing runtime provenance; Slice 2 is now closed.</li>
+          <li><strong>RTW1-S2 implementation:</strong> ordinary tactical handling mode, separate AI routing suggestion, ordinary/runtime provenance, distributed proposal results, Project bearer lifecycle, Action owner closure, and ordinary source trace are implemented without fake interface runs.</li>
+          <li><strong>RTW1-S2 correction review:</strong> reviewer 019f586f-d0b1-7360-99ed-88da783a8c3a initially found one P1 idempotency scope mismatch and one P2 Project completion relation issue. One concentrated correction made both organization-scoped; same-reviewer recheck returned PASS with no findings.</li>
+          <li><strong>RTW1-S2 static/database evidence:</strong> full source passed 33/33 files and 235/235 tests; TypeScript, Prisma, production build, scoped ESLint, and diff checks passed. Disposable PostgreSQL applied all 17 migrations, passed provenance/idempotency/completion constraints, rollback, and fresh reapply.</li>
+          <li><strong>RTW1-S2 browser evidence:</strong> three-account fixture RTW1 S2 Org 1783897000c proved another-participant Project approval and bearer completion, proposer-participant Action self-approval and owner resolution, durable ordinary trace after refresh, and 390px meeting/Action layouts with no horizontal overflow.</li>
+          <li><strong>RTW1-S2 browser ledger and cleanup:</strong> accepted browser run had zero unexplained failed requests, 4xx/5xx responses, console warnings/errors, or page errors. Server 3199, browser sessions, and disposable database loopos_rtw1_s2_main_1783897000 were removed and confirmed absent.</li>
+          <li><strong>RTW1-S2 roadmap audit:</strong> auditor 019f5873-b94f-7273-9835-64b875834444 initially found only three historical dashboard statements written in present tense. After targeted correction, the same auditor returned PASS with no findings.</li>
+          <li><strong>RTW1-S2 product acceptance:</strong> the product owner replied 确认 on 2026-07-13 after receiving the complete implementation, review, PostgreSQL, browser, cleanup, and audit evidence. Slice 2 is closed.</li>
+          <li><strong>RTW1-S3 historical activation:</strong> Slice 3 became the sole active slice after Slice 2 acceptance and connected ordinary and runtime governance provenance to the canonical governance service and browser IDM workbench for one atomic ROLE_CREATED structure change. It is now closed.</li>
+          <li><strong>RTW1-S3 implementation and static evidence:</strong> ordinary/runtime canonical provenance, distributed IDM authority, immutable revisions, objections, non-adoption, and atomic ROLE_CREATED adoption are connected. Full source passes 34/34 files and 244/244 tests; TypeScript, Prisma, diff checks, and production build pass.</li>
+          <li><strong>RTW1-S3 database evidence:</strong> disposable PostgreSQL applied all 18 migrations, proved the all-or-none runtime provenance constraint and tenant-scoped operation key, executed the S3 reverse SQL, and freshly reapplied S3.</li>
+          <li><strong>RTW1-S3 ordinary browser evidence:</strong> four accounts completed clarification, invalid then valid objection, amendment, explicit non-adoption, later revision, and proposer-participant adoption; the nonparticipant had no decision controls. Role, decision, change, and source-tension links survived refresh; 390px had no horizontal overflow.</li>
+          <li><strong>RTW1-S3 runtime browser evidence:</strong> the exact runtime candidate and explicit meeting route persisted, then initialized and adopted in the meeting with durable runtime-source and role trace. Both accepted browser ledgers had zero unexplained failures, bad responses, console errors, or page errors.</li>
+          <li><strong>RTW1-S3 browser corrections:</strong> browser proof closed three real gaps before review: governance buttons now submit, repeated objection/assessment attempts have distinct replay scopes, and uninitialized runtime candidates retain title, proposer, and runtime provenance.</li>
+          <li><strong>RTW1-S3 implementation re-review:</strong> reviewer 019f586f-d0b1-7360-99ed-88da783a8c3a returned PASS with no findings after inspecting the browser-driven corrections and rerunning the governance engine plus production build.</li>
+          <li><strong>RTW1-S3 roadmap audit:</strong> the auditor initially found only five stale review-status statements. After targeted synchronization, the same auditor returned PASS with no findings.</li>
+          <li><strong>RTW1-S3 cleanup:</strong> production server 3200 and disposable database loopos_rtw1_s3_main_1783899000 were removed and confirmed absent.</li>
+          <li><strong>RTW1-S3 close gate:</strong> implementation, evidence, review, roadmap audit, cleanup, and product-owner acceptance are complete.</li>
+          <li><strong>RTW1-S3 product acceptance:</strong> the product owner explicitly replied 确认接受 Slice 3 on 2026-07-13. Slice 3 is closed.</li>
+          <li><strong>RTW1-S4 activation:</strong> Slice 4 is the sole active slice for the low-friction member weekly action queue, exact notifications, weekly review, complete three-account browser rehearsal, and designated real-team evidence.</li>
+          <li><strong>RTW1-S4 implementation:</strong> commits 20c51fb through b87129b deliver the current-person weekly queue, role-filtered navigation, exact idempotent notifications, local commitment reconciliation, setup admin authorization, and human-confirmed AI meeting/weekly drafts with create-only confirmer audit.</li>
+          <li><strong>RTW1-S4 static evidence:</strong> full source passes 41/41 files and 265/265 tests; setup PostgreSQL passes 6/6 and weekly-review PostgreSQL passes 5/5; all 19 migrations, TypeScript, Prisma validation, production build, diff checks, and zero-error ESLint pass.</li>
+          <li><strong>RTW1-S4 browser/database evidence:</strong> three accounts completed invitations, owner-completed Action and Project, proposer-participant governance adoption, meeting-report confirmation, and weekly-review confirmation against a disposable PostgreSQL and local-only AI stub. Exactly eight notifications matched recipient/type/target/count, AI drafts wrote nothing before confirmation, supported durable actor/status traces matched, 390px had no overflow, and the full browser error ledger was clean. Action owner closure is browser-proven because no separate resolver-actor field exists.</li>
+          <li><strong>RTW1-S4 independent review:</strong> the initial three P1 and two P2 findings were addressed in the single correction round. The same reviewer passed 13/13 focused tests and returned PASS with no P0/P1/P2.</li>
+          <li><strong>RTW1-S4 cleanup:</strong> acceptance ports 3212/3213 are unreachable and all three Slice 4 disposable databases are absent; JSON and screenshot evidence remains retained.</li>
+          <li><strong>RTW1-S4 roadmap audit:</strong> the first pass found four documentation-precision issues and no implementation finding. After d6d2fd8 and verified cleanup, the same auditor returned PASS with no P0/P1/P2.</li>
+          <li><strong>RTW1-S4 pilot record:</strong> docs/pilots/rtw1-s4-real-team-weekly-run.md is the canonical evidence record for the 基础大模型团队; it remains pending and contains no scripted evidence.</li>
+          <li><strong>RTW1-S4 release:</strong> the product owner confirmed seriousplay/loopos is trusted, and the reviewed release range was pushed to origin/main. A team-accessible production deployment now runs at https://csi-org.com/loopos with isolated web/worker processes, database, port, and exact Nginx path routing.</li>
+          <li><strong>RTW1-S4 deployment evidence:</strong> public LoopOS root/login/session checks, existing-site regressions, protected-route redirect, desktop login, clickable registration flow, settled 390px layout, and zero failed browser requests passed on 2026-07-14.</li>
+          <li><strong>RTW1-S4 deployment decision:</strong> all future releases build and verify locally before artifact upload. The shared 3.5 GiB server must not run Next.js production builds after the first attempt caused resource exhaustion and required a host restart.</li>
+          <li><strong>RTW1-S4 authentication evidence:</strong> a temporary production account completed registration, dashboard entry, sign-out to /loopos/login, and credential sign-in. It produced no 4xx/5xx or console error and was deleted with its temporary organization.</li>
+          <li><strong>RTW1-S4 deployment audit:</strong> the initial two P1 and four P2 findings were corrected in one concentrated round. Same-auditor recheck returned PASS with no P0/P1/P2; the complete source gate passes 42 files and 272 tests.</li>
+          <li><strong>RTW1-S4 remaining gate:</strong> scripted rehearsal cannot replace the designated real-team weekly-run evidence or product-owner acceptance.</li>
+          <li><strong>GD1 planning:</strong> read-only task 019f5117-8948-7000-a5e8-f8bf4705f702 completed. Existing exact route provenance is reusable; legacy adoption/objection actions are not. The task recommends a minimal GovernanceDecisionProcess projection, ROLE_CREATED as the first typed category, and full distributed meeting-process authority.</li>
+          <li><strong>GD1 planning evidence:</strong> 14/14 governance-route tests, 10/10 tactical distributed-authority/idempotency tests, Prisma validation, and diff checks passed. Implementation, database mutation, and browser work were inactive at that gate.</li>
+          <li><strong>GD1 decision 1:</strong> product owner accepted option A. Amendments keep one routed proposal identity with immutable increasing revisions; new proposal identities are reserved for genuinely new tensions.</li>
+          <li><strong>GD1 decision 2:</strong> product owner accepted option A. GD1 creates one unassigned HOME role in one active same-organization circle as its only typed structure mutation; modification and archival remain deferred.</li>
+          <li><strong>GD1 decision 3:</strong> product owner accepted option A. GD1 adds one GovernanceDecisionProcess current-state projection plus append-only immutable revision/events while leaving legacy GovernanceProposal semantics compatible.</li>
+          <li><strong>GD1 decision 4:</strong> product owner accepted option A. A meeting-confirmed valid objection blocks adoption until the proposer authors an amended revision or the process records explicit non-adoption; no structure write occurs while unresolved.</li>
+          <li><strong>GD1 decision 5:</strong> product owner accepted option A. Explicit non-adoption ends the current proposal result but keeps the source tension OPEN and produces zero structure or resolution writes.</li>
+          <li><strong>GD1 decision 6:</strong> product owner accepted option A. Clarification blocks adoption until the proposer submits a clarified immutable revision containing the complete narrative and typed role payload.</li>
+          <li><strong>GD1 decision 7:</strong> product owner accepted option A. An invalid objection remains in immutable history and returns the unchanged revision to adoption-ready; it never forces amendment or triggers automatic adoption.</li>
+          <li><strong>GD1 decision 8:</strong> product owner accepted option A. Failed pre-commit application rolls back all effects, keeps the revision adoption-ready, and supports audited retry with the same payload-bound idempotency key.</li>
+          <li><strong>GD1 decision 9:</strong> product owner accepted option A. Successful adopted role creation resolves the source tension in the same atomic transaction; later observation or disagreement creates a new tension.</li>
+          <li><strong>GD1 decision audit:</strong> planning task 019f5117-8948-7000-a5e8-f8bf4705f702 returned NO MORE PRODUCT DECISIONS. Product policy was locked and remaining choices were technical implementation details. Design approval was the sole gate and implementation was inactive at that point.</li>
+          <li><strong>GD1 design section 1:</strong> product owner approved architecture and authority boundaries. GovernanceProposal stays the identity/route anchor, GovernanceDecisionProcess owns process state, one domain service owns writes, legacy bypasses close, and adoption remains atomic and meeting-process authorized.</li>
+          <li><strong>GD1 design section 2:</strong> product owner approved the current-state projection, immutable complete revisions, six-state process, proposer-only amendments, objection transitions, non-adoption/open-tension semantics, atomic adoption, and exact payload-bound idempotency.</li>
+          <li><strong>GD1 design section 3:</strong> product owner approved compact meeting UX, proposer-only editing, participant result recording, structured material-harm objection guidance, coach non-authority, explicit role confirmation, trace links, zero-write denial, same-key retry, and desktop/390px usability.</li>
+          <li><strong>GD1 design section 4:</strong> product owner approved the narrow implementation write scope, explicit exclusions, migration/database/browser/static gates, independent review, one correction maximum, audit, visible acceptance, and cleanup requirements. All four design sections were approved; implementation was inactive at that gate.</li>
+          <li><strong>GD1 formal design:</strong> docs/plans/2026-07-11-gd1-governance-decision-design.md was created with 29 sections and passed file-format checks.</li>
+          <li><strong>GD1 design review:</strong> independent task 019f517d-e7a8-74f0-9723-791cd05e7214 returned FAIL with no P0, five P1, and two P2. Product clarification is required for post-non-adoption continuity and proposer membership during later amendments; technical corrections are required for historical idempotency, first-revision initialization, mandatory failure audit, circle statuses, and roadmap synchronization.</li>
+          <li><strong>GD1 clarification 10:</strong> product owner accepted option A. NOT_ADOPTED is terminal only for the current revision/result; the proposer may create a new immutable revision on the same routed proposal while the source tension remains OPEN.</li>
+          <li><strong>GD1 clarification 11:</strong> product owner accepted option A. The original proposer may author later immutable revisions without current meeting participation, but only actual current participants may record meeting-process results.</li>
+          <li><strong>GD1 design correction:</strong> the only correction task 019f5188-a9fa-75b3-b142-f5f6cad30675 completed all five P1 and two P2 contracts in the design document only: revision-terminal non-adoption, immutable operation ledger, deferred current-revision initialization, proposer/current-participant separation, mandatory recoverable failure audit, explicit circle statuses, and evidence scenarios.</li>
+          <li><strong>GD1 same-reviewer recheck:</strong> all original five P1 and two P2 closed, but the correction introduced two P1 authorization regressions: operation claim before full authorization and terminal replay without operation-specific current authorization.</li>
+          <li><strong>GD1 correction continuation:</strong> the same concentrated correction addressed both correction-introduced regressions in place; this was not a second correction round. Implementation was inactive at that gate.</li>
+          <li><strong>GD1 correction continuation evidence:</strong> complete operation-specific authorization now precedes claim insertion/reservation/reclaim; denials keep operation rows unchanged; terminal replay reauthorizes original-proposer revision actions or current-participant meeting-result actions before return.</li>
+          <li><strong>GD1 final design review:</strong> same reviewer 019f517d-e7a8-74f0-9723-791cd05e7214 returned PASS with no P0/P1/P2. Both follow-up P1s and all original findings closed; nine decisions, six states, and scope were unchanged. At that gate, the design was complete and independent implementation planning was the only active work.</li>
+          <li><strong>GD1 implementation planning:</strong> durable task 019f519c-2d4e-7752-9ec9-f1a1e117a671 delivered docs/plans/2026-07-11-gd1-governance-decision-implementation-plan.md as its only change. The 442-line plan defines current symbol anchors, authority/state/transaction contracts, four sequential slices and rollback points, Definition of Done evidence, and an explicit non-implementation statement.</li>
+          <li><strong>GD1 implementation-plan evidence:</strong> Prisma validation, 14/14 governance route/domain/action, 10/10 tactical authority/action, 4/4 tactical persistence, plan-format checks, and diff checks passed read-only. No implementation, schema, migration, test, database, runtime, roadmap, or dashboard change was made by the planning task.</li>
+          <li><strong>GD1 plan audit:</strong> initial task 019f51a4-d1cd-7362-ba6b-af8d51e1e84b ended in a platform systemError before producing review output or changing files, so it provides no audit conclusion.</li>
+          <li><strong>GD1 replacement plan audit:</strong> durable task 019f51a5-a220-7b70-a3db-14da6b431e1a ended in the same platform systemError before review output or file change. Temporary subagent 019f51a6-c5ff-71d2-a826-624b8f7e27e3 then hit the pre-reset usage limit before review output or file change. Neither provides an audit conclusion.</li>
+          <li><strong>GD1 completed plan audit:</strong> post-reset independent read-only task 019f523a-46bf-7493-88f2-0a63aa0533bc completed without file changes; its findings are recorded below.</li>
+          <li><strong>GD1 plan-audit result:</strong> task 019f523a-46bf-7493-88f2-0a63aa0533bc returned FAIL with no P0, one P1, and two P2. Whole-owned-path rollback could destroy overlapping dirty/untracked work; Data -&gt; Pretraining test discovery was deferred rather than deterministic; and GOALS inverted zero-write denial wording.</li>
+          <li><strong>GD1 plan correction:</strong> durable planning task 019f519c-2d4e-7752-9ec9-f1a1e117a671 completed the one concentrated correction and modified only the implementation plan. The coordinator corrected the roadmap wording to zero-write denial.</li>
+          <li><strong>GD1 plan-correction evidence:</strong> the one correction added content-complete per-slice baselines and own-delta reverse patches, exact baseline paths for all four slices, deterministic per-file nonzero test discovery including explicit [id] tsx, and Slice 4 -&gt; 1 final rollback. Data -&gt; Pretraining currently has zero dedicated static tests, so its required real browser regression remains separate.</li>
+          <li><strong>GD1 plan closure recheck:</strong> original reviewer 019f523a-46bf-7493-88f2-0a63aa0533bc closed the roadmap-wording P2 and confirmed exact 15-file discovery plus separate mandatory Data -&gt; Pretraining browser regression, but returned FAIL with one P1 and one P2 still open.</li>
+          <li><strong>GD1 correction continuation:</strong> Git patch alone could not restore empty-directory absence or full POSIX modes, and the first deterministic runner aborted on the known 4/5 foundation persistence debt. Planning task 019f519c-2d4e-7752-9ec9-f1a1e117a671 completed the in-place continuation of the same concentrated correction; this was not a second correction round.</li>
+          <li><strong>GD1 correction-continuation evidence:</strong> immutable baseline archives are now the actual restoration medium; existing paths restore recursively from tar, missing paths permit only exact removal after repository/ownership/missing/post-state/concurrency proof, and final rollback remains Slice 4 -&gt; 1. The deterministic runner executes every selected file before judgment, preserves only persistence.test.ts:38-39 as a FAIL debt, and rejects identity/count drift or any new failure.</li>
+          <li><strong>GD1 final plan closure:</strong> same reviewer 019f523a-46bf-7493-88f2-0a63aa0533bc confirmed archive restoration, exact missing-path cleanup, known-debt collection, and bracket-path discovery closed, but returned FAIL with one P1 and one P2: rollback retained a validation-to-mutation TOCTOU window, and final comparison omitted baseline identity and exact-count equality.</li>
+          <li><strong>GD1 final correction continuation:</strong> planning task 019f519c-2d4e-7752-9ec9-f1a1e117a671 completed the same concentrated correction in place with a macOS atomic mkdir lock and guardian across every write/baseline/rollback critical section, fail-closed stale-lock retention, exact baseline identity/count equality, and separate new-GD1-test gates. This was not a second correction round.</li>
+          <li><strong>GD1 final same-reviewer closure:</strong> reviewer 019f523a-46bf-7493-88f2-0a63aa0533bc returned PASS with no P0/P1/P2. The lock/rollback TOCTOU gap, baseline identity/count gate, new-test gates, deterministic discovery, known-debt isolation, and browser-evidence separation are closed without policy or scope regression.</li>
+          <li><strong>GD1 Slice 1 activation:</strong> durable local task 019f5260-c533-78c0-97d3-90d413616779 was the sole active delegation at that gate. Its write scope was limited to the Prisma schema, one new GD1 migration, generated Prisma client, and one focused persistence test; later behavior and UI slices remained inactive.</li>
+          <li><strong>GD1 Slice 1 implementation:</strong> task 019f5260-c533-78c0-97d3-90d413616779 returned PASS with schema, one migration, generated Prisma client, and one persistence test only. Test-first 8 expected failures and final 8/8 pass; Prisma, TypeScript, ESLint, diff, PostgreSQL apply/reverse/reapply, invalid-pointer, 13 constraint/trigger, disposable-database cleanup, lock release, and 246-file out-of-scope hash gates pass.</li>
+          <li><strong>GD1 Slice 1 open evidence drift:</strong> the implementation plan's literal rollback sed extraction includes the marker heading as invalid SQL. The same reverse SQL body passed when the marker line was skipped; independent review must classify the required correction before closure.</li>
+          <li><strong>GD1 Slice 1 review:</strong> independent read-only task 019f5292-5ae8-7672-9f11-7e0c91f67cf6 was the sole active delegation at that gate. Slice 1 was delivered but not complete, and Slice 2 remained inactive.</li>
+          <li><strong>GD1 Slice 1 review result:</strong> task 019f5292-5ae8-7672-9f11-7e0c91f67cf6 returned FAIL with no P0 and four P1 findings: revision semantics are not bound to state edges, expired leases can finalize, tests assert text instead of PostgreSQL behavior, and the plan rollback extractor emits its marker line.</li>
+          <li><strong>GD1 Slice 1 sole correction:</strong> durable task 019f5260-c533-78c0-97d3-90d413616779 was the only active correction task at that gate. It was limited to the migration, focused persistence test, rollback command in the implementation plan, and strictly required schema/generated updates. Slice 2 remained inactive pending same-reviewer PASS.</li>
+          <li><strong>GD1 Slice 1 correction result:</strong> the only correction is complete. Red evidence reproduced 33 database cases with 9 failures and 0 skips; final database-required evidence passed 33/33 with zero failures/skips, and static mode passed 8/8. Exact edge/revision rules, same-state denial, lease expiry/reclaim, stale-worker exclusion, literal documented reverse, full absence/preservation, and reapply are covered by real PostgreSQL behavior.</li>
+          <li><strong>GD1 Slice 1 correction integrity:</strong> Prisma, TypeScript, ESLint, and diff gates pass; schema/generated output stayed baseline-identical; correction baseline/post/owned-delta hashes are 1abe3d92...a0a1e91, 778ad593...076f55d, and 6219c14b...de8a28d. Both 245-file out-of-scope manifests hash to ab2bb34a...6fa271; lock, guardian, and disposable database are absent.</li>
+          <li><strong>GD1 Slice 1 closure gate:</strong> original reviewer task 019f5292-5ae8-7672-9f11-7e0c91f67cf6 and same-history fork 019f52c2-f994-7091-8112-a4abf29ccdc4 both returned immediate platform systemError without output or changes; temporary independent subagent 019f52c4-4bcb-7220-a023-49bbc965c02e then hit the account usage limit before review. Independent closure was blocked and Slice 2 was inactive at that gate.</li>
+          <li><strong>GD1 Slice 1 coordinator precheck:</strong> no P0/P1/P2 was found in the four corrected areas. Exact state/revision edges, same-state denial, lease finalization/reclaim, executable plan extractor, 33-case retained DB evidence, three-file correction patch, schema/generated identity, and 245-file scope identity all reconcile; a fresh static run passed 8/8. This is explicitly not independent review closure.</li>
+          <li><strong>GD1 Slice 1 independent recovery:</strong> after quota reset, fresh read-only task 019f5359-b074-7783-9a45-a2b007b338de became the sole active delegation for the identical four-P1 closure. It had no write, database, generation, build, browser, cleanup, or roadmap scope; Slice 2 remained inactive.</li>
+          <li><strong>GD1 Slice 1 independent closure:</strong> task 019f5359-b074-7783-9a45-a2b007b338de returned PASS with no P0/P1/P2 and no changes. It closed all four original findings across exact state/revision edges, same-state projection restrictions, unexpired terminal leases and reclaim, 33 retained DB cases, the literal rollback extractor, correction scope identity, cleanup, and diff checks.</li>
+          <li><strong>GD1 Slice 1 roadmap audit:</strong> read-only task 019f535d-6545-7cf1-9276-b75abf68beca was the sole active delegation at that gate. It compared GOALS/dashboard with current files, the review chain, retained evidence, active-goal uniqueness, and later-slice inactivity; product acceptance and Slice 2 were inactive then.</li>
+          <li><strong>GD1 Slice 1 audit result:</strong> task 019f535d-6545-7cf1-9276-b75abf68beca initially found one P1 limited to four stale current-state statements. After those statements alone were synchronized, the same auditor returned PASS with no P0/P1/P2, no changes, no new contradiction, and a clean diff check.</li>
+          <li><strong>GD1 Slice 1 acceptance gate:</strong> product-owner acceptance of the persistence-only foundation was the sole active gate. It did not claim a visible page; Slice 2, I2C-3, and the second interface were inactive at that gate.</li>
+          <li><strong>GD1 Slice 1 product acceptance:</strong> the product owner explicitly replied 确认接受 Slice 1 on 2026-07-12. This accepts the inert persistence boundary and authorizes temporary evidence cleanup before Slice 2 activation; it does not claim a visible page.</li>
+          <li><strong>GD1 Slice 1 cleanup:</strong> accepted-slice baseline, correction, reconciliation, and quarantined-lock temporary directories were removed. Guardian, canonical lock, and disposable GD1 database are absent; diff check passes.</li>
+          <li><strong>GD1 Slice 2 activation:</strong> durable task 019f5365-284a-7493-9dc8-11b84c6ce735 was the sole implementation delegation for the exact resolver and complete governance domain service. Server Actions, UI, fixtures, schema changes, and Slice 3 remained inactive.</li>
+          <li><strong>GD1 Slice 2 delivery:</strong> the implementation changed exactly four owned files; governance-engine.ts stayed baseline-identical. Governance tests passed 30/30, earlier resolver/regression evidence passed 13/13, all static gates passed, own-delta reverse-apply and scope checks passed, close_slice succeeded, and the guardian lock is absent.</li>
+          <li><strong>GD1 Slice 2 review:</strong> independent read-only task 019f537e-9fad-7b50-9017-51ed6fa49ac2 was the sole review delegation. It reported findings and evidence only; Slice 3, Server Actions, UI, fixtures, I2C-3, and the second interface remained inactive.</li>
+          <li><strong>GD1 Slice 2 review result:</strong> FAIL with no P0, two P1, and two P2 findings: incomplete adoption revision/payload binding, assessment not bound to the active objection, superseded revision number in authored events, and no real PostgreSQL proof for Prisma concurrency/rollback/lease/recovery. All 65 existing tests and static gates passed, so these require targeted contract and test-depth correction.</li>
+          <li><strong>GD1 Slice 2 sole correction:</strong> durable task 019f5365-284a-7493-9dc8-11b84c6ce735 was the only correction delegation. Scope was limited to the governance service and test, with domain resolver files only if strictly required; schema, migrations, generated output, governance-engine, actions, UI, fixtures, later slices, and commits remained inactive.</li>
+          <li><strong>GD1 Slice 2 reconciliation:</strong> after the first correction guardian died, coordinator proof found both recorded processes dead, no open handles or mutation in flight, exact repo identity, 247/247 unchanged out-of-scope hashes, and only the known red-test delta. The exact stale lock was quarantined and the same correction resumed under a fresh session.</li>
+          <li><strong>GD1 Slice 2 correction result:</strong> only the governance service and test changed. Normal tests passed 32/32; real PostgreSQL required mode passed 36/36 with zero skips; all regressions/static gates passed. Real DB evidence covers two-client races, Serializable locks, nine rollback boundaries, failure audit, SQL NULL, stale tokens, recovery, and replay; the disposable DB and canonical lock are absent.</li>
+          <li><strong>GD1 Slice 2 closure:</strong> original reviewer 019f537e-9fad-7b50-9017-51ed6fa49ac2 was the sole closure delegation to recheck the original two P1 and two P2 findings plus direct correction regressions. Slice 3 and UI remained inactive.</li>
+          <li><strong>GD1 Slice 2 reclosure result:</strong> all four original findings are closed, but closure found one direct P1: UTC-only test clients hide production lease dependence on PostgreSQL session timezone for timestamp-without-time-zone values. No P0/P2; all non-mutating gates and scope/cleanup checks pass.</li>
+          <li><strong>GD1 Slice 2 timezone correction:</strong> the same durable task 019f5365-284a-7493-9dc8-11b84c6ce735 completed the direct P1 continuation in only the governance service and test. Governance transactions establish transaction-local UTC without changing external pooled-session timezones; disposable PostgreSQL passed 37/37 with zero skips across Asia/Shanghai and America/New_York, normal governance passed 32/32, all prior regressions/static/scope gates passed, and the disposable DB and canonical lock are absent.</li>
+          <li><strong>GD1 Slice 2 final reclosure:</strong> original reviewer 019f537e-9fad-7b50-9017-51ed6fa49ac2 returned PASS with no P0/P1/P2. It confirmed transaction-local UTC coverage and non-leakage, the positive/negative non-UTC lease matrix, original-finding closure, two-file correction scope, cleanup, and later-slice inactivity.</li>
+          <li><strong>GD1 Slice 2 audit recovery:</strong> initial read-only task 019f53a9-7f74-7e53-ae04-283dfb9456f3 ended in platform systemError after nine seconds without output or changes, so it provides no conclusion.</li>
+          <li><strong>GD1 Slice 2 replacement audit:</strong> replacement read-only task 019f53aa-c2f0-7b73-9912-304f859c898a ended with the same platform systemError after eight seconds without output or changes, so it also provides no conclusion.</li>
+          <li><strong>GD1 Slice 2 roadmap audit:</strong> bounded independent subagent 019f53ac-09a3-7eb2-a211-a8feb9e22e8d was the sole active delegation and final fallback for that gate. Product acceptance, cleanup, Slice 3, UI, I2C-3, and the second interface were inactive then.</li>
+          <li><strong>G3-I2C-1 delegation history:</strong> two early workers timed out without changes; the work recovered through bounded independent runtime, persistence, permission, service, page, correction, review, and audit tasks.</li>
+          <li><strong>G3-I2C-1 engine:</strong> independent task 019f4c82-3012-7211-ba53-00c55c1bcbd5 completed the pure engine and 7 tests; main-thread TypeScript, ESLint, and diff verification passed.</li>
+          <li><strong>G3-I2C-1 persistence:</strong> independent task 019f4c87-9f27-73f3-b78f-5cad5fb7c736 completed schema, migration, and 6 contract tests; combined main-thread engine/persistence verification passed 13 tests.</li>
+          <li><strong>G3-I2C-1 runtime core:</strong> permissions 019f4c90-2756-71c0-8c75-7c1d5122560a and transactional service 019f4c90-296d-70a0-981d-8ace24dc6580 completed; the corrected combined gate passes all 36 runtime tests, Prisma validation, TypeScript, ESLint, and diff checks.</li>
+          <li><strong>G3-I2C-1 migration:</strong> isolated PostgreSQL 14 applied all 13 project migrations, rolled G3-I2C-1 back to full absence, and reapplied it. Live probes rejected version mutation, event UPDATE/DELETE, both duplicate-command identities, targetless bindings, and cross-organization bindings; the run remained pinned to v1.</li>
+          <li><strong>G3-I2C-1 member page:</strong> task 019f4c9a-a563-7da3-9eba-b3ba81fa6f73 delivered the accepted runs routes, compact navigation, explicit validated role binding, trusted actions, and fixture.</li>
+          <li><strong>G3-I2C-1 browser:</strong> authorized ORG_MEMBER start → evidence → confirmation → completion and refresh persistence passed with seven ordered events; unrelated member list isolation and direct 404 passed. Final list/detail had zero console errors, request failures, or dev overlay.</li>
+          <li><strong>G3-I2C-1 final gate:</strong> 36 runtime tests, Prisma validate/generate, TypeScript, scoped ESLint, production build, and diff checks pass. The single review and same-reviewer closure are complete.</li>
+          <li><strong>G3-I2C-1 review history:</strong> no P0, one P1, and two P2 were found; the single concentrated correction bound against the transaction-locked version, filtered permissions before the 50-run limit, and preserved takeover conflict feedback.</li>
+          <li><strong>G3-I2C-1 correction:</strong> task 019f4ceb-2ebe-7283-aba8-4468a75b78a2 closed the three code paths; 36 tests and all static/build gates pass. A 55-newer-inaccessible-run browser probe still returned all three authorized runs with zero data leakage.</li>
+          <li><strong>G3-I2C-1 review closure:</strong> the original reviewer confirmed the P1 and both P2 findings closed with no blocker. Independent roadmap audit 019f4cf5-5185-7042-9e0b-0eb9de66d061 passed; the product owner then accepted the page by explicitly continuing the project.</li>
+          <li><strong>Recovery discipline:</strong> after acceptance, every implementation slice must return a usable page before more architecture work; only one planned review-correction pass is allowed before visible acceptance.</li>
+          <li><strong>G3-I2B3 research:</strong> explorer 019f4979-d839-7b63-b514-bb3fdddafb3c selected AI SDK v7 structured output for OpenAI/Anthropic, with strict limits, compiler validation, structural diff, client-only apply, and no AI persistence/publication authority.</li>
+          <li><strong>G3-I2B decomposition:</strong> B1 backend/publication, B2 visual designer, B3 safe structured AI assistance. AI cannot persist or publish without explicit administrator action.</li>
+          <li><strong>Completion gate:</strong> G3 cannot close until a second interface proves the generalized model without regressing the Data → Pretraining rhythm.</li>
+        </ul>
+      </div>
+    </section>
+
+    <footer>
+      Worker return format: conclusion, changes, evidence, blockers. This dashboard is updated only when project state changes.
+    </footer>
+  </main>
+</body>
+</html>

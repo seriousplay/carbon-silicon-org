@@ -1,0 +1,182 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080" viewBox="0 0 1920 1080" role="img" aria-labelledby="title desc">
+  <title id="title">Loop Designer 回路设计报告结构图</title>
+  <desc id="desc">一张用于 6.24 课堂介绍的回路设计报告结构图，说明每个部分是什么、价值是什么、如何使用。</desc>
+  <defs>
+    <style>
+      .bg { fill: #f7f8f2; }
+      .ink { fill: #18211f; }
+      .muted { fill: #66716d; }
+      .soft { fill: #eef2ea; }
+      .line { stroke: #cbd5ce; stroke-width: 2; }
+      .card { fill: #ffffff; stroke: #d8dfd8; stroke-width: 2; }
+      .title { font-family: "PingFang SC", "Noto Sans CJK SC", "Microsoft YaHei", sans-serif; font-size: 54px; font-weight: 800; }
+      .subtitle { font-family: "PingFang SC", "Noto Sans CJK SC", "Microsoft YaHei", sans-serif; font-size: 24px; font-weight: 500; }
+      .label { font-family: "PingFang SC", "Noto Sans CJK SC", "Microsoft YaHei", sans-serif; font-size: 18px; font-weight: 700; }
+      .card-title { font-family: "PingFang SC", "Noto Sans CJK SC", "Microsoft YaHei", sans-serif; font-size: 30px; font-weight: 800; }
+      .card-text { font-family: "PingFang SC", "Noto Sans CJK SC", "Microsoft YaHei", sans-serif; font-size: 20px; font-weight: 500; }
+      .small { font-family: "PingFang SC", "Noto Sans CJK SC", "Microsoft YaHei", sans-serif; font-size: 18px; font-weight: 500; }
+      .num { font-family: "Avenir Next", "PingFang SC", sans-serif; font-size: 30px; font-weight: 800; fill: #ffffff; }
+      .footer { font-family: "PingFang SC", "Noto Sans CJK SC", "Microsoft YaHei", sans-serif; font-size: 24px; font-weight: 700; }
+    </style>
+  </defs>
+
+  <rect class="bg" width="1920" height="1080"/>
+  <rect x="64" y="52" width="1792" height="976" rx="8" fill="#ffffff" stroke="#d8dfd8" stroke-width="2"/>
+  <rect x="64" y="52" width="1792" height="132" rx="8" fill="#18312f"/>
+  <rect x="64" y="176" width="1792" height="10" fill="#2fb7aa"/>
+
+  <text x="110" y="126" class="title" fill="#ffffff">Loop Designer 回路设计报告：一页读懂怎么用</text>
+  <text x="112" y="163" class="subtitle" fill="#cfe7df">6.24 现场课｜这不是一份“AI 咨询方案”，而是一张从诊断到试运行的行动地图</text>
+  <text x="1508" y="112" class="label" fill="#9fe0d8">客户只问三件事</text>
+  <text x="1508" y="146" class="small" fill="#ffffff">能不能跑？风险在哪？先修什么？</text>
+
+  <line x1="226" y1="292" x2="1694" y2="292" class="line"/>
+  <line x1="226" y1="654" x2="1694" y2="654" class="line"/>
+  <text x="110" y="300" class="label" fill="#2d6f68">先读方向</text>
+  <text x="110" y="662" class="label" fill="#2d6f68">再进执行</text>
+
+  <!-- Card 1 -->
+  <g transform="translate(188 230)">
+    <rect class="card" width="370" height="286" rx="8"/>
+    <rect width="370" height="10" rx="5" fill="#2fb7aa"/>
+    <circle cx="42" cy="54" r="24" fill="#2fb7aa"/>
+    <text x="33" y="65" class="num">1</text>
+    <text x="78" y="64" class="card-title ink">优先阅读</text>
+    <text x="32" y="116" class="label muted">看什么</text>
+    <text x="112" y="116" class="card-text ink">三分钟抓结论</text>
+    <text x="32" y="166" class="label muted">价值</text>
+    <text x="112" y="166" class="card-text ink">先知道能不能跑、风险在哪</text>
+    <text x="32" y="216" class="label muted">怎么用</text>
+    <text x="112" y="216" class="card-text ink">开会先读，决定先试哪一段</text>
+  </g>
+
+  <!-- Card 2 -->
+  <g transform="translate(596 230)">
+    <rect class="card" width="370" height="286" rx="8"/>
+    <rect width="370" height="10" rx="5" fill="#8fbf3d"/>
+    <circle cx="42" cy="54" r="24" fill="#8fbf3d"/>
+    <text x="33" y="65" class="num">2</text>
+    <text x="78" y="64" class="card-title ink">业务目标锚点</text>
+    <text x="32" y="116" class="label muted">看什么</text>
+    <text x="112" y="116" class="card-text ink">要改善什么，底线是什么</text>
+    <text x="32" y="166" class="label muted">价值</text>
+    <text x="112" y="166" class="card-text ink">防止方案跑偏、泛化</text>
+    <text x="32" y="216" class="label muted">怎么用</text>
+    <text x="112" y="216" class="card-text ink">让业务方确认目标和成功标志</text>
+  </g>
+
+  <!-- Card 3 -->
+  <g transform="translate(1004 230)">
+    <rect class="card" width="370" height="286" rx="8"/>
+    <rect width="370" height="10" rx="5" fill="#e2a843"/>
+    <circle cx="42" cy="54" r="24" fill="#e2a843"/>
+    <text x="33" y="65" class="num">3</text>
+    <text x="78" y="64" class="card-title ink">回路总览</text>
+    <text x="32" y="116" class="label muted">看什么</text>
+    <text x="112" y="116" class="card-text ink">起点、终点、目标速度</text>
+    <text x="32" y="166" class="label muted">价值</text>
+    <text x="112" y="166" class="card-text ink">明确边界，不把所有问题塞进来</text>
+    <text x="32" y="216" class="label muted">怎么用</text>
+    <text x="112" y="216" class="card-text ink">判断是不是一条完整业务链路</text>
+  </g>
+
+  <!-- Card 4 -->
+  <g transform="translate(1412 230)">
+    <rect class="card" width="370" height="286" rx="8"/>
+    <rect width="370" height="10" rx="5" fill="#d76546"/>
+    <circle cx="42" cy="54" r="24" fill="#d76546"/>
+    <text x="33" y="65" class="num">4</text>
+    <text x="78" y="64" class="card-title ink">现状诊断</text>
+    <text x="32" y="116" class="label muted">看什么</text>
+    <text x="112" y="116" class="card-text ink">卡点、人工负担、AI 缺口</text>
+    <text x="32" y="166" class="label muted">价值</text>
+    <text x="112" y="166" class="card-text ink">找到真实瓶颈，而不是追工具</text>
+    <text x="32" y="216" class="label muted">怎么用</text>
+    <text x="112" y="216" class="card-text ink">先补输入、知识、验收或接管人</text>
+  </g>
+
+  <!-- Card 5 -->
+  <g transform="translate(188 592)">
+    <rect class="card" width="370" height="286" rx="8"/>
+    <rect width="370" height="10" rx="5" fill="#3c88c9"/>
+    <circle cx="42" cy="54" r="24" fill="#3c88c9"/>
+    <text x="33" y="65" class="num">5</text>
+    <text x="78" y="64" class="card-title ink">改造后回路</text>
+    <text x="32" y="116" class="label muted">看什么</text>
+    <text x="112" y="116" class="card-text ink">未来每一步怎么跑</text>
+    <text x="32" y="166" class="label muted">价值</text>
+    <text x="112" y="166" class="card-text ink">把抽象建议变成可执行流程</text>
+    <text x="32" y="216" class="label muted">怎么用</text>
+    <text x="112" y="216" class="card-text ink">逐步确认是否贴合真实业务</text>
+  </g>
+
+  <!-- Card 6 -->
+  <g transform="translate(596 592)">
+    <rect class="card" width="370" height="286" rx="8"/>
+    <rect width="370" height="10" rx="5" fill="#5f6fb7"/>
+    <circle cx="42" cy="54" r="24" fill="#5f6fb7"/>
+    <text x="33" y="65" class="num">6</text>
+    <text x="78" y="64" class="card-title ink">人机分工</text>
+    <text x="32" y="116" class="label muted">看什么</text>
+    <text x="112" y="116" class="card-text ink">人、AI、系统各做什么</text>
+    <text x="32" y="166" class="label muted">价值</text>
+    <text x="112" y="166" class="card-text ink">避免 AI 全包，避免人继续全扛</text>
+    <text x="32" y="216" class="label muted">怎么用</text>
+    <text x="112" y="216" class="card-text ink">写进权限、责任和接管规则</text>
+  </g>
+
+  <!-- Card 7 -->
+  <g transform="translate(1004 592)">
+    <rect class="card" width="370" height="286" rx="8"/>
+    <rect width="370" height="10" rx="5" fill="#8f6a2d"/>
+    <circle cx="42" cy="54" r="24" fill="#8f6a2d"/>
+    <text x="33" y="65" class="num">7</text>
+    <text x="78" y="64" class="card-title ink">成熟度诊断</text>
+    <text x="32" y="116" class="label muted">看什么</text>
+    <text x="112" y="116" class="card-text ink">能否试跑，最大短板是什么</text>
+    <text x="32" y="166" class="label muted">价值</text>
+    <text x="112" y="166" class="card-text ink">判断先跑、先补，还是暂缓</text>
+    <text x="32" y="216" class="label muted">怎么用</text>
+    <text x="112" y="216" class="card-text ink">每轮试运行后重新评估</text>
+  </g>
+
+  <!-- Card 8 -->
+  <g transform="translate(1412 592)">
+    <rect class="card" width="370" height="286" rx="8"/>
+    <rect width="370" height="10" rx="5" fill="#1f8f73"/>
+    <circle cx="42" cy="54" r="24" fill="#1f8f73"/>
+    <text x="33" y="65" class="num">8</text>
+    <text x="78" y="64" class="card-title ink">行动路线</text>
+    <text x="32" y="116" class="label muted">看什么</text>
+    <text x="112" y="116" class="card-text ink">接下来几周谁做什么</text>
+    <text x="32" y="166" class="label muted">价值</text>
+    <text x="112" y="166" class="card-text ink">从报告进入执行</text>
+    <text x="32" y="216" class="label muted">怎么用</text>
+    <text x="112" y="216" class="card-text ink">转成项目计划和周复盘议程</text>
+  </g>
+
+  <!-- Direction arrows -->
+  <g fill="none" stroke="#9aa8a2" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M558 373h34"/>
+    <path d="M586 365l10 8-10 8"/>
+    <path d="M966 373h34"/>
+    <path d="M994 365l10 8-10 8"/>
+    <path d="M1374 373h34"/>
+    <path d="M1402 365l10 8-10 8"/>
+    <path d="M558 735h34"/>
+    <path d="M586 727l10 8-10 8"/>
+    <path d="M966 735h34"/>
+    <path d="M994 727l10 8-10 8"/>
+    <path d="M1374 735h34"/>
+    <path d="M1402 727l10 8-10 8"/>
+  </g>
+
+  <rect x="188" y="920" width="1594" height="64" rx="8" fill="#18312f"/>
+  <text x="222" y="960" class="footer" fill="#ffffff">现场使用顺序：</text>
+  <text x="400" y="960" class="footer" fill="#9fe0d8">先读 1-2 确认方向</text>
+  <text x="668" y="960" class="footer" fill="#ffffff">→</text>
+  <text x="710" y="960" class="footer" fill="#f0c067">再看 3-7 找短板和分工</text>
+  <text x="1015" y="960" class="footer" fill="#ffffff">→</text>
+  <text x="1058" y="960" class="footer" fill="#9fe0d8">最后用 8 形成试运行计划</text>
+  <text x="1460" y="960" class="small" fill="#cfe7df">一句话：从“看懂报告”走到“下周开跑”。</text>
+</svg>

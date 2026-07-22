@@ -1,0 +1,28 @@
+{
+  "name": "carbon-silicon-org",
+  "version": "1.0.0",
+  "private": true,
+  "description": "碳硅组织 (Carbon-Silicon Organization) - AI 时代的商业进化论",
+  "scripts": {
+    "dev": "turbo dev",
+    "build": "turbo build",
+    "start": "turbo start",
+    "lint": "turbo lint",
+    "test": "turbo test",
+    "clean": "turbo clean",
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\"",
+    "db:migrate": "turbo db:migrate",
+    "db:seed": "turbo db:seed",
+    "deploy": "bash scripts/deploy-all.sh",
+    "health": "bash scripts/health-check.sh"
+  },
+  "devDependencies": {
+    "turbo": "^2.5.0",
+    "prettier": "^3.5.0",
+    "typescript": "^5.7.0"
+  },
+  "packageManager": "pnpm@10.28.0",
+  "engines": {
+    "node": ">=22.0.0"
+  }
+}

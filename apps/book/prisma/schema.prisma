@@ -1,0 +1,302 @@
+// Prisma schema for Book (Carbon-Silicon Book & Diagnostic Tools)
+// Migrated from Supabase project A (uxaxvzqskqsujmlmxvhj)
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["driverAdapters"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Event {
+  id             String         @id @default(uuid()) @db.Uuid
+  slug           String         @unique
+  title          String
+  eventDate      DateTime?      @map("event_date") @db.Date
+  accessCode     String?        @map("access_code")
+  status         String         @default("draft")
+  runType        String         @default("workshop") @map("run_type")
+  audience       String?
+  description    String?
+  showOnHome     Boolean        @default(false) @map("show_on_home")
+  startDate      DateTime?      @map("start_date") @db.Timestamptz()
+  endDate        DateTime?      @map("end_date") @db.Timestamptz()
+  config         Json           @default("{}") @map("config")
+  organizationId String?        @map("organization_id") @db.Uuid
+  createdBy      String?        @map("created_by") @db.Uuid
+  createdAt      DateTime       @default(now()) @map("created_at") @db.Timestamptz()
+
+  organization   Organization?  @relation(fields: [organizationId], references: [id])
+  participants   Participant[]
+  assessments    Assessment[]
+  toolSessions   ToolSession[]
+
+  @@index([runType])
+  @@index([status])
+  @@index([showOnHome])
+  @@index([organizationId])
+  @@index([createdBy])
+  @@map("events")
+}
+
+model Organization {
+  id        String    @id @default(uuid()) @db.Uuid
+  slug      String    @unique
+  name      String
+  orgType   String    @default("company") @map("org_type")
+  status    String    @default("active")
+  createdBy String?   @map("created_by") @db.Uuid
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+
+  events        Event[]
+  members       OrganizationMember[]
+  invites       OrganizationInvite[]
+  participants  Participant[]
+  toolSessions  ToolSession[]
+
+  @@index([status])
+  @@map("organizations")
+}
+
+model Profile {
+  id                    String        @id @db.Uuid
+  email                 String?
+  displayName           String?       @map("display_name")
+  role                  String?
+  defaultOrganizationId String?       @map("default_organization_id") @db.Uuid
+  createdAt             DateTime      @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt             DateTime      @updatedAt @map("updated_at") @db.Timestamptz()
+
+  defaultOrganization   Organization? @relation(fields: [defaultOrganizationId], references: [id])
+
+  @@index([defaultOrganizationId])
+  @@map("profiles")
+}
+
+model OrganizationMember {
+  id             String       @id @default(uuid()) @db.Uuid
+  organizationId String       @map("organization_id") @db.Uuid
+  userId         String       @map("user_id") @db.Uuid
+  memberRole     String       @default("member") @map("member_role")
+  status         String       @default("active")
+  joinedAt       DateTime?    @map("joined_at") @db.Timestamptz()
+  createdAt      DateTime     @default(now()) @map("created_at") @db.Timestamptz()
+
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, userId])
+  @@index([userId])
+  @@index([organizationId])
+  @@map("organization_members")
+}
+
+model OrganizationInvite {
+  id             String       @id @default(uuid()) @db.Uuid
+  organizationId String       @map("organization_id") @db.Uuid
+  code           String       @unique
+  memberRole     String       @default("member") @map("member_role")
+  status         String       @default("active")
+  expiresAt      DateTime?    @map("expires_at") @db.Timestamptz()
+  createdBy      String?      @map("created_by") @db.Uuid
+  createdAt      DateTime     @default(now()) @map("created_at") @db.Timestamptz()
+
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([code])
+  @@map("organization_invites")
+}
+
+model Participant {
+  id             String       @id @default(uuid()) @db.Uuid
+  eventId        String       @map("event_id") @db.Uuid
+  userId         String?      @map("user_id") @db.Uuid
+  organizationId String?      @map("organization_id") @db.Uuid
+  displayName    String       @map("display_name")
+  role           String?
+  industry       String?
+  orgSize        String?      @map("org_size")
+  companyName    String?      @map("company_name")
+  contact        String?
+  contactConsent Boolean      @default(false) @map("contact_consent")
+  createdAt      DateTime     @default(now()) @map("created_at") @db.Timestamptz()
+
+  event          Event        @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  organization   Organization? @relation(fields: [organizationId], references: [id])
+  assessments    Assessment[]
+
+  @@index([userId])
+  @@index([organizationId])
+  @@map("participants")
+}
+
+model Question {
+  id           String
+  module       String
+  dimension    String?
+  title        String
+  description  String?
+  questionType String  @map("question_type")
+  sortOrder    Int     @map("sort_order")
+
+  @@map("questions")
+}
+
+model Assessment {
+  id            String             @id @default(uuid()) @db.Uuid
+  eventId       String             @map("event_id") @db.Uuid
+  participantId String             @map("participant_id") @db.Uuid
+  userId        String?            @map("user_id") @db.Uuid
+  status        String             @default("in_progress")
+  submittedAt   DateTime?          @map("submitted_at") @db.Timestamptz()
+  createdAt     DateTime           @default(now()) @map("created_at") @db.Timestamptz()
+
+  event         Event              @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  participant   Participant        @relation(fields: [participantId], references: [id], onDelete: Cascade)
+  answers       AssessmentAnswer[]
+  report        Report?
+
+  @@index([userId])
+  @@map("assessments")
+}
+
+model AssessmentAnswer {
+  id           String     @id @default(uuid()) @db.Uuid
+  assessmentId String     @map("assessment_id") @db.Uuid
+  questionId   String     @map("question_id")
+  numericValue Decimal?   @map("numeric_value") @db.Numeric
+  textValue    String?    @map("text_value")
+  createdAt    DateTime   @default(now()) @map("created_at") @db.Timestamptz()
+
+  assessment   Assessment @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+
+  @@map("assessment_answers")
+}
+
+model Report {
+  id                   String     @id @default(uuid()) @db.Uuid
+  assessmentId         String     @map("assessment_id") @db.Uuid
+  userId               String?    @map("user_id") @db.Uuid
+  stageLevel           String?    @map("stage_level")
+  nextLevel            String?    @map("next_level")
+  stageSummary         String?    @map("stage_summary")
+  spiralScores         Json       @default("{}") @map("spiral_scores")
+  energyScores         Json       @default("{}") @map("energy_scores")
+  chainScore           Decimal?   @map("chain_score") @db.Numeric
+  charterScore         Decimal?   @map("charter_score") @db.Numeric
+  primaryBottleneck    String?    @map("primary_bottleneck")
+  actionRecommendation Json       @default("{}") @map("action_recommendation")
+  recommendedTools     Json       @default("[]") @map("recommended_tools")
+  participantSnapshot  Json       @default("{}") @map("participant_snapshot")
+  openAnswers          Json       @default("{}") @map("open_answers")
+  reportPayload        Json       @default("{}") @map("report_payload")
+  createdAt            DateTime   @default(now()) @map("created_at") @db.Timestamptz()
+
+  assessment           Assessment @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("reports")
+}
+
+model Tool {
+  id              String
+  chapter         Int
+  name            String
+  purpose         String
+  output          String?
+  contentMarkdown String  @map("content_markdown")
+  sortOrder       Int     @map("sort_order")
+
+  @@map("tools")
+}
+
+model ToolSession {
+  id                  String       @id @default(uuid()) @db.Uuid
+  toolId              String       @map("tool_id")
+  eventId             String?      @map("event_id") @db.Uuid
+  organizationId      String?      @map("organization_id") @db.Uuid
+  userId              String?      @map("user_id") @db.Uuid
+  participantId       String?      @map("participant_id") @db.Uuid
+  mode                String       @default("standalone")
+  status              String       @default("submitted")
+  participantSnapshot Json         @default("{}") @map("participant_snapshot")
+  context             Json         @default("{}")
+  responses           Json         @default("{}")
+  outputs             Json         @default("{}")
+  submittedAt         DateTime     @default(now()) @map("submitted_at") @db.Timestamptz()
+  createdAt           DateTime     @default(now()) @map("created_at") @db.Timestamptz()
+
+  event               Event?       @relation(fields: [eventId], references: [id])
+  organization        Organization? @relation(fields: [organizationId], references: [id])
+
+  @@index([toolId])
+  @@index([eventId])
+  @@index([organizationId])
+  @@index([userId])
+  @@index([submittedAt(sort: Desc)])
+  @@map("tool_sessions")
+}
+
+model AdminProfile {
+  id        String   @id @db.Uuid
+  role      String   @default("facilitator")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz()
+
+  @@map("admin_profiles")
+}
+
+// NextAuth tables (required for NextAuth v5 with Prisma adapter)
+model Account {
+  id                String  @id @default(cuid())
+  userId            String  @map("user_id") @db.Uuid
+  type              String
+  provider          String
+  providerAccountId String  @map("provider_account_id")
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique @map("session_token")
+  userId       String   @map("user_id") @db.Uuid
+  expires      DateTime @db.Timestamptz()
+
+  @@map("sessions")
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime @db.Timestamptz()
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}
+
+// NextAuth compatible User model
+model User {
+  id            String          @id @default(uuid()) @db.Uuid
+  name          String?
+  email         String?         @unique
+  emailVerified DateTime?       @map("email_verified") @db.Timestamptz()
+  image         String?
+  role          String?         @default("user")
+  createdAt     DateTime        @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt     DateTime        @updatedAt @map("updated_at") @db.Timestamptz()
+
+  accounts      Account[]
+  sessions      Session[]
+
+  @@map("users")
+}

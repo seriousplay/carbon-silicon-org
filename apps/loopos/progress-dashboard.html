@@ -1,0 +1,216 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>LoopOS V6 Progress Dashboard</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #17211b;
+      --muted: #637067;
+      --line: #d9dfda;
+      --paper: #f7f8f5;
+      --surface: #ffffff;
+      --green: #176b46;
+      --green-soft: #e4f2ea;
+      --amber: #9b5a08;
+      --amber-soft: #fff0d6;
+      --blue: #205b8f;
+      --blue-soft: #e7f0f8;
+      --red: #9d2d2d;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--paper);
+      color: var(--ink);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      letter-spacing: 0;
+    }
+    a { color: var(--blue); }
+    header {
+      border-bottom: 1px solid var(--line);
+      background: var(--surface);
+    }
+    .wrap { width: min(1120px, calc(100% - 32px)); margin: 0 auto; }
+    .masthead {
+      min-height: 112px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 24px;
+      padding: 24px 0;
+    }
+    h1, h2, h3, p { margin-top: 0; }
+    h1 { margin-bottom: 8px; font-size: 28px; line-height: 1.2; }
+    h2 { margin-bottom: 14px; font-size: 18px; }
+    h3 { margin-bottom: 5px; font-size: 15px; }
+    .muted { color: var(--muted); }
+    .status {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      min-height: 32px;
+      padding: 6px 10px;
+      border: 1px solid #acd1bc;
+      border-radius: 6px;
+      background: var(--green-soft);
+      color: var(--green);
+      font-size: 13px;
+      font-weight: 650;
+      white-space: nowrap;
+    }
+    .status::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--green); }
+    main { padding: 28px 0 48px; }
+    .summary {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      border: 1px solid var(--line);
+      background: var(--surface);
+    }
+    .metric { min-height: 108px; padding: 20px; border-right: 1px solid var(--line); }
+    .metric:last-child { border-right: 0; }
+    .metric strong { display: block; margin-top: 8px; font-size: 24px; }
+    section { padding: 28px 0; border-bottom: 1px solid var(--line); }
+    .active-goal {
+      display: grid;
+      grid-template-columns: 2fr 1fr;
+      gap: 28px;
+      align-items: start;
+    }
+    .evidence {
+      margin: 0;
+      padding-left: 20px;
+      color: var(--muted);
+      line-height: 1.65;
+    }
+    .gate {
+      border-left: 4px solid var(--amber);
+      background: var(--amber-soft);
+      padding: 16px 18px;
+    }
+    .gate p:last-child { margin-bottom: 0; }
+    .milestones { border: 1px solid var(--line); background: var(--surface); }
+    .milestone {
+      display: grid;
+      grid-template-columns: 88px minmax(0, 1fr) 120px;
+      gap: 18px;
+      align-items: center;
+      min-height: 88px;
+      padding: 16px 18px;
+      border-bottom: 1px solid var(--line);
+    }
+    .milestone:last-child { border-bottom: 0; }
+    .code { font: 650 13px ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--blue); }
+    .pill {
+      justify-self: end;
+      min-width: 84px;
+      padding: 6px 9px;
+      border-radius: 999px;
+      text-align: center;
+      font-size: 12px;
+      font-weight: 650;
+    }
+    .active { background: var(--green-soft); color: var(--green); }
+    .accepted { background: #eef1ef; color: #4c5d52; }
+    .pending { background: var(--blue-soft); color: var(--blue); }
+    .state-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; }
+    .state-grid article { min-width: 0; }
+    .state-grid ul { margin: 0; padding-left: 18px; color: var(--muted); line-height: 1.6; }
+    footer { padding: 22px 0 34px; color: var(--muted); font-size: 12px; overflow-wrap: anywhere; }
+    @media (max-width: 760px) {
+      .masthead, .active-goal { display: block; }
+      .status { margin-top: 14px; }
+      .summary, .state-grid { grid-template-columns: 1fr; }
+      .metric { border-right: 0; border-bottom: 1px solid var(--line); }
+      .metric:last-child { border-bottom: 0; }
+      .milestone { grid-template-columns: 68px minmax(0, 1fr); }
+      .pill { grid-column: 2; justify-self: start; }
+      .gate { margin-top: 22px; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="wrap masthead">
+      <div>
+        <h1>LoopOS V6 Project Control</h1>
+        <p class="muted">AI-native setup · Business Loops · Evidence-gated delivery</p>
+      </div>
+      <div class="status">V6-M6 Active · Integrated Acceptance and Real-Team Trial</div>
+    </div>
+  </header>
+  <main class="wrap">
+    <div class="summary" aria-label="Project summary">
+      <div class="metric"><span class="muted">Active milestones</span><strong>1</strong></div>
+      <div class="metric"><span class="muted">Pending milestones</span><strong>4</strong></div>
+      <div class="metric"><span class="muted">Open acceptance gates</span><strong>4</strong></div>
+    </div>
+
+    <section class="active-goal">
+      <div>
+        <h2>Active Goal · Integrated Acceptance and Real-Team Trial</h2>
+      <p>V6-M6 is the single active Goal. It proves a real team can complete setup, activate, and run one weekly tension-to-closure operating loop with human accountability and AI assistance.</p>
+        <h3>Required evidence</h3>
+        <ul class="evidence">
+          <li>First-run setup, activation, role assignment, goal cycle, tactical meeting, and governance meeting are browser-proven</li>
+          <li>Organization Brain supports the trial path without bypassing human authority</li>
+          <li>Candidate tensions remain evidence-backed and require authorized human confirmation</li>
+          <li>Production deployment, health/readiness, rollback, and authenticated smoke evidence are separated from local proof</li>
+          <li>Production Reader and BioCoach data isolation remain invariant</li>
+          <li>Longitudinal real-team completion is not claimed before evidence is collected</li>
+        </ul>
+      </div>
+      <aside class="gate">
+        <h3>Current engineering gate</h3>
+        <p>V6-M1, V6-M2, V6-M3, V6-M4, and V6-M5 are accepted after independent reviews. V6-M6 is active. M6-A contract and evidence harness are accepted. M6-B proves a local SQL-seeded fixture browser path with tactical/governance outcomes, focused governance regression tests, final production build, and independent reclosures. M6-C is accepted as local fixture evidence. M6-D is accepted as local UI-first setup evidence after full verifier, implementation review reclosure, and roadmap/evidence reclosure. M6-E has deployed the corrected Aliyun release with public web health, authenticated smoke, and BioCoach isolation passing after one rollback from a bad package layout. Independent reviews and real-team longitudinal use remain open.</p>
+      </aside>
+    </section>
+
+    <section>
+      <h2>Milestone Roadmap</h2>
+      <div class="milestones">
+        <div class="milestone"><span class="code">V5-M1</span><div><h3>Trustworthy Organization Brain Entry</h3><span class="muted">Read-only, grounded, permission-correct, visible in the browser</span></div><span class="pill accepted">Accepted</span></div>
+        <div class="milestone"><span class="code">V5-M2</span><div><h3>Goal Tree Closed Loop</h3><span class="muted">Shared cycle, strategic confirmation, Targets, check-ins, tree</span></div><span class="pill accepted">Accepted</span></div>
+        <div class="milestone"><span class="code">V5-M3</span><div><h3>Brain-Assisted Goal Operations</h3><span class="muted">Previewed and confirmed commands without authority bypass</span></div><span class="pill accepted">Accepted</span></div>
+        <div class="milestone"><span class="code">V5-M4</span><div><h3>Proactive Perception and Memory</h3><span class="muted">Drift detection, briefs, memory candidates, source authority</span></div><span class="pill accepted">Accepted</span></div>
+        <div class="milestone"><span class="code">V5-M5</span><div><h3>Pluginization and Industry Hardening</h3><span class="muted">Interface plugin, resilience, production and real-team evidence</span></div><span class="pill accepted">Accepted</span></div>
+        <div class="milestone"><span class="code">V5-M6</span><div><h3>Brain-first Organization OS</h3><span class="muted">Accepted foundations with residual M6-3 reclosure debt retained for provenance</span></div><span class="pill pending">Historical debt</span></div>
+        <div class="milestone"><span class="code">V5-M7</span><div><h3>Role Mechanism and Marketplace</h3><span class="muted">Role vacancies, applications, nominations, confirmation, assignment history, Brain synchronization</span></div><span class="pill">Proposed</span></div>
+        <div class="milestone"><span class="code">V6-M1</span><div><h3>Setup Lifecycle Foundation</h3><span class="muted">Explicit lifecycle, readiness, authority, meeting denial, activation audit, and held invitations</span></div><span class="pill accepted">Accepted</span></div>
+        <div class="milestone"><span class="code">V6-M2</span><div><h3>Organization Setup Workspace</h3><span class="muted">Seven-step editable setup workspace for real administrators before activation</span></div><span class="pill accepted">Accepted</span></div>
+        <div class="milestone"><span class="code">V6-M3</span><div><h3>Business Loop Core</h3><span class="muted">Parallel Organization views for formal structure and value/data flow</span></div><span class="pill accepted">Accepted</span></div>
+        <div class="milestone"><span class="code">V6-M4</span><div><h3>AI Co-Assignees and Risk Policy</h3><span class="muted">Bounded AI role co-execution with human accountability</span></div><span class="pill accepted">Accepted</span></div>
+        <div class="milestone"><span class="code">V6-M5</span><div><h3>Candidate Tension Sensing</h3><span class="muted">Evidence-backed candidates that require authorized human confirmation</span></div><span class="pill accepted">Accepted</span></div>
+        <div class="milestone"><span class="code">V6-M6</span><div><h3>Integrated Acceptance and Real-Team Trial</h3><span class="muted">One real team runs setup to weekly tension-to-closure with production evidence</span></div><span class="pill active">Active</span></div>
+        <div class="milestone"><span class="code">V6-M7</span><div><h3>AI-Native First-Run to Weekly Loop</h3><span class="muted">Guided setup, role accountability, primary goal, tactical/governance loop, and Brain assistance</span></div><span class="pill">Proposed</span></div>
+      </div>
+    </section>
+
+    <section class="state-grid">
+      <article>
+        <h2>What's done</h2>
+        <ul><li>V6-M1-A is accepted with focused 10/10, full 42-migration PostgreSQL proof, direct ACTIVE-insert denial, legal human activation, irreversible lifecycle, immutable evidence, six-class zero-residue rollback, same-reviewer PASS, and roadmap audit acceptance.</li><li>V6-M1-B1 is accepted with focused 18/18, fresh 42-migration setup-action 10/10, transaction rollback and concurrent single-winner proof, tenant-bound activation actor proof, zero organizations Prisma drift, and same-reviewer PASS with no P0/P1/P2.</li><li>V6-M1-B2 is accepted with source 59/59 plus runtime 21/21, PostgreSQL five-boundary zero-write proof, TypeScript, scoped ESLint, diff check, zero fixture residue, and same-reviewer reclosure of the governance multi-transaction P1.</li><li>V6-M1-B3 is accepted with focused 23/23, PostgreSQL zero-ledger/zero-domain-write proof for three Brain meeting commands, explicit tension.raise availability, TypeScript, scoped ESLint, diff check, zero fixture residue, and independent review PASS with no P0/P1/P2.</li><li>V6-M1-C1 is accepted with focused 11/11, PostgreSQL activation/concurrency/immutability/replay proof, TypeScript, scoped ESLint, Prisma validation, diff check, zero fixture residue, and same-reviewer closure of evidence-completeness and deterministic-ordering findings.</li><li>V6-M1-C2A is accepted with focused 11/11, migration rollback/reapply, historical completed backfill with zero retroactive jobs, PostgreSQL negative DML 1/1, zero random fixture residue, and same-reviewer closure of attempt-count and executable-evidence findings.</li><li>V6-M1-C2D is accepted with focused processor/service 17/17, disposable PostgreSQL processor 1/1 after full 43 migrations, Prisma validation, TypeScript, scoped ESLint, diff check, and independent review PASS with no P0/P1/P2.</li><li>V6-M1-C2E is accepted with activation focused 12/12, disposable PostgreSQL activation-release 1/1 after full 43 migrations, combined focused 29/29, Prisma validation, TypeScript, scoped ESLint, diff check, and independent review PASS with no P0/P1/P2.</li><li>V6-M1-D is accepted: browser acceptance proves setup locked, activation disabled/enabled, activation success, HELD invitation release, meeting availability after ACTIVE, mobile no overflow, clean ledgers, cleanupOk, dropped disposable DB, restored reader role, source gates passed, implementation review PASS, and roadmap/evidence re-audit PASS.</li><li>V6-M1 final acceptance auditor returned ACCEPT V6-M1 AND ACTIVATE V6-M2 with no findings and no blockers.</li><li>V6-M2-A is accepted: seven-step Organization workspace read model, browser route proof for all seven entries, desktop/mobile no overflow, clean ledgers, cleanupOk, source gates pass, implementation review PASS, and roadmap/evidence re-audit PASS.</li><li>V6-M2-B is accepted: Organization now owns editable setup sections, first review findings were fixed and reclosed, profile save persists name and purpose, identity readiness becomes ready, desktop/mobile overflow false, clean ledgers, cleanupOk, disposable DB dropped, reader role remains no-login/no-privilege, source gates pass, and roadmap/evidence reclosure PASS.</li><li>V6-M2-C is accepted: goals, role-definition, member-invitation, and role-assignment setup panels are visible with counts and direct next actions; repo-local browser evidence passed with clean ledgers and cleanup; implementation review and roadmap/evidence reclosure PASS.</li><li>V6-M2-D is accepted: prioritized readiness guidance passed source and browser gates with clean ledgers, cleanup, reader safety, implementation review PASS, and roadmap/evidence audit PASS after BioCoach wording precision was fixed.</li><li>V6-M2-E is accepted: Organization setup identity/system-configuration links stay inside /app/organization, no /app/setup setup-workspace links are visible in browser, source/browser/cleanup gates pass, and implementation plus roadmap/evidence reviews PASS.</li><li>Final V6-M2 milestone auditor returned ACCEPT V6-M2 AND ACTIVATE V6-M3 with no P0/P1/P2.</li><li>V6-M3-A is accepted: Business Loop read/navigation shell passes source/browser/cleanup gates, first implementation review P1/P2 are corrected and reclosed, and roadmap/evidence P2 dashboard label is corrected and reclosed.</li><li>V6-M3-B is accepted: Business Loop persistence skeleton passes focused 11/11, TypeScript, scoped ESLint, Prisma validate, scoped diff check, disposable 44-migration PostgreSQL proof, implementation review PASS, stale-status P2 fix, and roadmap/evidence reclosure PASS.</li><li>V6-M3-C is accepted: persisted/fallback Business Loop read projection passes focused 12/12, TypeScript, scoped ESLint, Prisma validate, browser proof, archived-count P1 correction, same-reviewer reclosure, stale-status P2 correction, and roadmap/evidence reclosure PASS.</li><li>V6-M3-D is accepted: minimal Business Loop authoring passes focused 15/15, TypeScript, scoped ESLint, Prisma validate, browser proof, duplicate-submission corrections, implementation review PASS, stale-status P2 correction, and roadmap/evidence reclosure PASS.</li><li>V6-M3-E is accepted after first-review corrections, implementation reclosure PASS, and roadmap/evidence re-audit PASS: focused tests 16/16, TypeScript, scoped ESLint, Prisma validate, browser proof in /tmp/loopos-m3e-browser-20260720-3, ACTIVE-only read projection, repeated publish click attempt without duplicate versions, one ACTIVE loop, one PUBLISHED version, zero DRAFT versions, cleanupOk true, and zero user/person/organization/business-loop residue.</li><li>V6-M3 final milestone auditor returned ACCEPT V6-M3 AND ACTIVATE V6-M4 with no P0/P1/P2. M4-A is accepted: AI co-assignee policy table, L0-L4 vocabulary, accountable-human invariant helper, AGENT/HUMAN creation guard, focused tests 5/5, TypeScript, scoped ESLint, Prisma validate, migration transaction proof, scoped diff check, implementation re-review PASS, and roadmap/evidence re-audit alignment. M4-B is accepted after implementation reclosure PASS and roadmap/evidence audit PASS. M4-C is accepted after implementation review PASS and roadmap/evidence reclosure PASS. M4-D is accepted after focused 11/11, production build, browser proof in /tmp/loopos-m4d-browser-20260720-1, clean ledger, zero residue, implementation review PASS, dashboard P2 corrections, roadmap/evidence reclosure PASS, and no AI automatic execution. M4-E is accepted after focused 15/15, production build, migration BEGIN/ROLLBACK proof, ready RECORDED event, blocked DENIED event, human-recorder guard, tenant-scoped policy guard, implementation review PASS, roadmap/evidence audit PASS, and no AI automatic execution. M4-F and V6-M4 are accepted after focused 15/15, production build, browser regression in /tmp/loopos-m4f-browser-20260720-1, no overflow, clean ledger, zero residue, final implementation review PASS, roadmap/evidence reclosure PASS, and no AI automatic execution. V6-M5-A is accepted after focused 6/6, TypeScript, scoped ESLint, Prisma validate, production build, migration BEGIN/ROLLBACK proof, implementation reclosure PASS, roadmap/evidence audit PASS, no formal Tension before human confirmation, and no automatic sensing. V6-M5-B is accepted after focused 11/11, TypeScript, scoped ESLint, Prisma validate, production build, scoped diff check, human owner-role confirmation boundary, terminal dismissal/false-positive/merge transitions, audit events, no AI-created formal Tension, no automatic sensing, implementation review PASS, and roadmap/evidence audit PASS. V6-M5-C is accepted after /app/tensions candidate inbox evidence, sourceRef display fix, implementation reclosure PASS, and roadmap/evidence reclosure PASS. V6-M5-D is accepted after candidate human review action evidence, formal Tension type compatibility fix, implementation reclosure PASS, and roadmap/evidence audit PASS. V6-M5-E is accepted after disposable DB browser proof, clean ledger, cleanupOk, default residue zero, temp DB dropped, implementation review PASS, and roadmap/evidence audit PASS.</li></ul>
+        <ul><li>Historical V5-M3/M4 record below; not current V6-M3-E status.</li><li>V5-M1 and V5-M2 accepted with final audit PASS</li><li>V5-M3-A contract accepted after same-reviewer closure of four P1 findings</li><li>V5-M3-B final snapshot passes 83 source files with 770 tests and production build 35/35</li><li>V5-M3-C command ledger and six static command variants are accepted in d018d77 plus 711644e</li><li>V5-M3-D1 Goal draft/check-in handlers are accepted through 24c0d2f, 70e7109, and 76b8e45</li><li>V5-M3-D2 Tension raise and tactical proposal submit handlers are accepted with focused 32/32, source 88 files / 795 tests, PostgreSQL 14.18 1/1, independent source review, and roadmap audit</li><li>V5-M3-D3 meeting notes update is accepted with focused 39/39, source 88 files / 798 tests, TypeScript, scoped lint, Prisma validation, build 35/35, PostgreSQL 14.18 1/1, independent source review, and roadmap re-audit</li><li>V5-M3-E is accepted with 36/36 focused tests, 89/89 source files with 803 tests, TypeScript, scoped lint, Prisma validation, diff check, production build 35/35, PostgreSQL preview/confirm proof, production-mode browser proof in /tmp/loopos-m3e-browser-1784124498816, independent implementation review PASS, and roadmap/evidence audit with no findings</li><li>V5-M3-F coordinator cleanup passes full source 89/89 files with 803 tests, TypeScript, scoped lint, Prisma validation, diff check, production build 35/35, zero disposable DB residue, and no 3224 listener</li><li>Historical V5-M3 final acceptance auditor returned ACCEPT M3 AND ACTIVATE M4 with no findings</li><li>V5-M4-A private proactive briefs design and implementation plan are documented in docs/plans/2026-07-15-v5-m4a-private-briefs-design.md and docs/plans/2026-07-15-v5-m4a-private-briefs-implementation-plan.md</li><li>V5-M4-A1 detector is accepted after focused 6/6, scoped lint, TypeScript, diff check, full source 90/90 files with 809 tests, production build 35/35, same-reviewer implementation reclosure PASS, and independent roadmap audit ACCEPT A1 AND ACTIVATE A2</li><li>V5-M4-A2 service is accepted after focused A1/A2 12/12, PostgreSQL 1/1, zero loopos_m4a2_% residue, scoped lint, TypeScript, diff check, full source 92/92 files with 816 tests, and same-reviewer implementation reclosure PASS</li><li>V5-M4-A3 Brain UI surface is accepted with focused Brain action/client 16/16, scoped lint, TypeScript, diff check, full source 92/92 files with 818 tests, production build 35/35, production-mode browser proof in /tmp/loopos-m4a3-browser-1784134920921, independent implementation review PASS with no P0/P1/P2, and roadmap reclosure ACCEPT A3 AND ACTIVATE A4</li><li>V5-M4-A4 cleanup evidence exists with script syntax check, Prisma validate, scoped lint, TypeScript, diff check, full source 92/92 files with 818 tests, production build 35/35, clean browser ledger, unchanged object counts, and zero disposable DB residue</li><li>Historical V5-M4-A final auditor returned ACCEPT M4-A with no findings and no blockers</li><li>V5-M4-B Option A is documented as candidate-first in docs/plans/2026-07-15-v5-m4b-source-authority-memory-candidates-design.md and docs/plans/2026-07-15-v5-m4b-source-authority-memory-candidates-implementation-plan.md</li><li>V5-M4-B1 pure lifecycle is accepted after fixing initial review findings: focused 9/9, TypeScript, scoped ESLint, diff check, full source 93/93 files with 827 tests, Prisma validate, production build 35/35, same-reviewer implementation reclosure PASS, and roadmap audit PASS</li><li>V5-M4-B2 is accepted after focused service 7/7, PostgreSQL 1/1, Prisma validate, TypeScript, scoped ESLint, diff check, source 95/95 files with 835 tests, production build 35/35, implementation review reclosure PASS, and roadmap audit reclosure PASS.</li><li>V5-M4-B3 is accepted after focused Brain action/client 18/18, scoped ESLint, TypeScript, diff check, Prisma validate, source 95/95 files with 837 tests, production build 35/35, production-mode browser proof in /tmp/loopos-m4b3-browser-1784154856960, implementation review PASS, and roadmap audit PASS.</li><li>V5-M4-B4 is accepted after focused service/action/client 29/29, route coverage for Goal/Governance/Tactical/Meeting plus owner/admin/outsider/tension denial, TypeScript, scoped lint, Prisma validate, source tests 304 top-level / 776 items with 0 failures, production build 35/35, production-mode browser proof in /tmp/loopos-m4b4-browser-1784156353691, implementation reclosure PASS, and roadmap reclosure PASS.</li><li>V5-M4-B5 / V5-M4-B is accepted after cleanup evidence: script syntax checks for M4-B3/B4 browser scripts, TypeScript, scoped lint, Prisma validate, diff check, full source tests 304 top-level / 776 items with 0 failures, production build 35/35, no 3226/3227 browser server, no M4-B browser process, zero `loopos_m4b2_%`, `loopos_m4b3_browser_%`, or `loopos_m4b4_browser_%` disposable databases, and final cleanup audit PASS with no findings.</li><li>V5-M4-C Option A design and implementation plan are documented for confirmed-candidate retrieval first.</li><li>V5-M4-C1 is accepted with focused 8/8, scoped lint, TypeScript, diff check, Prisma validate, full source tests 305 top-level / 784 items with 0 failures, production build 35/35, implementation review reclosure PASS, and roadmap/evidence audit reclosure PASS.</li><li>V5-M4-C2 is accepted with focused service 7/7, real PostgreSQL 1/1, source tests 307 top-level / 792 items with 0 failures, TypeScript, scoped lint, Prisma validate, diff check, production build 35/35, implementation review PASS, and roadmap reclosure PASS.</li><li>V5-M4-C3 is accepted: confirmed memory is retrieved after Brain turn claim, passed to D1 separately, stored as an optional distinct response section, rendered separately in the Brain answer surface, and guarded against D1 omission/alteration; focused tests pass 128/128, full source tests pass 98/98 files with 865 tests, TypeScript, scoped ESLint, Prisma validate, diff check, production build 35/35, independent implementation review PASS, and roadmap audit reclosure PASS.</li></ul>
+        <ul><li>M4-C4 is accepted with browser/database evidence in /tmp/loopos-m4c4-browser-1784170114120: source-authority confirmation, permitted reviewer Brain retrieval, same-org nonpermitted no-hint behavior, second-tenant isolation, correction entry without direct memory mutation, clean network/page/console ledger, zero disposable database residue, closed port 3228, independent implementation review PASS, and roadmap/evidence audit PASS.</li></ul>
+        <ul><li>M4-C5 and M4-C are accepted: diff check, M4-C4 browser script syntax, Prisma validate, TypeScript, scoped ESLint, full source tests 98/98 files with 865 tests, production build 35/35, zero loopos_m4c4_browser_% databases, closed port 3228, final implementation review PASS, and final roadmap/evidence audit PASS.</li></ul>
+        <ul><li>V5-M4 is accepted: final auditor returned ACCEPT V5-M4 AND ACTIVATE V5-M5 with no P0/P1/P2, while keeping production deployment and longitudinal real-team evidence deferred to M5.</li></ul>
+        <ul><li>M5-A production baseline design and implementation plan are documented for the csi-org.com/loopos production contract, release identity, local build/remote run model, migration safety, health/readiness, browser smoke, rollback/recovery, and evidence-class separation.</li><li>M5-A planning checkpoint passed independent review with no P0/P1/P2 and is accepted.</li><li>M5-A1 is accepted: pnpm is pinned, the Aliyun deployment contract forbids npm/package-lock production releases, and docs/evidence/production-baseline-template.md defines a secret-free release evidence shape. Coordinator verification and independent implementation review both passed.</li><li>M5-A2 is accepted: Prisma generate/validate, source tests 98/98 files with 865 tests, TypeScript, diff check, production /loopos build 35/35 pages, routes-manifest redirect, disposable 26-migration deploy, cleanup, and independent review all passed.</li><li>M5-A3 is accepted: anonymous public HTTP smoke script, authenticated read-only browser checklist, coordinator dry-run verification, and independent review passed without claiming production smoke execution.</li><li>M5-A4 is accepted: rollback/recovery checklist, dry-run recovery-plan script, README rollback boundary, coordinator verification, and independent review passed without claiming production recovery execution.</li><li>M5-A5 and M5-A are accepted: acceptance cleanup evidence is consolidated, final implementation review passed, final roadmap/evidence audit passed, and M5-B production validation followed.</li><li>M5-B is accepted with production evidence current through release 20260717-1410-m6reader-isolation: 27 migrations are applied with zero failed rows and no pending migration, LoopOS PM2 processes and public HTTP are healthy, authenticated HTTP and browser checks pass with zero smoke residue, the dedicated Brain Reader passes exact ACL readiness and strict mutation denial, two real browser tenants read only their own organization facts with zero residue, and both LoopOS application and Brain credentials are denied access to the separate BioCoach database with SQLSTATE 42501. Independent security reclosure and final roadmap audit passed with no P0/P1/P2. Bounded recovery evidence is accepted; real-team longitudinal proof remains unproven and deferred to M6-6.</li></ul>
+        <ul><li>M6-1A and M6-1B are accepted with route, Actor-scoped projection, browser navigation, cleanup, implementation review, and roadmap-audit evidence.</li><li>M6-1C implementation is accepted: focused 45/45, scoped lint, TypeScript, diff check, build 36/36, desktop/mobile light/dark browser proof, AA contrast, real navigation, conversation creation, keyboard model-off state, zero residue, and same-reviewer UX reclosure all pass.</li><li>The mandatory production refresh proves Reader mutation denial and both LoopOS credentials denied BioCoach and postgres with exact SQLSTATE 42501 while BioCoach local/public health is 200 and relevant PM2 processes are online.</li></ul>
+      </article>
+      <article>
+        <h2>What's next</h2>
+        <ul><li>Prepare M6-E production deployment and isolation proof from the accepted M6-D local evidence snapshot</li><li>Keep remaining setup gaps explicit: tactical cadence, Organization Brain model/profile persistence, full goal proposal/decision/adopted-goal/target path, detector Agent, and candidate tension creation</li><li>Keep V6-M7 proposed until V6-M6 is accepted or explicitly split</li><li>Keep production deployment, BioCoach isolation, rollback, and longitudinal completion unclaimed until their separate evidence is collected</li></ul>
+      </article>
+      <article>
+        <h2>Any blockers</h2>
+        <ul><li>No M6-E product-decision blocker; current gate is production deployment and isolation evidence</li><li>Historical M6-3 independent reclosure and fixture evidence remain acceptance debt, not active implementation</li><li>Production Brain governance flow, migration ledger, and BioCoach isolation remain mandatory invariants</li><li>V6-M6 is not accepted until local, production, isolation, review, and real-team evidence all pass</li></ul>
+      </article>
+    </section>
+  </main>
+  <footer class="wrap">
+    Canonical roadmap: GOALS.md · Updated 2026-07-21 · Previous dashboard SHA-256: 6aab00bc5dca0b5e5321f085ab0b4178be7afc969bb14454d4c83421e2275042
+  </footer>
+</body>
+</html>
