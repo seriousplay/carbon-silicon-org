@@ -165,16 +165,15 @@ export default async function Home() {
       <section className="relative overflow-hidden border-b border-emerald-200/10">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_82%_18%,rgba(45,212,191,0.22),transparent_28%),linear-gradient(135deg,rgba(3,16,15,0.98),rgba(5,35,30,0.9)_48%,rgba(5,10,9,0.98))]" />
         <div className="absolute inset-0 bg-[linear-gradient(rgba(116,242,202,0.06)_1px,transparent_1px),linear-gradient(90deg,rgba(116,242,202,0.05)_1px,transparent_1px)] bg-[size:72px_72px] opacity-45" />
-        <div className="absolute bottom-[-8rem] right-[-2rem] hidden h-[34rem] w-[34rem] rotate-[-10deg] rounded-[3rem] border border-emerald-200/15 bg-black/25 shadow-2xl shadow-emerald-950/50 lg:block" />
-        <div className="absolute bottom-[-7rem] right-[3vw] hidden w-[32rem] rotate-[-6deg] overflow-hidden rounded-[2rem] border border-emerald-200/20 shadow-[0_0_80px_rgba(45,212,191,0.18)] lg:block">
+        <div className="absolute right-[2vw] top-[50%] hidden w-[34rem] -translate-y-1/2 overflow-hidden rounded-2xl border border-emerald-200/15 shadow-[0_0_60px_rgba(45,212,191,0.12)] lg:block">
           <Image
             src="/book/hero-desktop.webp"
             alt="碳硅组织英雄图"
             width={1672}
             height={941}
             priority
-            sizes="(max-width: 1024px) 0px, 512px"
-            className="h-auto w-full opacity-[0.92]"
+            sizes="(max-width: 1024px) 0px, 544px"
+            className="h-auto w-full"
           />
         </div>
 
