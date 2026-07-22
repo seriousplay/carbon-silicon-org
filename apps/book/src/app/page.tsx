@@ -168,7 +168,7 @@ export default async function Home() {
         <div className="absolute bottom-[-8rem] right-[-2rem] hidden h-[34rem] w-[34rem] rotate-[-10deg] rounded-[3rem] border border-emerald-200/15 bg-black/25 shadow-2xl shadow-emerald-950/50 lg:block" />
         <div className="absolute bottom-[-6rem] right-[3vw] hidden w-[30rem] rotate-[-6deg] overflow-hidden rounded-[2rem] border border-emerald-200/20 shadow-[0_0_80px_rgba(45,212,191,0.15)] lg:block">
           <Image
-            src="/book/hero-1600.png"
+            src="/book/hero-desktop.webp"
             alt="碳硅组织封面视觉"
             width={1600}
             height={1000}
@@ -219,7 +219,7 @@ export default async function Home() {
 
           <div className="mt-8 lg:hidden">
             <Image
-              src="/book/hero-800.png"
+              src="/book/hero-mobile.webp"
               alt="碳硅组织封面视觉"
               width={800}
               height={500}
