@@ -268,6 +268,9 @@ function StepSection({ step: s, completed, onToggleComplete, onNext, onPrev }: {
         {s.id === "hr5" && <HR5Content />}
         {s.id === "hr6" && <HR6Content />}
         {s.id === "hr7" && <HR7Content />}
+        {s.id === "loop1" && <Loop1Content />}
+        {s.id === "loop2" && <Loop2Content />}
+        {s.id === "loop3" && <Loop3Content />}
       </div>
 
       <div className="mt-8 flex items-center justify-between">
@@ -452,6 +455,7 @@ function GovernanceSection() {
       </div>
     </div>
   );
+}
 
 // ─── Loop Governance Module ───────────────────────────
 
@@ -666,5 +670,4 @@ function Loop3Content() {
       </p>
     </div>
   </>);
-}
 }
