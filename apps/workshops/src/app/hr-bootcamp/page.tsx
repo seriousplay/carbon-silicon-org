@@ -180,11 +180,11 @@ function WelcomeSection({ onStart, selectedTask, onSelectTask }: { onStart: () =
         <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-3xl border border-emerald-300/20 bg-emerald-300/10">
           <Zap className="h-10 w-10 text-emerald-300" />
         </div>
-        <p className="text-xs font-bold uppercase tracking-widest text-emerald-300/50">AI · HR · 2小时微学习</p>
+        <p className="text-xs font-bold uppercase tracking-widest text-emerald-300/50">AI for HR · 精英赋能营</p>
         <h1 className="mt-4 text-4xl font-black tracking-tight">AI赋能训练营<span className="text-emerald-300"> · HR篇</span></h1>
         <p className="mt-4 text-lg leading-relaxed text-emerald-100/60">
           先会用提示词、智能体、Skill和知识库，再理解组织如何接住AI。<br />
-          2小时，7个步骤，5个HR场景任选。
+          10个模块，5个HR场景任选。
         </p>
         <div className="mt-8 flex flex-wrap justify-center gap-3">
           <button onClick={onStart} className="inline-flex items-center gap-2 rounded-full bg-emerald-300 px-8 py-3 text-sm font-black text-[#07110f] transition hover:bg-emerald-200">
