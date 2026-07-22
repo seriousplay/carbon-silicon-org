@@ -16,6 +16,10 @@ const steps = [
   { id: "hr5", step: 5, time: "95-115min", section: "风险边界", title: "HR审核与使用边界", desc: "什么判断不能交给AI？HR合规的八条红线。" },
   { id: "hr6", step: 6, time: "115-118min", section: "组织导入", title: "AI进入组织后的排异", desc: "为什么个人用得好、团队推不动？组织排异的四种模式。" },
   { id: "hr7", step: 7, time: "118-120min", section: "组织导入", title: "回路治理导入", desc: "用回路思维把个人AI能力变成组织资产。" },
+
+  { id: "loop1", step: 8, time: "120-150min", section: "回路治理", title: "从流水线到神经系统", desc: "理解回路式组织与传统组织的七个根本差异——为什么你的公司不能只把AI当工具。" },
+  { id: "loop2", step: 9, time: "150-170min", section: "回路治理", title: "锁定关键业务，设计你的回路", desc: "不需要自上而下的组织变革。选一个痛点业务，画出它的回路地图，定义人机角色。" },
+  { id: "loop3", step: 10, time: "170-180min", section: "回路治理", title: "我的行动承诺", desc: "带回公司的不是一个概念，而是一个可执行的最小回路方案。" },
 ];
 
 const tasks = [
@@ -93,6 +97,13 @@ export default function HRBootcampPage() {
 
           <NavGroup label="组织导入 5min" />
           {steps.filter(s => s.section === "组织导入").map(s => (
+            <NavItem key={s.id} target={s.id} step={s.step} active={active === s.id} completed={completed.has(s.id)} onClick={() => { setActive(s.id); setSidebarOpen(false); }}>
+              {s.title.split("：")[1] || s.title}
+            </NavItem>
+          ))}
+
+          <NavGroup label="回路治理 60min" />
+          {steps.filter(s => s.section === "回路治理").map(s => (
             <NavItem key={s.id} target={s.id} step={s.step} active={active === s.id} completed={completed.has(s.id)} onClick={() => { setActive(s.id); setSidebarOpen(false); }}>
               {s.title.split("：")[1] || s.title}
             </NavItem>
@@ -441,4 +452,127 @@ function GovernanceSection() {
       </div>
     </div>
   );
+
+// ─── Loop Governance Module ───────────────────────────
+
+function Loop1Content() {
+  return (<>
+    <InfoBox>
+      <strong className="text-emerald-200">一个画面，两种组织：</strong>传统组织是一台<strong className="text-amber-300">机器</strong>——设计好流程，人按流程执行，管理层监督质量，出问题就修理流程。机器的上限是设计者的上限。回路组织是一个<strong className="text-emerald-300">生命体</strong>——设计好反馈回路，每次行动都产生学习信号，系统自动变得比上一次更聪明。生命体的上限是它学习了多少次。
+    </InfoBox>
+
+    <div className="rounded-xl border border-emerald-200/10 bg-white/[0.02] p-5">
+      <div className="text-sm font-bold text-emerald-200 mb-4">七个维度的根本差异</div>
+      <div className="grid gap-4">
+        {[
+          { dim: "核心隐喻", old: "公司 = 精密机器", new: "公司 = 神经系统" },
+          { dim: "设计对象", old: "谁做什么？谁向谁汇报？", new: "AI做什么？人判断什么？反馈从哪来？" },
+          { dim: "协调机制", old: "晨会、周报、审批流", new: "信号自动流动，AI直接从数据感知" },
+          { dim: "能力归属", old: "能力存在人身上，人走能力走", new: "能力存在回路里，积累成组织资产" },
+          { dim: "规模化逻辑", old: "业务翻倍，人头翻倍", new: "业务翻倍，AI更聪明，人效更高" },
+          { dim: "变革方式", old: "几年一次组织架构调整", new: "持续校准回路，日常操作即进化" },
+          { dim: "衡量标准", old: "执行质量：KPI是否达标", new: "学习速度：AI采纳率在上升吗？推翻率在下降吗？" },
+        ].map(item => (
+          <div key={item.dim} className="rounded-lg border border-emerald-200/5 bg-emerald-200/[0.02] p-3">
+            <div className="text-xs font-bold text-emerald-300">{item.dim}</div>
+            <div className="mt-1 grid grid-cols-2 gap-2 text-xs">
+              <div><span className="text-rose-300/60">旧：</span><span className="text-rose-100/60">{item.old}</span></div>
+              <div><span className="text-emerald-300/60">新：</span><span className="text-emerald-100/80">{item.new}</span></div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+
+    <div className="rounded-xl border border-emerald-300/20 bg-emerald-300/[0.06] p-4 text-sm leading-relaxed text-emerald-100/80">
+      <strong className="text-emerald-300">对HR的含义：</strong>你不是在引入一个AI工具，你是在重新设计组织做判断的方式。让招聘、培训、绩效每一次决策都变成组织学习的养料。
+    </div>
+  </>);
+}
+
+function Loop2Content() {
+  const loopSteps = [
+    { num: "1", title: "选一个痛点业务", desc: "不要全面铺开。选一个高频、有数据、结果可衡量的HR业务。", tip: "问自己：这个业务有没有每次都需要老员工经验判断的环节？" },
+    { num: "2", title: "画出回路地图", desc: "信号从哪来→AI做什么→人判断什么→决策怎么执行→反馈信号怎么回到起点", tip: "用一张A4纸画出节点和箭头。" },
+    { num: "3", title: "定义人机角色", desc: "AI负责模式识别和生成建议。人负责审核、修正、处理情境信息。", tip: "AI建议，人确认。人推翻时必须记录原因——这是回路的学习材料。" },
+    { num: "4", title: "定义反馈信号", desc: "什么数据能告诉你回路在越来越聪明？采纳率？推翻率？冷启动时间？", tip: "好的反馈信号是自动采集的——不需要人汇报。" },
+  ];
+
+  return (<>
+    <InfoBox>
+      <strong className="text-emerald-200">不需要自上而下的组织变革。</strong>锁定一个让团队真实疼痛的业务环节，跑通一条回路。当这条回路开始自己变聪明的时候，其他人会主动来找你。
+    </InfoBox>
+
+    <div className="text-sm font-bold text-emerald-200 mt-2">四步设计你的第一个回路</div>
+    <div className="grid gap-4">
+      {loopSteps.map(s => (
+        <div key={s.num} className="rounded-xl border border-emerald-200/10 bg-white/[0.02] p-4">
+          <div className="flex items-start gap-3">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-emerald-300/10 text-sm font-black text-emerald-300">{s.num}</div>
+            <div className="flex-1">
+              <div className="font-bold text-emerald-100">{s.title}</div>
+              <div className="mt-1 text-sm text-emerald-100/60">{s.desc}</div>
+              <div className="mt-2 rounded-lg bg-amber-300/[0.06] border border-amber-300/10 px-3 py-1.5 text-xs text-amber-200/70">💡 {s.tip}</div>
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+
+    <div className="rounded-xl border border-emerald-200/10 bg-white/[0.02] p-5">
+      <div className="text-sm font-bold text-emerald-300 mb-3">示例：招聘筛选回路</div>
+      <div className="flex flex-wrap items-center gap-2 text-xs">
+        <span className="rounded-full bg-emerald-300/10 px-3 py-1 text-emerald-200">📥 简历流入</span>
+        <span className="text-emerald-100/30">→</span>
+        <span className="rounded-full bg-emerald-300/10 px-3 py-1 text-emerald-200">🤖 AI初筛打分</span>
+        <span className="text-emerald-100/30">→</span>
+        <span className="rounded-full bg-amber-300/10 px-3 py-1 text-amber-200">👤 HR审核确认</span>
+        <span className="text-emerald-100/30">→</span>
+        <span className="rounded-full bg-emerald-300/10 px-3 py-1 text-emerald-200">🔄 入职后跟踪匹配度</span>
+      </div>
+      <div className="mt-3 text-xs text-emerald-100/40">
+        反馈信号：HR审核时推翻AI排序的原因被记录→模型学习HR偏好→下次更精准。入职后6个月绩效与面试评分相关性→校准模型。
+      </div>
+    </div>
+  </>);
+}
+
+function Loop3Content() {
+  return (<>
+    <InfoBox>
+      <strong className="text-emerald-200">今天的产出不是一个概念，是一个你可以带回公司、下周一就开始执行的方案。</strong>
+    </InfoBox>
+
+    <div className="grid gap-4">
+      {[
+        { q: "你要锁定的关键业务是什么？", hint: "选择一个高频、有痛点、你能直接影响的HR业务。" },
+        { q: "这个业务上，AI可以帮你做什么？", hint: "数据处理？模式识别？生成初稿？批量筛选？不要想全面AI化——只想第一步。" },
+        { q: "什么判断必须保留给人？", hint: "涉及合规风险？需要情境理解？涉及人的主观感受？" },
+        { q: "什么数据可以作为反馈信号？", hint: "这个信号必须是自动可采集的——不需要额外的人工报告。" },
+        { q: "你下周一要做的第一件事是什么？", hint: "约同事聊？选工具？整理数据？画回路图？" },
+      ].map((item, i) => (
+        <div key={i} className="rounded-xl border border-emerald-200/10 bg-white/[0.02] p-4">
+          <div className="flex items-start gap-2">
+            <span className="mt-0.5 text-emerald-300 font-black">{i + 1}.</span>
+            <div className="flex-1">
+              <div className="font-bold text-sm text-emerald-100">{item.q}</div>
+              <div className="mt-1 text-xs text-emerald-100/30">{item.hint}</div>
+              <div className="mt-2 border-b border-dashed border-emerald-200/20 pt-2 pb-1 text-sm text-emerald-100/50 min-h-[1.5rem]"></div>
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+
+    <div className="rounded-xl border border-emerald-300/20 bg-emerald-300/[0.06] p-5 mt-4">
+      <div className="text-sm font-bold text-emerald-300 mb-2">送给每一位HR</div>
+      <p className="text-sm leading-relaxed text-emerald-100/70">
+        AI时代的HR，不是被AI替代的岗位——而是帮助组织长出智能的关键角色。你不需要成为技术专家。你需要的是：<strong className="text-emerald-200">识别关键业务回路、设计人机角色、定义反馈信号、让每一次判断都变成组织学习的养料。</strong>
+      </p>
+      <p className="mt-3 text-sm leading-relaxed text-emerald-100/50">
+        回到公司后，不需要搞AI转型大项目。锁定一个业务痛点，跑通一条回路。当第一条回路开始自己变聪明的时候，变革就不再需要你去推动——它会自己生长。
+      </p>
+    </div>
+  </>);
+}
 }
