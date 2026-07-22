@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, CalendarDays, Sparkles, QrCode } from "lucide-react";
+import { ArrowRight, CalendarDays, Sparkles } from "lucide-react";
 import { AppShell, Container, GlassCard, PrimaryLink, SectionLabel } from "@/components/ui";
 
 const workshops = [
@@ -10,14 +10,6 @@ const workshops = [
     title: "超级个体赋能工作坊",
     desc: "一天流程框架、核心术语、工具安装链接与课前问卷。从 Prompt 到 Skill 的完整路径。",
     highlight: "课前问卷",
-  },
-  {
-    href: "/cocreate",
-    icon: QrCode,
-    tag: "PWA",
-    title: "现场共创台",
-    desc: "扫码即进的现场 H5。AI 生成 3 条备选业务回路，现场编辑锁定，5 分钟出结果。",
-    highlight: "扫码进入",
   },
 ];
 
@@ -42,12 +34,6 @@ export default function WorkshopsHomePage() {
             <PrimaryLink href="/super-individual">
               超级个体工作坊 <ArrowRight className="ml-2 h-4 w-4" />
             </PrimaryLink>
-            <Link
-              href="/cocreate"
-              className="inline-flex items-center gap-2 rounded-full border border-emerald-200/20 px-8 py-3 text-sm font-bold text-emerald-100 transition hover:bg-white/5"
-            >
-              现场共创台
-            </Link>
           </div>
         </Container>
       </section>
