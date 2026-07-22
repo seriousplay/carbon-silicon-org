@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { ArrowRight, MailCheck } from "lucide-react";
-import { createBrowserAuthClient } from "@/lib/auth/client";
+import { signIn } from "next-auth/react";
 
 export function LoginForm({ nextPath }: { nextPath?: string }) {
   const [email, setEmail] = useState("");
@@ -13,36 +13,37 @@ export function LoginForm({ nextPath }: { nextPath?: string }) {
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
-    const supabase = createBrowserAuthClient();
-    if (!supabase) {
-      setError("站点认证环境变量尚未配置。");
-      return;
-    }
-
     setSubmitting(true);
-    const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || window.location.origin).replace(/\/$/, "");
-    const redirectTo = `${siteUrl}/auth/callback${nextPath ? `?next=${encodeURIComponent(nextPath)}` : ""}`;
-    const { error: signInError } = await supabase.auth.signInWithOtp({
-      email: email.trim(),
-      options: {
-        emailRedirectTo: redirectTo,
-      },
-    });
-    setSubmitting(false);
 
-    if (signInError) {
-      setError(signInError.message);
-      return;
+    try {
+      const result = await signIn("email", {
+        email: email.trim(),
+        redirect: false,
+        callbackUrl: nextPath ? `/book${nextPath}` : "/book/dashboard",
+      });
+
+      if (result?.error) {
+        setError(result.error);
+      } else if (result?.ok) {
+        setSent(true);
+      }
+    } catch {
+      setError("发送登录邮件失败，请稍后再试。");
+    } finally {
+      setSubmitting(false);
     }
-    setSent(true);
   }
 
   if (sent) {
     return (
       <div className="mt-8 rounded-3xl border border-emerald-200/15 bg-white/[0.045] p-6">
         <MailCheck className="h-9 w-9 text-emerald-300" />
-        <h2 className="mt-4 text-2xl font-black text-white">登录邮件已发送</h2>
-        <p className="mt-2 text-sm leading-7 text-emerald-50/62">请打开邮箱中的登录链接，回到本站后即可继续使用。</p>
+        <h2 className="mt-4 text-2xl font-black text-white">
+          登录邮件已发送
+        </h2>
+        <p className="mt-2 text-sm leading-7 text-emerald-50/62">
+          请打开邮箱中的登录链接，回到本站后即可继续使用。
+        </p>
       </div>
     );
   }
@@ -60,7 +61,11 @@ export function LoginForm({ nextPath }: { nextPath?: string }) {
           required
         />
       </label>
-      {error ? <div className="rounded-2xl border border-red-300/25 bg-red-500/10 p-4 text-sm text-red-100">{error}</div> : null}
+      {error ? (
+        <div className="rounded-2xl border border-red-300/25 bg-red-500/10 p-4 text-sm text-red-100">
+          {error}
+        </div>
+      ) : null}
       <button
         disabled={submitting}
         className="inline-flex items-center justify-center rounded-full bg-emerald-300 px-6 py-3 text-sm font-black text-[#06110f] transition hover:bg-emerald-200 disabled:cursor-not-allowed disabled:opacity-50"

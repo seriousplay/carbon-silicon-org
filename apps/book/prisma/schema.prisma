@@ -1,14 +1,12 @@
 // Prisma schema for Book (Carbon-Silicon Book & Diagnostic Tools)
-// Migrated from Supabase project A (uxaxvzqskqsujmlmxvhj)
+// Generated from Supabase project A (uxaxvzqskqsujmlmxvhj)
 
 generator client {
-  provider        = "prisma-client-js"
-  previewFeatures = ["driverAdapters"]
+  provider = "prisma-client-js"
 }
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
 }
 
 model Event {
@@ -24,7 +22,7 @@ model Event {
   showOnHome     Boolean        @default(false) @map("show_on_home")
   startDate      DateTime?      @map("start_date") @db.Timestamptz()
   endDate        DateTime?      @map("end_date") @db.Timestamptz()
-  config         Json           @default("{}") @map("config")
+  config         Json           @default("{}")
   organizationId String?        @map("organization_id") @db.Uuid
   createdBy      String?        @map("created_by") @db.Uuid
   createdAt      DateTime       @default(now()) @map("created_at") @db.Timestamptz()
@@ -51,11 +49,12 @@ model Organization {
   createdBy String?   @map("created_by") @db.Uuid
   createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz()
 
-  events        Event[]
-  members       OrganizationMember[]
-  invites       OrganizationInvite[]
-  participants  Participant[]
-  toolSessions  ToolSession[]
+  events           Event[]
+  members          OrganizationMember[]
+  invites          OrganizationInvite[]
+  participants     Participant[]
+  toolSessions     ToolSession[]
+  profiles         Profile[]
 
   @@index([status])
   @@map("organizations")
@@ -66,13 +65,12 @@ model Profile {
   email                 String?
   displayName           String?       @map("display_name")
   role                  String?
-  defaultOrganizationId String?       @map("default_organization_id") @db.Uuid
+  defaultOrganizationId String?       @unique @map("default_organization_id") @db.Uuid
   createdAt             DateTime      @default(now()) @map("created_at") @db.Timestamptz()
   updatedAt             DateTime      @updatedAt @map("updated_at") @db.Timestamptz()
 
   defaultOrganization   Organization? @relation(fields: [defaultOrganizationId], references: [id])
 
-  @@index([defaultOrganizationId])
   @@map("profiles")
 }
 
@@ -133,7 +131,7 @@ model Participant {
 }
 
 model Question {
-  id           String
+  id           String  @id
   module       String
   dimension    String?
   title        String
@@ -166,7 +164,7 @@ model AssessmentAnswer {
   id           String     @id @default(uuid()) @db.Uuid
   assessmentId String     @map("assessment_id") @db.Uuid
   questionId   String     @map("question_id")
-  numericValue Decimal?   @map("numeric_value") @db.Numeric
+  numericValue Decimal?   @map("numeric_value")
   textValue    String?    @map("text_value")
   createdAt    DateTime   @default(now()) @map("created_at") @db.Timestamptz()
 
@@ -177,15 +175,15 @@ model AssessmentAnswer {
 
 model Report {
   id                   String     @id @default(uuid()) @db.Uuid
-  assessmentId         String     @map("assessment_id") @db.Uuid
+  assessmentId         String     @unique @map("assessment_id") @db.Uuid
   userId               String?    @map("user_id") @db.Uuid
   stageLevel           String?    @map("stage_level")
   nextLevel            String?    @map("next_level")
   stageSummary         String?    @map("stage_summary")
   spiralScores         Json       @default("{}") @map("spiral_scores")
   energyScores         Json       @default("{}") @map("energy_scores")
-  chainScore           Decimal?   @map("chain_score") @db.Numeric
-  charterScore         Decimal?   @map("charter_score") @db.Numeric
+  chainScore           Decimal?   @map("chain_score")
+  charterScore         Decimal?   @map("charter_score")
   primaryBottleneck    String?    @map("primary_bottleneck")
   actionRecommendation Json       @default("{}") @map("action_recommendation")
   recommendedTools     Json       @default("[]") @map("recommended_tools")
@@ -201,7 +199,7 @@ model Report {
 }
 
 model Tool {
-  id              String
+  id              String  @id
   chapter         Int
   name            String
   purpose         String
@@ -247,7 +245,7 @@ model AdminProfile {
   @@map("admin_profiles")
 }
 
-// NextAuth tables (required for NextAuth v5 with Prisma adapter)
+// NextAuth models
 model Account {
   id                String  @id @default(cuid())
   userId            String  @map("user_id") @db.Uuid
@@ -262,6 +260,8 @@ model Account {
   id_token          String?
   session_state     String?
 
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@unique([provider, providerAccountId])
   @@map("accounts")
 }
@@ -271,6 +271,8 @@ model Session {
   sessionToken String   @unique @map("session_token")
   userId       String   @map("user_id") @db.Uuid
   expires      DateTime @db.Timestamptz()
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("sessions")
 }
@@ -284,16 +286,15 @@ model VerificationToken {
   @@map("verification_tokens")
 }
 
-// NextAuth compatible User model
 model User {
-  id            String          @id @default(uuid()) @db.Uuid
+  id            String    @id @default(uuid()) @db.Uuid
   name          String?
-  email         String?         @unique
-  emailVerified DateTime?       @map("email_verified") @db.Timestamptz()
+  email         String?   @unique
+  emailVerified DateTime? @map("email_verified") @db.Timestamptz()
   image         String?
-  role          String?         @default("user")
-  createdAt     DateTime        @default(now()) @map("created_at") @db.Timestamptz()
-  updatedAt     DateTime        @updatedAt @map("updated_at") @db.Timestamptz()
+  role          String?   @default("user")
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt     DateTime  @updatedAt @map("updated_at") @db.Timestamptz()
 
   accounts      Account[]
   sessions      Session[]

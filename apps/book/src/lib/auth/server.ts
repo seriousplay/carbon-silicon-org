@@ -1,10 +1,8 @@
 import "server-only";
 
-import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { createServerClient } from "@supabase/ssr";
-import type { User } from "@supabase/supabase-js";
-import { createAdminSupabaseClient } from "@/lib/supabase/admin";
+import { auth } from "@/lib/auth";
+import { db } from "@/lib/supabase/pool";
 
 export type UserProfile = {
   id: string;
@@ -22,108 +20,117 @@ export type OrganizationMembership = {
   status: string;
 };
 
-export async function createServerSupabaseClient() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+/**
+ * Get the current authenticated user from NextAuth session.
+ * Use this in Server Components and Route Handlers.
+ */
+export async function getCurrentUser() {
+  const session = await auth();
+  if (!session?.user?.id) return null;
 
-  if (!url || !anonKey) return null;
-
-  const cookieStore = await cookies();
-
-  return createServerClient(url, anonKey, {
-    cookies: {
-      getAll() {
-        return cookieStore.getAll();
-      },
-      setAll(cookiesToSet) {
-        try {
-          cookiesToSet.forEach(({ name, value, options }) => cookieStore.set(name, value, options));
-        } catch {
-          // Server Components cannot set cookies. Middleware and route handlers refresh sessions.
-        }
-      },
-    },
-  });
+  return {
+    id: session.user.id,
+    email: session.user.email ?? null,
+    role: (session.user as { role?: string }).role ?? null,
+  };
 }
 
-export async function getCurrentUser(): Promise<User | null> {
-  const supabase = await createServerSupabaseClient();
-  if (!supabase) return null;
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  return user;
-}
-
+/**
+ * Require authentication. Redirects to /book/login if not logged in.
+ */
 export async function requireUser(nextPath?: string) {
   const user = await getCurrentUser();
   if (!user) {
     const suffix = nextPath ? `?next=${encodeURIComponent(nextPath)}` : "";
-    redirect(`/login${suffix}`);
+    redirect(`/book/login${suffix}`);
   }
   return user;
 }
 
+/**
+ * Get user profile from database.
+ */
 export async function getUserProfile(userId: string): Promise<UserProfile | null> {
-  const supabase = createAdminSupabaseClient();
-  if (!supabase) return null;
+  if (!db) return null;
 
-  const { data } = await supabase
-    .from("profiles")
-    .select("id,email,display_name,role,default_organization_id")
-    .eq("id", userId)
-    .maybeSingle();
+  const profile = await db.profile.findUnique({
+    where: { id: userId },
+    select: {
+      id: true,
+      email: true,
+      displayName: true,
+      role: true,
+      defaultOrganizationId: true,
+    },
+  });
 
-  if (!data) return null;
+  if (!profile) return null;
 
   return {
-    id: String(data.id),
-    email: data.email ?? null,
-    displayName: data.display_name ?? null,
-    role: data.role ?? null,
-    defaultOrganizationId: data.default_organization_id ?? null,
+    id: profile.id,
+    email: profile.email ?? null,
+    displayName: profile.displayName ?? null,
+    role: profile.role ?? null,
+    defaultOrganizationId: profile.defaultOrganizationId ?? null,
   };
 }
 
+/**
+ * Get user's organization memberships.
+ */
 export async function getUserMemberships(userId: string): Promise<OrganizationMembership[]> {
-  const supabase = createAdminSupabaseClient();
-  if (!supabase) return [];
+  if (!db) return [];
 
-  const { data } = await supabase
-    .from("organization_members")
-    .select("organization_id,member_role,status,organizations(slug,name)")
-    .eq("user_id", userId)
-    .eq("status", "active")
-    .order("created_at", { ascending: true });
-
-  return ((data ?? []) as Array<{
-    organization_id: string;
-    member_role: "admin" | "member";
-    status: string;
-    organizations: { slug: string; name: string } | { slug: string; name: string }[] | null;
-  }>).flatMap((row) => {
-    const organization = Array.isArray(row.organizations) ? row.organizations[0] : row.organizations;
-    if (!organization) return [];
-    return {
-      organizationId: row.organization_id,
-      organizationSlug: organization.slug,
-      organizationName: organization.name,
-      memberRole: row.member_role,
-      status: row.status,
-    };
+  const memberships = await db.organizationMember.findMany({
+    where: {
+      userId,
+      status: "active",
+    },
+    select: {
+      organizationId: true,
+      memberRole: true,
+      status: true,
+      organization: {
+        select: {
+          slug: true,
+          name: true,
+        },
+      },
+    },
+    orderBy: { createdAt: "asc" },
   });
+
+  return memberships.map((m) => ({
+    organizationId: m.organizationId,
+    organizationSlug: m.organization.slug,
+    organizationName: m.organization.name,
+    memberRole: m.memberRole as "admin" | "member",
+    status: m.status,
+  }));
 }
 
+/**
+ * Get the complete user workspace (profile + memberships).
+ */
 export async function getUserWorkspace(userId: string) {
-  const [profile, memberships] = await Promise.all([getUserProfile(userId), getUserMemberships(userId)]);
+  const [profile, memberships] = await Promise.all([
+    getUserProfile(userId),
+    getUserMemberships(userId),
+  ]);
+
   const defaultMembership =
-    memberships.find((membership) => membership.organizationId === profile?.defaultOrganizationId) ?? memberships[0] ?? null;
+    memberships.find(
+      (m) => m.organizationId === profile?.defaultOrganizationId
+    ) ?? memberships[0] ?? null;
 
   return { profile, memberships, defaultMembership };
 }
 
-export function isOrganizationAdmin(membership: OrganizationMembership | null | undefined) {
+/**
+ * Check if a membership has admin role.
+ */
+export function isOrganizationAdmin(
+  membership: OrganizationMembership | null | undefined
+) {
   return membership?.memberRole === "admin";
 }
