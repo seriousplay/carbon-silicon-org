@@ -6,8 +6,16 @@ import { AppShell, Container, GlassCard, SectionLabel } from "@/components/ui";
 import { buildReport, demoParticipant } from "@/lib/assessment/scoring";
 import { orderedModules, questions, moduleMeta } from "@/lib/assessment/questions";
 import { saveLocalReport } from "@/lib/assessment/storage";
-import { submitAssessment } from "@/lib/supabase/submit";
 import type { AssessmentAnswers, ParticipantProfile, StageAnswer } from "@/lib/assessment/types";
+
+async function submitAssessment(payload: Record<string, unknown>) {
+  const res = await fetch("/book/api/assessments", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  return res.json();
+}
 
 const scaleLabels = ["完全不符合", "较少符合", "部分符合", "比较符合", "稳定符合"];
 const stageOptions: { value: StageAnswer; label: string }[] = [

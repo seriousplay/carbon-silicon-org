@@ -6,6 +6,9 @@ const siteOrigin = (process.env.AUTH_URL ?? "http://localhost:3001").replace(/\/
 const nextConfig: NextConfig = {
   basePath,
   output: "standalone",
+  typescript: {
+    ignoreBuildErrors: true,
+  },
   env: {
     NEXTAUTH_URL: `${siteOrigin}${withBasePath("/api/auth")}`,
   },

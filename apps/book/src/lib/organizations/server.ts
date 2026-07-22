@@ -453,9 +453,12 @@ export async function exportOrganizationDataCsv(userId: string) {
 function mapToolSessionRows(rows: {
   id: string;
   toolId: string;
-  context?: Record<string, string | undefined> | null;
-  responses?: Record<string, string> | null;
-  outputs?: Record<string, unknown> | null;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  context?: any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  responses?: any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  outputs?: any;
   submittedAt: Date;
 }[]): PersonalToolSessionItem[] {
   return rows.map((row) => ({
@@ -463,12 +466,12 @@ function mapToolSessionRows(rows: {
     toolId: row.toolId,
     toolName: getTool(row.toolId)?.name ?? row.toolId,
     submittedAt: row.submittedAt.toISOString(),
-    useCase: row.context?.useCase,
-    dataScope: row.context?.dataScope,
+    useCase: row.context?.useCase as string | undefined,
+    dataScope: row.context?.dataScope as string | undefined,
     nextAction: typeof row.outputs?.nextAction === "string" ? row.outputs.nextAction : undefined,
-    context: row.context ?? {},
-    responses: row.responses ?? {},
-    insightReport: row.outputs?.report,
+    context: (row.context ?? {}) as Record<string, string | undefined>,
+    responses: (row.responses ?? {}) as Record<string, string>,
+    insightReport: row.outputs?.report as Record<string, unknown> | undefined,
   }));
 }
 

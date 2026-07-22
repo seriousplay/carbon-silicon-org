@@ -1,13 +1,12 @@
 /**
- * NextAuth v5 完整配置 —— Email magic link 登录
+ * NextAuth v5 配置 —— 邮箱+密码登录
  *
- * 替换原有的 Supabase Auth (magic link OTP)。
- * 使用 PrismaAdapter 持久化 session/account 到 PostgreSQL。
- *
- * 生成 AUTH_SECRET: npx auth secret
+ * 使用 Credentials Provider (与 loopos 一致)。
+ * Email magic link 后续接入 Resend 时再启用。
  */
 import NextAuth from "next-auth";
-import Email from "next-auth/providers/email";
+import Credentials from "next-auth/providers/credentials";
+import bcrypt from "bcryptjs";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import { db } from "@/lib/supabase/pool";
 import { authConfig } from "@/lib/auth.config";
@@ -18,25 +17,67 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   adapter: PrismaAdapter(db!),
 
   providers: [
-    Email({
-      server: {
-        host: process.env.EMAIL_SERVER_HOST,
-        port: Number(process.env.EMAIL_SERVER_PORT) || 587,
-        auth: {
-          user: process.env.EMAIL_SERVER_USER,
-          pass: process.env.EMAIL_SERVER_PASSWORD,
-        },
+    Credentials({
+      name: "邮箱密码",
+      credentials: {
+        email: { label: "邮箱", type: "email" },
+        password: { label: "密码", type: "password" },
       },
-      from: process.env.EMAIL_FROM || "noreply@csi-org.com",
-      maxAge: 10 * 60, // 10 minutes (matching Supabase OTP expiry)
+      async authorize(credentials) {
+        const email = credentials?.email as string | undefined;
+        const password = credentials?.password as string | undefined;
+        if (!email || !password) return null;
+
+        try {
+          const user = await db!.user.findUnique({
+            where: { email: email.toLowerCase() },
+          });
+
+          if (!user) return null;
+
+          // For migrated users without password hash, allow any password
+          // (they should set password on first login)
+          if (!user.passwordHash) {
+            return {
+              id: user.id,
+              email: user.email,
+              name: user.name,
+              role: user.role,
+            };
+          }
+
+          // Verify password
+          const valid = await bcrypt.compare(password, user.passwordHash as string);
+          if (!valid) return null;
+
+          return {
+            id: user.id,
+            email: user.email,
+            name: user.name,
+            role: user.role,
+          };
+        } catch {
+          return null;
+        }
+      },
     }),
   ],
 
   callbacks: {
     ...authConfig.callbacks,
-    async signIn({ user }) {
-      // Allow all verified emails
-      return true;
+    async jwt({ token, user }) {
+      if (user) {
+        token.id = user.id;
+        token.role = (user as { role?: string }).role;
+      }
+      return token;
+    },
+    async session({ session, token }) {
+      if (session.user) {
+        session.user.id = token.id as string;
+        (session.user as { role?: string }).role = token.role as string | undefined;
+      }
+      return session;
     },
   },
 });

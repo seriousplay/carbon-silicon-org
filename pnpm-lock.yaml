@@ -38,6 +38,9 @@ importers:
       '@prisma/client':
         specifier: ^7.8.0
         version: 7.9.0(prisma@7.9.0(@types/react@19.2.17)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(typescript@5.9.3))(typescript@5.9.3)
+      bcryptjs:
+        specifier: ^3.0.3
+        version: 3.0.3
       clsx:
         specifier: ^2.1.1
         version: 2.1.1
@@ -72,6 +75,9 @@ importers:
       '@tailwindcss/postcss':
         specifier: ^4
         version: 4.3.3
+      '@types/bcryptjs':
+        specifier: ^3.0.0
+        version: 3.0.0
       '@types/node':
         specifier: ^20
         version: 20.19.43

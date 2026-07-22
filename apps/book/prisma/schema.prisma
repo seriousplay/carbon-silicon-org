@@ -292,6 +292,7 @@ model User {
   email         String?   @unique
   emailVerified DateTime? @map("email_verified") @db.Timestamptz()
   image         String?
+  passwordHash  String?   @map("password_hash")
   role          String?   @default("user")
   createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz()
   updatedAt     DateTime  @updatedAt @map("updated_at") @db.Timestamptz()

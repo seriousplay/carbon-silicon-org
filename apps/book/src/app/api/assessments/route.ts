@@ -118,7 +118,7 @@ export async function POST(request: Request) {
         recommendedTools: report.recommendedTools,
         participantSnapshot: participant,
         openAnswers: report.openAnswers,
-        reportPayload: report as unknown as Record<string, unknown>,
+        reportPayload: JSON.parse(JSON.stringify(report)),
       },
       select: { id: true },
     });
