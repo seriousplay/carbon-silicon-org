@@ -1,6 +1,6 @@
 import "server-only";
 
-import { createAdminSupabaseClient } from "@/lib/supabase/admin";
+import { db } from "@/lib/supabase/pool";
 import { getTool } from "@/lib/tools/tool-library";
 import { getUserMemberships, getUserProfile, isOrganizationAdmin, type OrganizationMembership } from "@/lib/auth/server";
 
@@ -72,24 +72,22 @@ export type OrganizationDashboardData = {
 };
 
 export async function completeOnboarding(input: OnboardingInput) {
-  const supabase = createAdminSupabaseClient();
-  if (!supabase) return { ok: false as const, reason: "Supabase service role is not configured" };
+  if (!db) return { ok: false as const, reason: "Supabase service role is not configured" };
 
   if (input.mode === "create") {
     const slug = await uniqueOrganizationSlug(input.organizationName);
-    const { data: organization, error: orgError } = await supabase
-      .from("organizations")
-      .insert({
+    const organization = await db.organization.create({
+      data: {
         slug,
         name: input.organizationName,
-        org_type: "company",
+        orgType: "company",
         status: "active",
-        created_by: input.userId,
-      })
-      .select("id,slug,name")
-      .single();
+        createdBy: input.userId,
+      },
+      select: { id: true, slug: true, name: true },
+    });
 
-    if (orgError || !organization) return { ok: false as const, reason: orgError?.message ?? "Organization insert failed" };
+    if (!organization) return { ok: false as const, reason: "Organization insert failed" };
 
     const profileResult = await upsertProfile(input.userId, {
       email: input.email,
@@ -106,15 +104,14 @@ export async function completeOnboarding(input: OnboardingInput) {
     return { ok: true as const, organizationSlug: organization.slug };
   }
 
-  const { data: invite, error: inviteError } = await supabase
-    .from("organization_invites")
-    .select("organization_id,member_role,status,expires_at")
-    .eq("code", input.inviteCode.trim().toUpperCase())
-    .maybeSingle();
+  const invite = await db.organizationInvite.findUnique({
+    where: { code: input.inviteCode.trim().toUpperCase() },
+    select: { organizationId: true, memberRole: true, status: true, expiresAt: true },
+  });
 
-  if (inviteError || !invite) return { ok: false as const, reason: "邀请码不存在或已失效" };
+  if (!invite) return { ok: false as const, reason: "邀请码不存在或已失效" };
   if (invite.status !== "active") return { ok: false as const, reason: "邀请码已失效" };
-  if (invite.expires_at && new Date(invite.expires_at).getTime() < Date.now()) {
+  if (invite.expiresAt && invite.expiresAt.getTime() < Date.now()) {
     return { ok: false as const, reason: "邀请码已过期" };
   }
 
@@ -122,11 +119,11 @@ export async function completeOnboarding(input: OnboardingInput) {
     email: input.email,
     displayName: input.displayName,
     role: input.role,
-    organizationId: invite.organization_id,
+    organizationId: invite.organizationId,
   });
   if (!profileResult.ok) return profileResult;
 
-  const memberResult = await upsertOrganizationMember(invite.organization_id, input.userId, invite.member_role === "admin" ? "admin" : "member");
+  const memberResult = await upsertOrganizationMember(invite.organizationId, input.userId, invite.memberRole === "admin" ? "admin" : "member");
   if (!memberResult.ok) return memberResult;
 
   return { ok: true as const };
@@ -136,116 +133,140 @@ export async function upsertProfile(
   userId: string,
   input: { email?: string | null; displayName?: string | null; role?: string | null; organizationId?: string | null },
 ) {
-  const supabase = createAdminSupabaseClient();
-  if (!supabase) return { ok: false as const, reason: "Supabase service role is not configured" };
+  if (!db) return { ok: false as const, reason: "Supabase service role is not configured" };
 
-  const { error } = await supabase.from("profiles").upsert(
-    {
-      id: userId,
-      email: input.email ?? null,
-      display_name: input.displayName ?? null,
-      role: input.role ?? null,
-      default_organization_id: input.organizationId ?? null,
-      updated_at: new Date().toISOString(),
-    },
-    { onConflict: "id" },
-  );
+  try {
+    await db.profile.upsert({
+      where: { id: userId },
+      create: {
+        id: userId,
+        email: input.email ?? null,
+        displayName: input.displayName ?? null,
+        role: input.role ?? null,
+        defaultOrganizationId: input.organizationId ?? null,
+        updatedAt: new Date(),
+      },
+      update: {
+        email: input.email ?? null,
+        displayName: input.displayName ?? null,
+        role: input.role ?? null,
+        defaultOrganizationId: input.organizationId ?? null,
+        updatedAt: new Date(),
+      },
+    });
 
-  if (error) return { ok: false as const, reason: error.message };
-  return { ok: true as const };
+    return { ok: true as const };
+  } catch (error) {
+    return { ok: false as const, reason: error instanceof Error ? error.message : "Profile upsert failed" };
+  }
 }
 
 async function upsertOrganizationMember(organizationId: string, userId: string, memberRole: "admin" | "member") {
-  const supabase = createAdminSupabaseClient();
-  if (!supabase) return { ok: false as const, reason: "Supabase service role is not configured" };
+  if (!db) return { ok: false as const, reason: "Supabase service role is not configured" };
 
-  const { error } = await supabase.from("organization_members").upsert(
-    {
-      organization_id: organizationId,
-      user_id: userId,
-      member_role: memberRole,
-      status: "active",
-      joined_at: new Date().toISOString(),
-    },
-    { onConflict: "organization_id,user_id" },
-  );
+  try {
+    await db.organizationMember.upsert({
+      where: { organizationId_userId: { organizationId, userId } },
+      create: {
+        organizationId,
+        userId,
+        memberRole,
+        status: "active",
+        joinedAt: new Date(),
+      },
+      update: {
+        memberRole,
+        status: "active",
+        joinedAt: new Date(),
+      },
+    });
 
-  if (error) return { ok: false as const, reason: error.message };
-  return { ok: true as const };
+    return { ok: true as const };
+  } catch (error) {
+    return { ok: false as const, reason: error instanceof Error ? error.message : "Organization member upsert failed" };
+  }
 }
 
 export async function createInviteForOrganization(organizationId: string, userId: string) {
-  const supabase = createAdminSupabaseClient();
-  if (!supabase) return { ok: false as const, reason: "Supabase service role is not configured" };
+  if (!db) return { ok: false as const, reason: "Supabase service role is not configured" };
 
   const memberships = await getUserMemberships(userId);
   const membership = memberships.find((item) => item.organizationId === organizationId);
   if (!isOrganizationAdmin(membership)) return { ok: false as const, reason: "Only organization admins can create invites" };
 
   const code = await uniqueInviteCode();
-  const expiresAt = new Date(Date.now() + 1000 * 60 * 60 * 24 * 30).toISOString();
-  const { data, error } = await supabase
-    .from("organization_invites")
-    .insert({
-      organization_id: organizationId,
-      code,
-      member_role: "member",
-      status: "active",
-      expires_at: expiresAt,
-      created_by: userId,
-    })
-    .select("code,expires_at")
-    .single();
+  const expiresAt = new Date(Date.now() + 1000 * 60 * 60 * 24 * 30);
 
-  if (error || !data) return { ok: false as const, reason: error?.message ?? "Invite insert failed" };
-  return { ok: true as const, code: data.code as string, expiresAt: data.expires_at as string | null };
+  const invite = await db.organizationInvite.create({
+    data: {
+      organizationId,
+      code,
+      memberRole: "member",
+      status: "active",
+      expiresAt,
+      createdBy: userId,
+    },
+    select: { code: true, expiresAt: true },
+  });
+
+  if (!invite) return { ok: false as const, reason: "Invite insert failed" };
+  return { ok: true as const, code: invite.code, expiresAt: invite.expiresAt?.toISOString() ?? null };
 }
 
 export async function getPersonalDashboardData(userId: string) {
-  const supabase = createAdminSupabaseClient();
-  if (!supabase) {
+  if (!db) {
     return { reports: [] as PersonalReportItem[], toolSessions: [] as PersonalToolSessionItem[] };
   }
 
-  const [reportsResult, toolsResult] = await Promise.all([
-    supabase
-      .from("reports")
-      .select("id,created_at,stage_level,next_level,primary_bottleneck,chain_score,charter_score")
-      .eq("user_id", userId)
-      .order("created_at", { ascending: false })
-      .limit(20),
-    supabase
-      .from("tool_sessions")
-      .select("id,tool_id,context,responses,outputs,submitted_at")
-      .eq("user_id", userId)
-      .order("submitted_at", { ascending: false })
-      .limit(30),
-  ]);
+  try {
+    const [reportsRows, toolsRows] = await Promise.all([
+      db.report.findMany({
+        where: { userId },
+        select: {
+          id: true,
+          createdAt: true,
+          stageLevel: true,
+          nextLevel: true,
+          primaryBottleneck: true,
+          chainScore: true,
+          charterScore: true,
+        },
+        orderBy: { createdAt: "desc" },
+        take: 20,
+      }),
+      db.toolSession.findMany({
+        where: { userId },
+        select: {
+          id: true,
+          toolId: true,
+          context: true,
+          responses: true,
+          outputs: true,
+          submittedAt: true,
+        },
+        orderBy: { submittedAt: "desc" },
+        take: 30,
+      }),
+    ]);
 
-  return {
-    reports: ((reportsResult.data ?? []) as Array<{
-      id: string;
-      created_at: string;
-      stage_level?: string | null;
-      next_level?: string | null;
-      primary_bottleneck?: string | null;
-      chain_score?: number | null;
-      charter_score?: number | null;
-    }>).map((row) => ({
-      id: row.id,
-      createdAt: row.created_at,
-      stageLevel: row.stage_level,
-      nextLevel: row.next_level,
-      primaryBottleneck: row.primary_bottleneck,
-      chainScore: row.chain_score,
-      charterScore: row.charter_score,
-    })),
-    toolSessions: mapToolSessionRows(toolsResult.data ?? []),
-  };
+    return {
+      reports: reportsRows.map((row) => ({
+        id: row.id,
+        createdAt: row.createdAt.toISOString(),
+        stageLevel: row.stageLevel,
+        nextLevel: row.nextLevel,
+        primaryBottleneck: row.primaryBottleneck,
+        chainScore: row.chainScore ? Number(row.chainScore) : null,
+        charterScore: row.charterScore ? Number(row.charterScore) : null,
+      })),
+      toolSessions: mapToolSessionRows(toolsRows),
+    };
+  } catch {
+    return { reports: [] as PersonalReportItem[], toolSessions: [] as PersonalToolSessionItem[] };
+  }
 }
 
 export async function getOrganizationDashboardData(userId: string): Promise<OrganizationDashboardData> {
-  const supabase = createAdminSupabaseClient();
   const memberships = await getUserMemberships(userId);
   const profile = await getUserProfile(userId);
   const membership =
@@ -254,107 +275,130 @@ export async function getOrganizationDashboardData(userId: string): Promise<Orga
     memberships[0] ??
     null;
 
-  if (!supabase || !membership || !isOrganizationAdmin(membership)) {
+  if (!db || !membership || !isOrganizationAdmin(membership)) {
     return { membership, members: [], invites: [], runs: [], reports: [], toolSessions: [] };
   }
 
-  const [membersResult, invitesResult, runsResult, participantsResult, toolSessionsResult] = await Promise.all([
-    supabase
-      .from("organization_members")
-      .select("user_id,member_role,created_at")
-      .eq("organization_id", membership.organizationId)
-      .eq("status", "active")
-      .order("created_at", { ascending: true }),
-    supabase
-      .from("organization_invites")
-      .select("code,status,expires_at,created_at")
-      .eq("organization_id", membership.organizationId)
-      .order("created_at", { ascending: false })
-      .limit(8),
-    supabase
-      .from("events")
-      .select("slug,title,status,created_at")
-      .eq("organization_id", membership.organizationId)
-      .order("created_at", { ascending: false })
-      .limit(20),
-    supabase.from("participants").select("id").eq("organization_id", membership.organizationId),
-    supabase
-      .from("tool_sessions")
-      .select("id,tool_id,context,responses,outputs,submitted_at")
-      .eq("organization_id", membership.organizationId)
-      .order("submitted_at", { ascending: false })
-      .limit(50),
-  ]);
+  try {
+    const [
+      memberRows,
+      inviteRows,
+      runRows,
+      participants,
+      toolSessionsRows,
+    ] = await Promise.all([
+      db.organizationMember.findMany({
+        where: { organizationId: membership.organizationId, status: "active" },
+        select: { userId: true, memberRole: true, createdAt: true },
+        orderBy: { createdAt: "asc" },
+      }),
+      db.organizationInvite.findMany({
+        where: { organizationId: membership.organizationId },
+        select: { code: true, status: true, expiresAt: true, createdAt: true },
+        orderBy: { createdAt: "desc" },
+        take: 8,
+      }),
+      db.event.findMany({
+        where: { organizationId: membership.organizationId },
+        select: { slug: true, title: true, status: true, createdAt: true },
+        orderBy: { createdAt: "desc" },
+        take: 20,
+      }),
+      db.participant.findMany({
+        where: { organizationId: membership.organizationId },
+        select: { id: true },
+      }),
+      db.toolSession.findMany({
+        where: { organizationId: membership.organizationId },
+        select: {
+          id: true,
+          toolId: true,
+          context: true,
+          responses: true,
+          outputs: true,
+          submittedAt: true,
+        },
+        orderBy: { submittedAt: "desc" },
+        take: 50,
+      }),
+    ]);
 
-  const memberRows = (membersResult.data ?? []) as Array<{ user_id: string; member_role: string; created_at: string }>;
-  const memberUserIds = memberRows.map((member) => member.user_id);
-  const { data: profileRows } = memberUserIds.length
-    ? await supabase.from("profiles").select("id,email,display_name,role").in("id", memberUserIds)
-    : { data: [] };
-  const profileById = new Map(
-    ((profileRows ?? []) as Array<{ id: string; email?: string | null; display_name?: string | null; role?: string | null }>).map((profile) => [profile.id, profile]),
-  );
-
-  const participantIds = ((participantsResult.data ?? []) as { id: string }[]).map((participant) => participant.id);
-  let reports: PersonalReportItem[] = [];
-  if (participantIds.length) {
-    const { data: assessments } = await supabase.from("assessments").select("id").in("participant_id", participantIds);
-    const assessmentIds = ((assessments ?? []) as { id: string }[]).map((assessment) => assessment.id);
-    if (assessmentIds.length) {
-      const { data: reportRows } = await supabase
-        .from("reports")
-        .select("id,created_at,stage_level,next_level,primary_bottleneck,chain_score,charter_score")
-        .in("assessment_id", assessmentIds)
-        .order("created_at", { ascending: false })
-        .limit(50);
-      reports = ((reportRows ?? []) as Array<{
-        id: string;
-        created_at: string;
-        stage_level?: string | null;
-        next_level?: string | null;
-        primary_bottleneck?: string | null;
-        chain_score?: number | null;
-        charter_score?: number | null;
-      }>).map((row) => ({
-        id: row.id,
-        createdAt: row.created_at,
-        stageLevel: row.stage_level,
-        nextLevel: row.next_level,
-        primaryBottleneck: row.primary_bottleneck,
-        chainScore: row.chain_score,
-        charterScore: row.charter_score,
-      }));
+    const memberUserIds = memberRows.map((member) => member.userId);
+    let profileById = new Map<string, { id: string; email: string | null; displayName: string | null; role: string | null }>();
+    if (memberUserIds.length) {
+      const profileRows = await db.profile.findMany({
+        where: { id: { in: memberUserIds } },
+        select: { id: true, email: true, displayName: true, role: true },
+      });
+      profileById = new Map(profileRows.map((p) => [p.id, p]));
     }
-  }
 
-  return {
-    membership,
-    members: memberRows.map((row) => {
-      const profileRow = profileById.get(row.user_id);
-      return {
-        userId: row.user_id,
-        displayName: profileRow?.display_name,
-        email: profileRow?.email,
-        role: profileRow?.role,
-        memberRole: row.member_role,
-        createdAt: row.created_at,
-      };
-    }),
-    invites: ((invitesResult.data ?? []) as Array<{ code: string; status: string; expires_at?: string | null; created_at: string }>).map((row) => ({
-      code: row.code,
-      status: row.status,
-      expiresAt: row.expires_at,
-      createdAt: row.created_at,
-    })),
-    runs: ((runsResult.data ?? []) as Array<{ slug: string; title: string; status: string; created_at?: string | null }>).map((row) => ({
-      slug: row.slug,
-      title: row.title,
-      status: row.status,
-      createdAt: row.created_at,
-    })),
-    reports,
-    toolSessions: mapToolSessionRows(toolSessionsResult.data ?? []),
-  };
+    const participantIds = participants.map((p) => p.id);
+    let reports: PersonalReportItem[] = [];
+    if (participantIds.length) {
+      const assessmentRows = await db.assessment.findMany({
+        where: { participantId: { in: participantIds } },
+        select: { id: true },
+      });
+      const assessmentIds = assessmentRows.map((a) => a.id);
+      if (assessmentIds.length) {
+        const reportRows = await db.report.findMany({
+          where: { assessmentId: { in: assessmentIds } },
+          select: {
+            id: true,
+            createdAt: true,
+            stageLevel: true,
+            nextLevel: true,
+            primaryBottleneck: true,
+            chainScore: true,
+            charterScore: true,
+          },
+          orderBy: { createdAt: "desc" },
+          take: 50,
+        });
+        reports = reportRows.map((row) => ({
+          id: row.id,
+          createdAt: row.createdAt.toISOString(),
+          stageLevel: row.stageLevel,
+          nextLevel: row.nextLevel,
+          primaryBottleneck: row.primaryBottleneck,
+          chainScore: row.chainScore ? Number(row.chainScore) : null,
+          charterScore: row.charterScore ? Number(row.charterScore) : null,
+        }));
+      }
+    }
+
+    return {
+      membership,
+      members: memberRows.map((row) => {
+        const profileRow = profileById.get(row.userId);
+        return {
+          userId: row.userId,
+          displayName: profileRow?.displayName,
+          email: profileRow?.email,
+          role: profileRow?.role,
+          memberRole: row.memberRole,
+          createdAt: row.createdAt.toISOString(),
+        };
+      }),
+      invites: inviteRows.map((row) => ({
+        code: row.code,
+        status: row.status,
+        expiresAt: row.expiresAt?.toISOString() ?? null,
+        createdAt: row.createdAt.toISOString(),
+      })),
+      runs: runRows.map((row) => ({
+        slug: row.slug,
+        title: row.title,
+        status: row.status,
+        createdAt: row.createdAt?.toISOString() ?? null,
+      })),
+      reports,
+      toolSessions: mapToolSessionRows(toolSessionsRows),
+    };
+  } catch {
+    return { membership, members: [], invites: [], runs: [], reports: [], toolSessions: [] };
+  }
 }
 
 export async function exportOrganizationDataCsv(userId: string) {
@@ -406,19 +450,19 @@ export async function exportOrganizationDataCsv(userId: string) {
   };
 }
 
-function mapToolSessionRows(rows: unknown[]): PersonalToolSessionItem[] {
-  return (rows as Array<{
-    id: string;
-    tool_id: string;
-    context?: Record<string, string | undefined> | null;
-    responses?: Record<string, string> | null;
-    outputs?: Record<string, unknown> | null;
-    submitted_at: string;
-  }>).map((row) => ({
+function mapToolSessionRows(rows: {
+  id: string;
+  toolId: string;
+  context?: Record<string, string | undefined> | null;
+  responses?: Record<string, string> | null;
+  outputs?: Record<string, unknown> | null;
+  submittedAt: Date;
+}[]): PersonalToolSessionItem[] {
+  return rows.map((row) => ({
     id: row.id,
-    toolId: row.tool_id,
-    toolName: getTool(row.tool_id)?.name ?? row.tool_id,
-    submittedAt: row.submitted_at,
+    toolId: row.toolId,
+    toolName: getTool(row.toolId)?.name ?? row.toolId,
+    submittedAt: row.submittedAt.toISOString(),
     useCase: row.context?.useCase,
     dataScope: row.context?.dataScope,
     nextAction: typeof row.outputs?.nextAction === "string" ? row.outputs.nextAction : undefined,
@@ -430,26 +474,24 @@ function mapToolSessionRows(rows: unknown[]): PersonalToolSessionItem[] {
 
 async function uniqueOrganizationSlug(name: string) {
   const base = slugify(name) || "organization";
-  const supabase = createAdminSupabaseClient();
-  if (!supabase) return `${base}-${Date.now().toString(36)}`;
+  if (!db) return `${base}-${Date.now().toString(36)}`;
 
   for (let index = 0; index < 8; index += 1) {
     const suffix = index === 0 ? "" : `-${randomText(4).toLowerCase()}`;
     const slug = `${base}${suffix}`;
-    const { data } = await supabase.from("organizations").select("id").eq("slug", slug).maybeSingle();
-    if (!data) return slug;
+    const existing = await db.organization.findUnique({ where: { slug }, select: { id: true } });
+    if (!existing) return slug;
   }
 
   return `${base}-${Date.now().toString(36)}`;
 }
 
 async function uniqueInviteCode() {
-  const supabase = createAdminSupabaseClient();
   for (let index = 0; index < 8; index += 1) {
     const code = randomText(8);
-    if (!supabase) return code;
-    const { data } = await supabase.from("organization_invites").select("id").eq("code", code).maybeSingle();
-    if (!data) return code;
+    if (!db) return code;
+    const existing = await db.organizationInvite.findUnique({ where: { code }, select: { id: true } });
+    if (!existing) return code;
   }
   return randomText(10);
 }
