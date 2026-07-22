@@ -1,15 +1,10 @@
-import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowRight, CalendarDays, Sparkles, QrCode } from "lucide-react";
-
-export const metadata: Metadata = {
-  title: "碳硅组织工作坊 | Workshops",
-  description: "碳硅组织系列工作坊入口 — 超级个体赋能、现场共创、组织诊断与 HR 赋能。",
-};
+import { AppShell, Container, GlassCard, PrimaryLink, SectionLabel } from "@/components/ui";
 
 const workshops = [
   {
-    href: "/workshops/super-individual",
+    href: "/super-individual",
     icon: Sparkles,
     tag: "Workshop",
     title: "超级个体赋能工作坊",
@@ -17,7 +12,7 @@ const workshops = [
     highlight: "课前问卷",
   },
   {
-    href: "/workshops/cocreate",
+    href: "/cocreate",
     icon: QrCode,
     tag: "PWA",
     title: "现场共创台",
@@ -28,15 +23,15 @@ const workshops = [
 
 export default function WorkshopsHomePage() {
   return (
-    <main className="min-h-screen bg-[#06110f] text-white">
+    <AppShell>
       {/* Hero */}
       <section className="relative overflow-hidden border-b border-emerald-200/10">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_82%_18%,rgba(45,212,191,0.18),transparent_30%)]" />
-        <div className="relative mx-auto max-w-4xl px-6 py-20 text-center">
-          <p className="text-sm font-medium tracking-widest text-emerald-300/70">
-            CARBON-SILICON · WORKSHOPS
-          </p>
-          <h1 className="mt-6 text-5xl font-black tracking-tight sm:text-6xl">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_82%_18%,rgba(45,212,191,0.22),transparent_28%),linear-gradient(135deg,rgba(3,16,15,0.98),rgba(5,35,30,0.9)_48%,rgba(5,10,9,0.98))]" />
+        <div className="absolute inset-0 bg-[linear-gradient(rgba(116,242,202,0.06)_1px,transparent_1px),linear-gradient(90deg,rgba(116,242,202,0.05)_1px,transparent_1px)] bg-[size:72px_72px] opacity-45" />
+
+        <Container className="relative py-20 text-center">
+          <SectionLabel>Carbon-Silicon · Workshops</SectionLabel>
+          <h1 className="mt-6 text-5xl font-black tracking-tight text-white sm:text-6xl">
             工作坊
           </h1>
           <p className="mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-emerald-50/65">
@@ -44,25 +39,23 @@ export default function WorkshopsHomePage() {
             从课前准备到现场共创，一站式管理。
           </p>
           <div className="mt-8 flex flex-wrap justify-center gap-3">
+            <PrimaryLink href="/super-individual">
+              超级个体工作坊 <ArrowRight className="ml-2 h-4 w-4" />
+            </PrimaryLink>
             <Link
-              href="/workshops/super-individual"
-              className="inline-flex items-center gap-2 rounded-full bg-emerald-300 px-8 py-3 text-sm font-black text-[#06110f] transition hover:bg-emerald-200"
-            >
-              超级个体工作坊 <ArrowRight className="h-4 w-4" />
-            </Link>
-            <Link
-              href="/workshops/cocreate"
+              href="/cocreate"
               className="inline-flex items-center gap-2 rounded-full border border-emerald-200/20 px-8 py-3 text-sm font-bold text-emerald-100 transition hover:bg-white/5"
             >
               现场共创台
             </Link>
           </div>
-        </div>
+        </Container>
       </section>
 
       {/* Workshop Cards */}
-      <section className="mx-auto max-w-5xl px-6 py-20">
-        <h2 className="text-2xl font-black text-white">当前可用工作坊</h2>
+      <Container className="py-14 lg:py-20">
+        <SectionLabel>Available Workshops</SectionLabel>
+        <h2 className="mt-3 text-3xl font-black text-white sm:text-4xl">当前可用工作坊</h2>
         <div className="mt-8 grid gap-5 md:grid-cols-2">
           {workshops.map(({ href, icon: Icon, tag, title, desc, highlight }) => (
             <Link
@@ -91,25 +84,24 @@ export default function WorkshopsHomePage() {
             </Link>
           ))}
         </div>
-      </section>
+      </Container>
 
       {/* Assessment Entry */}
-      <section className="border-t border-emerald-200/10">
-        <div className="mx-auto max-w-3xl px-6 py-20 text-center">
+      <Container className="pb-20">
+        <GlassCard className="p-8 text-center">
           <CalendarDays className="mx-auto h-10 w-10 text-emerald-300" />
-          <h2 className="mt-6 text-2xl font-black">组织 AI 诊断测评</h2>
+          <h2 className="mt-6 text-2xl font-black text-white">组织 AI 诊断测评</h2>
           <p className="mt-3 text-emerald-50/60">
             基于螺旋模型与能量模型的在线测评，5 分钟定位组织进化阶段。
             支持工作坊现场采集和群体报告生成。
           </p>
-          <Link
-            href="/workshops/events/20260517-hr-od-workshop/start"
-            className="mt-8 inline-flex items-center gap-2 rounded-full bg-emerald-300 px-8 py-3 text-sm font-black text-[#06110f] transition hover:bg-emerald-200"
-          >
-            开始诊断 <ArrowRight className="h-4 w-4" />
-          </Link>
-        </div>
-      </section>
-    </main>
+          <div className="mt-8">
+            <PrimaryLink href="/events/20260517-hr-od-workshop/start">
+              开始诊断 <ArrowRight className="ml-2 h-4 w-4" />
+            </PrimaryLink>
+          </div>
+        </GlassCard>
+      </Container>
+    </AppShell>
   );
 }

@@ -28,7 +28,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             <Link className="rounded-full px-3 py-2 hover:bg-white/10 hover:text-white" href="/tools">
               工具库
             </Link>
-            <Link className="rounded-full px-3 py-2 hover:bg-white/10 hover:text-white" href="/super-individual-workshop">
+            <Link className="rounded-full px-3 py-2 hover:bg-white/10 hover:text-white" href="/workshops">
               超级个体
             </Link>
             <Link className="rounded-full px-3 py-2 hover:bg-white/10 hover:text-white" href="/glossary" prefetch={false}>
