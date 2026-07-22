@@ -456,56 +456,128 @@ function GovernanceSection() {
 // ─── Loop Governance Module ───────────────────────────
 
 function Loop1Content() {
+  const dimensions = [
+    {
+      dim: "核心隐喻",
+      detail: "传统组织把公司当精密机器：部门是齿轮，流程是传动带，管理层是操作员。机器理想状态是「一切按设计运转」，偏差=需要消除的噪音。回路组织把公司当神经系统：感知节点（数据采集）→处理中枢（AI+人）→效应器（执行）→反馈信号（学习）。系统理想状态是「每次循环都比上一次聪明」，偏差=需要捕获的学习信号。",
+      hr: "招聘：不是'JD发出去了，等简历来'——而是'每一次面试结果都在校准下一次筛选条件'。",
+    },
+    {
+      dim: "设计对象",
+      detail: "传统组织设计核心问题：谁做什么？谁向谁汇报？产出是组织架构图和岗位说明书。回路组织设计核心问题：在这个决策上，AI做什么？人保留什么？反馈信号从哪来？产出是回路地图和人机角色矩阵。",
+      hr: "绩效：不是'设计绩效流程'——而是'在绩效面谈这个决策点上，AI整理事实数据、生成反馈初稿，HR审核温度和合规性，员工反馈进入下一轮校准'。",
+    },
+    {
+      dim: "协调机制",
+      detail: "传统组织靠人跟人说话——晨会、周报、审批流、述职。信息每经一层汇报衰减一次。回路组织靠信号自动流动——AI不需要人汇报，直接从数据感知。采购间隔缩短2天？信号已自动触发调整。某个品类连续被客户删掉？推荐权重已自动降低。",
+      hr: "培训：不是'培训完发问卷'——而是'培训后30天的行为数据自动回流，告诉你哪些能力真正改变了'。",
+    },
+    {
+      dim: "能力归属",
+      detail: "传统组织中，老采购知道'这个季节山东土豆比河北好'。人走了，判断力就走了。培养新人需要三年。回路组织中，老采购每次'推翻AI建议并说明原因'，回路就吸收了这个判断力。新人入职第一周就能在AI辅助下做出接近老采购水平的判断。能力不跟着人走——留在系统里。",
+      hr: "招聘：不是'猎头老王有独特的人脉和眼光'——而是'老王每次筛选的理由被结构化记录，AI学会了王式判断，新人HR也能用'。",
+    },
+    {
+      dim: "规模化",
+      detail: "传统组织：业务量翻倍→人头基本翻倍。回路组织：业务量翻倍→AI反而更聪明（更多数据）→人效更高。增长本身成为竞争力增强器，而不是稀释器。",
+      hr: "员工服务：不是'员工翻倍就多招HR'——而是'AI自助回答80%的常规问题，HR只处理需要判断的20%'。",
+    },
+    {
+      dim: "变革方式",
+      detail: "传统变革是项目制的——几年一次组织架构调整、请咨询公司、全员宣贯。致命问题：周期太长、阻力太大、信息丢失太多。回路变革是持续进化的——不是'重新设计组织'，而是'持续校准回路'。当客户行为模式变了，回路自动调整预测参数。变革不需要动员大会——它发生在每一次日常操作中。",
+      hr: "不需要宣布'启动AI转型项目'。从招聘筛选这个环节开始，跑通第一条回路，让结果说话。",
+    },
+    {
+      dim: "衡量标准",
+      detail: "传统组织衡量执行质量：KPI达标？SOP合规？回路组织追加衡量学习速度：AI建议的采纳率在上升吗？人的推翻率在下降吗？新业务的冷启动周期在缩短吗？整个回路是否在'越用越聪明'？追加指标：预测准确率、推翻原因记录率、模型-人工判断偏差的变化趋势。",
+      hr: "不仅看'招到几个人'，还要看'AI筛选的准确率从60%提升到了85%'——这不是技术指标，是组织学习能力的指标。",
+    },
+  ];
+
   return (<>
     <InfoBox>
       <strong className="text-emerald-200">一个画面，两种组织：</strong>传统组织是一台<strong className="text-amber-300">机器</strong>——设计好流程，人按流程执行，管理层监督质量，出问题就修理流程。机器的上限是设计者的上限。回路组织是一个<strong className="text-emerald-300">生命体</strong>——设计好反馈回路，每次行动都产生学习信号，系统自动变得比上一次更聪明。生命体的上限是它学习了多少次。
     </InfoBox>
 
-    <div className="rounded-xl border border-emerald-200/10 bg-white/[0.02] p-5">
-      <div className="text-sm font-bold text-emerald-200 mb-4">七个维度的根本差异</div>
-      <div className="grid gap-4">
+    <div className="text-sm font-bold text-emerald-200 mt-2">七个维度的根本差异</div>
+    <div className="grid gap-4">
+      {dimensions.map(item => (
+        <div key={item.dim} className="rounded-xl border border-emerald-200/10 bg-white/[0.02] p-4">
+          <div className="text-sm font-bold text-emerald-300">{item.dim}</div>
+          <p className="mt-2 text-sm leading-relaxed text-emerald-100/70">{item.detail}</p>
+          <div className="mt-2 rounded-lg bg-emerald-300/[0.06] border border-emerald-300/10 px-3 py-2 text-xs text-emerald-200/80">
+            🎯 HR场景：{item.hr}
+          </div>
+        </div>
+      ))}
+    </div>
+
+    <div className="rounded-xl border border-emerald-300/20 bg-emerald-300/[0.06] p-5 mt-4">
+      <div className="text-sm font-bold text-emerald-300 mb-2">一号位必须关注的五个转变</div>
+      <div className="grid gap-3 text-sm text-emerald-100/70">
         {[
-          { dim: "核心隐喻", old: "公司 = 精密机器", new: "公司 = 神经系统" },
-          { dim: "设计对象", old: "谁做什么？谁向谁汇报？", new: "AI做什么？人判断什么？反馈从哪来？" },
-          { dim: "协调机制", old: "晨会、周报、审批流", new: "信号自动流动，AI直接从数据感知" },
-          { dim: "能力归属", old: "能力存在人身上，人走能力走", new: "能力存在回路里，积累成组织资产" },
-          { dim: "规模化逻辑", old: "业务翻倍，人头翻倍", new: "业务翻倍，AI更聪明，人效更高" },
-          { dim: "变革方式", old: "几年一次组织架构调整", new: "持续校准回路，日常操作即进化" },
-          { dim: "衡量标准", old: "执行质量：KPI是否达标", new: "学习速度：AI采纳率在上升吗？推翻率在下降吗？" },
+          { shift: "从看架构图到看回路图", detail: "组织架构图告诉你权力如何分布。回路地图告诉你智慧如何流动。对AI时代来说，后者重要得多。" },
+          { shift: "从管人到管决策权分配", detail: "最核心的管理动作不再是管人，而是设计每个关键决策点上的人机角色：AI做什么？人保留什么？" },
+          { shift: "从招聘经验到招聘判断力+表达能力", detail: "最值钱的人有两类：判断力极强的，和能把隐性知识表达出来的。'我就是有感觉'——在回路组织中价值被严重限制。" },
+          { shift: "从积累经验到积累数据资产", detail: "20年深耕不等于20年经验。深耕=20万条结构化决策记录+5个完整季节周期+1000个同类客户的集体经验。" },
+          { shift: "从定战略到定进化方向", detail: "AI能告诉你'是什么'，但'应该做什么'涉及价值观、风险偏好——这是人保留的领地。你的战略判断有了比任何咨询报告都更真实的信息基础。" },
         ].map(item => (
-          <div key={item.dim} className="rounded-lg border border-emerald-200/5 bg-emerald-200/[0.02] p-3">
-            <div className="text-xs font-bold text-emerald-300">{item.dim}</div>
-            <div className="mt-1 grid grid-cols-2 gap-2 text-xs">
-              <div><span className="text-rose-300/60">旧：</span><span className="text-rose-100/60">{item.old}</span></div>
-              <div><span className="text-emerald-300/60">新：</span><span className="text-emerald-100/80">{item.new}</span></div>
-            </div>
+          <div key={item.shift} className="rounded-lg bg-white/[0.03] px-4 py-2.5">
+            <span className="font-bold text-emerald-200">{item.shift}：</span>{item.detail}
           </div>
         ))}
       </div>
-    </div>
-
-    <div className="rounded-xl border border-emerald-300/20 bg-emerald-300/[0.06] p-4 text-sm leading-relaxed text-emerald-100/80">
-      <strong className="text-emerald-300">对HR的含义：</strong>你不是在引入一个AI工具，你是在重新设计组织做判断的方式。让招聘、培训、绩效每一次决策都变成组织学习的养料。
     </div>
   </>);
 }
 
 function Loop2Content() {
-  const loopSteps = [
-    { num: "1", title: "选一个痛点业务", desc: "不要全面铺开。选一个高频、有数据、结果可衡量的HR业务。", tip: "问自己：这个业务有没有每次都需要老员工经验判断的环节？" },
-    { num: "2", title: "画出回路地图", desc: "信号从哪来→AI做什么→人判断什么→决策怎么执行→反馈信号怎么回到起点", tip: "用一张A4纸画出节点和箭头。" },
-    { num: "3", title: "定义人机角色", desc: "AI负责模式识别和生成建议。人负责审核、修正、处理情境信息。", tip: "AI建议，人确认。人推翻时必须记录原因——这是回路的学习材料。" },
-    { num: "4", title: "定义反馈信号", desc: "什么数据能告诉你回路在越来越聪明？采纳率？推翻率？冷启动时间？", tip: "好的反馈信号是自动采集的——不需要人汇报。" },
-  ];
-
   return (<>
     <InfoBox>
-      <strong className="text-emerald-200">不需要自上而下的组织变革。</strong>锁定一个让团队真实疼痛的业务环节，跑通一条回路。当这条回路开始自己变聪明的时候，其他人会主动来找你。
+      <strong className="text-emerald-200">不需要自上而下的组织变革。</strong>你不需要说服CEO、不需要重新画组织架构图。你需要做的只是：锁定一个让团队真实疼痛的业务环节，在这个环节上跑通一条回路。当这条回路开始"自己变聪明"的时候，其他人会主动来找你。
     </InfoBox>
 
+    {/* Case Study */}
+    <div className="rounded-xl border border-emerald-200/10 bg-white/[0.02] p-5">
+      <div className="text-sm font-bold text-emerald-300 mb-3">📖 案例：一家生鲜供应链公司的智能补货回路</div>
+      <p className="text-sm leading-relaxed text-emerald-100/70 mb-3">
+        某生鲜供应链公司每天为1000多家社区店配货。传统模式下，采购员凭经验判断今天该买什么、买多少。老采购退休，新人三年才能独立。
+        他们做了什么？不是上一个AI系统，而是重新设计了<strong className="text-emerald-200">采购决策这个回路</strong>：
+      </p>
+      <div className="flex flex-wrap items-center gap-1.5 text-xs mb-3">
+        <span className="rounded-full bg-emerald-300/10 px-2 py-0.5 text-emerald-200">📊 历史销售+天气+库存</span>
+        <span className="text-emerald-100/30">→</span>
+        <span className="rounded-full bg-emerald-300/10 px-2 py-0.5 text-emerald-200">🤖 AI生成采购建议清单</span>
+        <span className="text-emerald-100/30">→</span>
+        <span className="rounded-full bg-amber-300/10 px-2 py-0.5 text-amber-200">👤 采购员花5分钟确认</span>
+        <span className="text-emerald-100/30">→</span>
+        <span className="rounded-full bg-emerald-300/10 px-2 py-0.5 text-emerald-200">📦 执行采购</span>
+        <span className="text-emerald-100/30">→</span>
+        <span className="rounded-full bg-emerald-300/10 px-2 py-0.5 text-emerald-200">🔄 实际消耗数据回流</span>
+        <span className="text-emerald-100/30">→</span>
+        <span className="rounded-full bg-emerald-300/10 px-2 py-0.5 text-emerald-200">🤖 AI自动校准下一次预测</span>
+      </div>
+      <div className="grid grid-cols-2 gap-3 text-xs">
+        <div className="rounded-lg bg-emerald-300/[0.06] p-3">
+          <div className="font-bold text-emerald-200 mb-1">回路的"学习"在哪？</div>
+          <p className="text-emerald-100/60">采购员每次推翻AI建议并记录原因（"山东土豆比河北的好，因为雨水少淀粉含量高"），回路就吸收了这个判断。下次同样条件，AI不再建议河北土豆。</p>
+        </div>
+        <div className="rounded-lg bg-emerald-300/[0.06] p-3">
+          <div className="font-bold text-emerald-200 mb-1">回路的"进化"在哪？</div>
+          <p className="text-emerald-100/60">当AI建议的采纳率从55%升到85%，当新采购员入职2周就能独立操作——说明回路在"自己变聪明"。不需要开会、不需要培训——能力自动传递。</p>
+        </div>
+      </div>
+    </div>
+
+    {/* Four-Step Method */}
     <div className="text-sm font-bold text-emerald-200 mt-2">四步设计你的第一个回路</div>
     <div className="grid gap-4">
-      {loopSteps.map(s => (
+      {[
+        { num: "1", title: "选一个痛点业务", desc: "不要全面铺开。选一个高频、有数据、结果可衡量的HR业务。关键判断：这个业务有没有'每次都需要老员工的经验判断'的环节？这个环节就是回路的核心。", tip: "反面教材：'全面升级招聘体系'。正确做法：'先让AI帮我筛选简历，我确认后，每次推翻都记录原因'" },
+        { num: "2", title: "画出回路地图", desc: "在一张A4纸上画出：📥 信号从哪来？（数据输入）→ 🤖 AI做什么？（分析/建议）→ 👤 人判断什么？（审核/修正）→ 📋 决策怎么执行？→ 🔄 反馈信号怎么回到起点？", tip: "如果画不出来——不知道每个节点的输入输出——说明你的业务还运行在'人治'模式上。" },
+        { num: "3", title: "定义人机角色矩阵", desc: "列出表格：决策点 | AI角色 | 人角色 | 人推翻时必须记录什么。核心原则：AI建议，人确认。人推翻时必须结构化记录原因——这是回路最重要的学习材料。", tip: "一个HR推翻AI的简历排序，如果只说'我感觉不对'——回路什么也学不到。如果说'这个人虽然经验不匹配，但他的行业背景和我们的新业务方向高度一致'——回路就学到了一个新规则。" },
+        { num: "4", title: "定义反馈信号和进化指标", desc: "什么数据能告诉你回路在越来越聪明？采纳率上升了吗？推翻率下降了吗？新人上手周期缩短了吗？决策的实际结果在变好吗？这些指标必须是自动采集的——不需要任何人来做额外报告。", tip: "三个月后回看：AI筛选的简历被HR接受的比例从60%升到80%了吗？HR每天花在筛选上的时间从2小时降到30分钟了吗？" },
+      ].map(s => (
         <div key={s.num} className="rounded-xl border border-emerald-200/10 bg-white/[0.02] p-4">
           <div className="flex items-start gap-3">
             <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-emerald-300/10 text-sm font-black text-emerald-300">{s.num}</div>
@@ -519,19 +591,20 @@ function Loop2Content() {
       ))}
     </div>
 
-    <div className="rounded-xl border border-emerald-200/10 bg-white/[0.02] p-5">
-      <div className="text-sm font-bold text-emerald-300 mb-3">示例：招聘筛选回路</div>
-      <div className="flex flex-wrap items-center gap-2 text-xs">
-        <span className="rounded-full bg-emerald-300/10 px-3 py-1 text-emerald-200">📥 简历流入</span>
-        <span className="text-emerald-100/30">→</span>
-        <span className="rounded-full bg-emerald-300/10 px-3 py-1 text-emerald-200">🤖 AI初筛打分</span>
-        <span className="text-emerald-100/30">→</span>
-        <span className="rounded-full bg-amber-300/10 px-3 py-1 text-amber-200">👤 HR审核确认</span>
-        <span className="text-emerald-100/30">→</span>
-        <span className="rounded-full bg-emerald-300/10 px-3 py-1 text-emerald-200">🔄 入职后跟踪匹配度</span>
-      </div>
-      <div className="mt-3 text-xs text-emerald-100/40">
-        反馈信号：HR审核时推翻AI排序的原因被记录→模型学习HR偏好→下次更精准。入职后6个月绩效与面试评分相关性→校准模型。
+    {/* HR-specific loop examples */}
+    <div className="rounded-xl border border-emerald-200/10 bg-white/[0.02] p-5 mt-4">
+      <div className="text-sm font-bold text-emerald-300 mb-3">三个HR回路速查</div>
+      <div className="grid gap-3">
+        {[
+          { name: "招聘筛选回路", nodes: "简历流入 → AI初筛打分 → HR审核确认(记录推翻原因) → 安排面试 → 入职后6个月绩效回流校准" },
+          { name: "培训效果回路", nodes: "课前评估 → AI推荐个性化学习路径 → 学员学习 → 课后30天行为数据自动采集 → AI校准下次推荐" },
+          { name: "离职预警回路", nodes: "多源信号(考勤/绩效/沟通频率/调薪间隔) → AI识别风险模式和优先级 → HR核实+干预 → 干预结果回流校准模型" },
+        ].map(loop => (
+          <div key={loop.name} className="rounded-lg bg-white/[0.03] p-3">
+            <div className="text-xs font-bold text-emerald-200">{loop.name}</div>
+            <div className="mt-1 text-xs text-emerald-100/50">{loop.nodes}</div>
+          </div>
+        ))}
       </div>
     </div>
   </>);
@@ -540,16 +613,35 @@ function Loop2Content() {
 function Loop3Content() {
   return (<>
     <InfoBox>
-      <strong className="text-emerald-200">今天的产出不是一个概念，是一个你可以带回公司、下周一就开始执行的方案。</strong>
+      <strong className="text-emerald-200">今天的产出不是一个概念，是一个你可以带回公司、下周一就开始执行的方案。</strong>请花10分钟认真填写。这不是作业——这是你给自己和团队的承诺。
     </InfoBox>
 
-    <div className="grid gap-4">
+    {/* Filled example */}
+    <div className="rounded-xl border border-amber-300/20 bg-amber-300/[0.04] p-4">
+      <div className="text-xs font-bold text-amber-300 mb-2">📝 填写示例（供参考）</div>
+      <div className="grid gap-2 text-xs">
+        {[
+          { q: "关键业务", a: "销售岗位的简历筛选——每天50-80份，HR花2小时初筛，经常漏掉好候选人，且不同HR标准不统一。" },
+          { q: "AI做什么", a: "AI读取简历，根据JD自动打分排序，标注Top20和需要HR特别关注的风险点（如频繁跳槽、经历断层）。" },
+          { q: "人保留什么", a: "最终面试名单由HR确认。AI没把握的边界情况（如转行者、非主流背景）必须人工判断。每次推翻AI排序必须记录理由。" },
+          { q: "反馈信号", a: "HR采纳AI推荐的Top20比例（目标：3个月内从60%到80%）。通过AI筛选的候选人面试通过率vs未通过的对比。入职6个月绩效评分回溯。" },
+          { q: "下周一第一件事", a: "整理过去半年的JD和对应的入职者绩效数据作为初始训练集。找技术同事帮忙对接一个AI API。预计2周内可以跑通MVP。" },
+        ].map((item, i) => (
+          <div key={i} className="rounded bg-white/[0.03] p-2">
+            <span className="font-bold text-amber-200/80">{item.q}：</span>
+            <span className="text-amber-100/60">{item.a}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+
+    <div className="grid gap-4 mt-4">
       {[
-        { q: "你要锁定的关键业务是什么？", hint: "选择一个高频、有痛点、你能直接影响的HR业务。" },
-        { q: "这个业务上，AI可以帮你做什么？", hint: "数据处理？模式识别？生成初稿？批量筛选？不要想全面AI化——只想第一步。" },
-        { q: "什么判断必须保留给人？", hint: "涉及合规风险？需要情境理解？涉及人的主观感受？" },
+        { q: "你要锁定的关键业务是什么？", hint: "选择一个高频、有痛点、你能直接影响的HR业务。写具体，不要写'招聘'——写'销售岗位简历筛选'。" },
+        { q: "这个业务上，AI可以帮你做什么？", hint: "数据处理？模式识别？生成初稿？批量筛选？不要想全面AI化——只想第一步能做什么。" },
+        { q: "什么判断必须保留给人？", hint: "涉及合规风险？需要情境理解？涉及人的主观感受？明确人和AI的边界。" },
         { q: "什么数据可以作为反馈信号？", hint: "这个信号必须是自动可采集的——不需要额外的人工报告。" },
-        { q: "你下周一要做的第一件事是什么？", hint: "约同事聊？选工具？整理数据？画回路图？" },
+        { q: "你下周一要做的第一件事是什么？", hint: "约相关同事聊？选一个AI工具？整理第一批数据？开始画回路图？越具体越好。" },
       ].map((item, i) => (
         <div key={i} className="rounded-xl border border-emerald-200/10 bg-white/[0.02] p-4">
           <div className="flex items-start gap-2">
@@ -557,7 +649,7 @@ function Loop3Content() {
             <div className="flex-1">
               <div className="font-bold text-sm text-emerald-100">{item.q}</div>
               <div className="mt-1 text-xs text-emerald-100/30">{item.hint}</div>
-              <div className="mt-2 border-b border-dashed border-emerald-200/20 pt-2 pb-1 text-sm text-emerald-100/50 min-h-[1.5rem]"></div>
+              <div className="mt-2 border-b border-dashed border-emerald-200/20 pt-2 pb-1 text-sm text-emerald-100/50 min-h-[2rem]"></div>
             </div>
           </div>
         </div>
@@ -567,10 +659,10 @@ function Loop3Content() {
     <div className="rounded-xl border border-emerald-300/20 bg-emerald-300/[0.06] p-5 mt-4">
       <div className="text-sm font-bold text-emerald-300 mb-2">送给每一位HR</div>
       <p className="text-sm leading-relaxed text-emerald-100/70">
-        AI时代的HR，不是被AI替代的岗位——而是帮助组织长出智能的关键角色。你不需要成为技术专家。你需要的是：<strong className="text-emerald-200">识别关键业务回路、设计人机角色、定义反馈信号、让每一次判断都变成组织学习的养料。</strong>
+        AI时代的HR，不是被AI替代的岗位——而是帮助组织"长出智能"的关键角色。你不需要成为技术专家。你需要的是：<strong className="text-emerald-200">识别关键业务回路、设计人机角色、定义反馈信号、让每一次判断都变成组织学习的养料。</strong>
       </p>
       <p className="mt-3 text-sm leading-relaxed text-emerald-100/50">
-        回到公司后，不需要搞AI转型大项目。锁定一个业务痛点，跑通一条回路。当第一条回路开始自己变聪明的时候，变革就不再需要你去推动——它会自己生长。
+        回到公司后，不需要搞"AI转型"大项目。锁定一个业务痛点，跑通一条回路，让团队看到"原来改的不是流程，而是组织学习的方式"。当第一条回路开始自己变聪明的时候，变革就不再需要你去推动——它会自己生长。
       </p>
     </div>
   </>);
