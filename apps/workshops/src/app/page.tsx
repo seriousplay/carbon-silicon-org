@@ -58,7 +58,7 @@ export default function WorkshopsHomePage() {
             return (
             <Comp
               key={href}
-              href={href.startsWith("http") ? href : `/workshops${href}`}
+              href={href}
               className="group rounded-[28px] border border-emerald-200/14 bg-white/[0.035] p-6 transition hover:-translate-y-1 hover:border-emerald-200/35 hover:bg-white/[0.06]"
               {...extraProps}
             >
