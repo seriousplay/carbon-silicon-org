@@ -194,11 +194,10 @@ export default async function Home() {
             </p>
 
             <div className="mt-8 flex flex-wrap gap-3">
-              <PrimaryLink href={`/e/${primaryRun.slug}`}>
-                进入组织 AI 自测 <ArrowRight className="ml-2 h-4 w-4" />
+              <PrimaryLink href="/workshops">
+                进入工作坊 <ArrowRight className="ml-2 h-4 w-4" />
               </PrimaryLink>
               <SecondaryLink href="/tools">浏览 22 个工具</SecondaryLink>
-              <SecondaryLink href="/super-individual-workshop">超级个体工作坊</SecondaryLink>
               <SecondaryLink href="/admin/runs/new" prefetch={false}>创建企业/班级入口</SecondaryLink>
             </div>
 
@@ -438,69 +437,6 @@ export default async function Home() {
           </GlassCard>
         </section>
 
-        <section className="mt-16">
-          <div className="grid gap-5 lg:grid-cols-[0.82fr_1.18fr] lg:items-start">
-            <div>
-              <SectionLabel>Start Here</SectionLabel>
-              <h2 className="text-3xl font-black text-white sm:text-4xl">当前可用入口</h2>
-              <p className="mt-4 text-base leading-8 text-emerald-50/64">
-                这里仅展示管理员选择公开的入口。企业、班级和工作坊入口创建后会生成独立链接，可直接发送给参与者。
-              </p>
-            </div>
-            <div className="grid gap-3">
-              <Link
-                href="/super-individual-workshop"
-                className="grid gap-4 rounded-[28px] border border-emerald-300/25 bg-emerald-300/10 p-5 transition hover:border-emerald-200/45 hover:bg-emerald-300/15 md:grid-cols-[1fr_auto] md:items-center"
-              >
-                <div>
-                  <div className="flex flex-wrap items-center gap-3">
-                    <span className="rounded-full border border-emerald-200/20 bg-emerald-300/15 px-3 py-1 text-xs font-bold text-emerald-100">
-                      Workshop
-                    </span>
-                    <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-50/58">
-                      <Sparkles className="h-3.5 w-3.5 text-emerald-200" />
-                      从 Prompt 到 Skill
-                    </span>
-                  </div>
-                  <h3 className="mt-3 text-xl font-black leading-tight text-white">超级个体赋能工作坊</h3>
-                  <p className="mt-2 line-clamp-2 text-sm leading-6 text-emerald-50/68">
-                    一天流程框架、核心术语、工具安装链接与课前问卷。
-                  </p>
-                </div>
-                <div className="flex items-center gap-2 text-sm font-bold text-emerald-200">
-                  进入 <ArrowRight className="h-4 w-4" />
-                </div>
-              </Link>
-              {activeRuns.length ? (
-                activeRuns.map((run) => (
-                  <Link
-                    key={run.slug}
-                    href={`/e/${run.slug}`}
-                    className="grid gap-4 rounded-[28px] border border-emerald-200/14 bg-white/[0.045] p-5 transition hover:border-emerald-200/35 hover:bg-white/[0.075] md:grid-cols-[1fr_auto] md:items-center"
-                  >
-                    <div>
-                      <div className="flex flex-wrap items-center gap-3">
-                        <span className="rounded-full border border-emerald-200/15 bg-emerald-300/10 px-3 py-1 text-xs font-bold text-emerald-200">
-                          {runTypeLabels[run.runType]}
-                        </span>
-                        <span className="text-xs font-semibold text-emerald-50/45">{run.completedCount ?? 0} 份报告</span>
-                      </div>
-                      <h3 className="mt-3 text-xl font-black leading-tight text-white">{run.title}</h3>
-                      <p className="mt-2 line-clamp-2 text-sm leading-6 text-emerald-50/60">{run.audience}</p>
-                    </div>
-                    <div className="flex items-center gap-2 text-sm font-bold text-emerald-200">
-                      进入 <ArrowRight className="h-4 w-4" />
-                    </div>
-                  </Link>
-                ))
-              ) : (
-                <div className="rounded-[28px] border border-emerald-200/14 bg-white/[0.045] p-5 text-sm leading-7 text-emerald-50/65">
-                  暂无启用入口。进入后台创建第一个企业诊断、内部班级或工作坊入口。
-                </div>
-              )}
-            </div>
-          </div>
-        </section>
 
         <section className="mt-16 grid gap-4 md:grid-cols-4">
           {platformCapabilities.map(({ icon: Icon, title, text }) => (

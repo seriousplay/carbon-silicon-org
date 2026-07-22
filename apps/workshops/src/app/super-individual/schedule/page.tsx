@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic";
 import { ArrowLeft } from "lucide-react";
 import { AppShell, Container, SecondaryLink, SectionLabel } from "@/components/ui";
 import { schedule } from "../content";

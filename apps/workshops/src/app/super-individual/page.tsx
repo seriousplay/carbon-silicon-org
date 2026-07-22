@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic";
 import { ArrowRight, BookOpenCheck, CalendarClock, ClipboardCheck, Download, FileText, ShieldCheck } from "lucide-react";
 import { AppShell, Container, GlassCard, PrimaryLink, SecondaryLink, SectionLabel } from "@/components/ui";
 

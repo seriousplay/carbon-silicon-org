@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic";
 import { ArrowLeft, Download, ShieldCheck } from "lucide-react";
 import { AppShell, Container, GlassCard, SecondaryLink, SectionLabel } from "@/components/ui";
 import { prework, tools } from "../content";

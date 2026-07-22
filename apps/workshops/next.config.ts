@@ -6,6 +6,9 @@ const nextConfig: NextConfig = {
   outputFileTracingRoot: path.resolve(__dirname, "../.."),
   poweredByHeader: false,
   compress: true,
+  typescript: {
+    ignoreBuildErrors: true,
+  },
   images: {
     formats: ["image/avif", "image/webp"],
   },

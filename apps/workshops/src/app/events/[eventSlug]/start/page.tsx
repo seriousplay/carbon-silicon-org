@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic";
 import { notFound, redirect } from "next/navigation";
 import { AppShell, Container, SectionLabel } from "@/components/ui";
 import { getUserWorkspace, requireUser } from "@/lib/auth/server";
