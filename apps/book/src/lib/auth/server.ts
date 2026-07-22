@@ -42,7 +42,7 @@ export async function requireUser(nextPath?: string) {
   const user = await getCurrentUser();
   if (!user) {
     const suffix = nextPath ? `?next=${encodeURIComponent(nextPath)}` : "";
-    redirect(`/book/login${suffix}`);
+    redirect(`/login${suffix}`);
   }
   return user;
 }
