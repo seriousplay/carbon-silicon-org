@@ -304,7 +304,9 @@ function StepTable({ headers, rows }: { headers: string[]; rows: React.ReactNode
 
 function HR1Content() {
   return <>
-    <InfoBox><strong className="text-emerald-200">先建立共同语言：</strong>HR 不需要先学复杂技术名词，但需要分清 AI 到底是在聊天、执行任务、生成文件，还是基于资料回答。</InfoBox>
+    <InfoBox><strong className="text-emerald-200">先建立共同语言：</strong>HR 不需要先学复杂技术名词，但需要分清 AI 到底是在聊天、执行任务、生成文件，还是基于资料回答。四个能力不是平级的——它们是一条进化阶梯。</InfoBox>
+
+    {/* Overview table */}
     <StepTable
       headers={["能力", "一句话理解", "HR 场景", "上手判断"]}
       rows={[
@@ -314,6 +316,150 @@ function HR1Content() {
         [<strong key="4">知识库 RAG</strong>, "先读你的资料，再基于资料回答", "员工手册问答、制度解释", "回答能引用来源，不靠泛泛经验"],
       ]}
     />
+
+    {/* 1. Prompt */}
+    <div className="rounded-xl border border-emerald-200/10 bg-white/[0.02] p-5 mt-6">
+      <div className="flex items-center gap-2 mb-3">
+        <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-300/10 text-sm font-black text-emerald-300">1</span>
+        <h3 className="text-lg font-black text-emerald-100">提示词 Prompt — 对齐公式</h3>
+      </div>
+      <div className="rounded-lg bg-emerald-300/[0.06] border border-emerald-300/10 px-4 py-3 text-sm font-bold text-emerald-200 mb-4">
+        对齐公式 = 角色 + 目标 + 对象画像 + 逻辑步骤 + 输出限制
+      </div>
+      <div className="grid gap-3 sm:grid-cols-2 mb-4">
+        <div className="rounded-lg border border-rose-300/10 bg-rose-300/[0.04] p-4">
+          <div className="text-xs font-bold text-rose-300/70 mb-2">❌ 散装提问</div>
+          <p className="text-sm text-rose-100/60">帮我写一个产品经理的 JD。</p>
+          <p className="mt-2 text-xs text-rose-100/30">结果：平庸、模板化，需要改很多轮。这就是"搜答案"，不是"接外挂"。</p>
+        </div>
+        <div className="rounded-lg border border-emerald-300/10 bg-emerald-300/[0.04] p-4">
+          <div className="text-xs font-bold text-emerald-300/70 mb-2">✅ 对齐提问</div>
+          <p className="text-sm text-emerald-100/70">你是一位资深招聘HR（角色）。为200人SaaS公司写高级产品经理JD（目标）。候选人需3年以上B端经验、熟悉敏捷协作（画像）。输出：岗位职责5条、硬性要求、加分项、面试关注点（步骤+限制）。语气专业但不浮夸。</p>
+          <p className="mt-2 text-xs text-emerald-100/30">结果：高度贴合需求，可直接使用。</p>
+        </div>
+      </div>
+      <div className="text-xs text-emerald-100/40">💡 局限：每次都要从零输入这段话。有没有办法一劳永逸？→ 这就是 Skill 要解决的问题。</div>
+    </div>
+
+    {/* 2. Agent */}
+    <div className="rounded-xl border border-emerald-200/10 bg-white/[0.02] p-5">
+      <div className="flex items-center gap-2 mb-3">
+        <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-300/10 text-sm font-black text-emerald-300">2</span>
+        <h3 className="text-lg font-black text-emerald-100">智能体 Agent — 不只是问答，是连续办事</h3>
+      </div>
+      <p className="text-sm leading-relaxed text-emerald-100/60 mb-3">
+        提示词是"给AI下一份任务书"。Agent 是"交给AI一个目标，它自己拆步骤、调用工具、交付结果"。区别在于：提示词是单轮对话，Agent是多轮连续执行。
+      </p>
+      <div className="rounded-lg bg-emerald-300/[0.06] border border-emerald-300/10 p-4 mb-3">
+        <div className="text-xs font-bold text-emerald-200 mb-2">HR Agent 示例：招聘助手</div>
+        <div className="flex flex-wrap items-center gap-1.5 text-xs">
+          <span className="rounded-full bg-emerald-300/10 px-2 py-0.5 text-emerald-200">📥 输入岗位需求</span>
+          <span className="text-emerald-100/30">→</span>
+          <span className="rounded-full bg-emerald-300/10 px-2 py-0.5 text-emerald-200">🤖 自动生成JD</span>
+          <span className="text-emerald-100/30">→</span>
+          <span className="rounded-full bg-emerald-300/10 px-2 py-0.5 text-emerald-200">🔍 筛选简历并打分</span>
+          <span className="text-emerald-100/30">→</span>
+          <span className="rounded-full bg-emerald-300/10 px-2 py-0.5 text-emerald-200">📋 生成面试问题</span>
+          <span className="text-emerald-100/30">→</span>
+          <span className="rounded-full bg-emerald-300/10 px-2 py-0.5 text-emerald-200">📊 输出评估表</span>
+        </div>
+        <p className="mt-2 text-xs text-emerald-100/40">不是你问一句它答一句——而是你给一个目标"帮我完成这个岗位的招聘准备"，它自己走完全流程。</p>
+      </div>
+      <StepTable
+        headers={["层级", "能做什么", "HR例子", "工具推荐"]}
+        rows={[
+          ["单Agent", "一个助手完成一个完整流程", "招聘助手从JD到面试问题一条龙", "扣子(Coze)、Minimax"],
+          ["多Agent", "多个助手分工协作", "调研Agent+分析Agent+创作Agent+审核Agent协同", "Trae、Codex、Dify"],
+        ]}
+      />
+    </div>
+
+    {/* 3. Skill */}
+    <div className="rounded-xl border border-emerald-200/10 bg-white/[0.02] p-5">
+      <div className="flex items-center gap-2 mb-3">
+        <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-300/10 text-sm font-black text-emerald-300">3</span>
+        <h3 className="text-lg font-black text-emerald-100">技能 Skill — 把经验变成可调用的外挂</h3>
+      </div>
+      <p className="text-sm leading-relaxed text-emerald-100/60 mb-4">
+        Skill 不是一段"长文本咒语"，而是把你的<strong className="text-emerald-200">默会经验刻录成随时调用的外挂操作手册</strong>。三个特点：按需加载、极其稳定、团队可复用。
+      </p>
+
+      {/* Three-tier comparison */}
+      <div className="text-xs font-bold text-emerald-200 mb-2">同一任务的三级对比：写一封员工绩效反馈信</div>
+      <div className="grid gap-3 mb-4">
+        <div className="rounded-lg border border-rose-300/10 bg-rose-300/[0.03] p-3">
+          <div className="text-xs font-bold text-rose-300/60">L1 浅层触达</div>
+          <p className="text-xs text-rose-100/50 mt-1">"帮我写一封绩效反馈，员工最近表现不好。" → 空泛、模板化，需要改很多轮。</p>
+        </div>
+        <div className="rounded-lg border border-amber-300/10 bg-amber-300/[0.03] p-3">
+          <div className="text-xs font-bold text-amber-300/60">L2 精准校准</div>
+          <p className="text-xs text-amber-100/50 mt-1">完整提示词：角色+员工画像+反馈要点+输出格式+语气要求。→ 很好了，但下次还得重写。</p>
+        </div>
+        <div className="rounded-lg border border-emerald-300/10 bg-emerald-300/[0.04] p-3">
+          <div className="text-xs font-bold text-emerald-300/60">L3 深度共生（Skill）</div>
+          <p className="text-xs text-emerald-100/60 mt-1">打开"绩效反馈助手"Skill，输入：员工名+事件+关注点。→ 自动按预设SOP（共情→事实→方案→行动）输出。SOP、语气、格式已刻在技能包里。</p>
+        </div>
+      </div>
+
+      {/* Skill structure */}
+      <div className="text-xs font-bold text-emerald-200 mb-2">Skill 四层结构</div>
+      <StepTable
+        headers={["层级", "名称", "存放内容", "比喻"]}
+        rows={[
+          ["1", "使用说明书", "技能用途、触发条件、SOP流程", "操作手册"],
+          ["2", "参考文档", "评分标准、制度文件、优秀范例", "专业依据"],
+          ["3", "资源模板", "输出格式模板、排版要求", "输出标准"],
+          ["4", "可执行脚本", "数据计算、图表生成（进阶）", "自动化工具"],
+        ]}
+      />
+      <div className="mt-3 rounded-lg bg-amber-300/[0.06] border border-amber-300/10 px-3 py-2 text-xs text-amber-200/70">
+        💡 创建Skill五步法：梳理经验 → 准备资料 → 挂载模板 → 编写说明 → 部署测试
+      </div>
+    </div>
+
+    {/* 4. Knowledge Base */}
+    <div className="rounded-xl border border-emerald-200/10 bg-white/[0.02] p-5">
+      <div className="flex items-center gap-2 mb-3">
+        <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-300/10 text-sm font-black text-emerald-300">4</span>
+        <h3 className="text-lg font-black text-emerald-100">知识库 RAG — 让AI基于你的资料回答</h3>
+      </div>
+      <p className="text-sm leading-relaxed text-emerald-100/60 mb-3">
+        没有知识库的AI，回答基于全网通用知识——泛泛而谈，不知道你公司的具体情况。有了知识库，AI先读你的资料，再基于资料回答。回答能引用来源，不靠猜测。
+      </p>
+      <div className="grid gap-3 sm:grid-cols-2 mb-3">
+        <div className="rounded-lg border border-rose-300/10 bg-rose-300/[0.04] p-4">
+          <div className="text-xs font-bold text-rose-300/70 mb-1">❌ 没有知识库</div>
+          <p className="text-xs text-rose-100/50">问："我们公司的年假制度是什么？"<br/>AI回答："一般公司年假是5-15天……"——这不是你公司的制度，是AI猜的。</p>
+        </div>
+        <div className="rounded-lg border border-emerald-300/10 bg-emerald-300/[0.04] p-4">
+          <div className="text-xs font-bold text-emerald-300/70 mb-1">✅ 有知识库</div>
+          <p className="text-xs text-emerald-100/60">上传《员工手册》到知识库后问同样的问题。<br/>AI回答："根据员工手册第3.2条，入职满1年享有10天年假……"——引用来源，准确可靠。</p>
+        </div>
+      </div>
+      <div className="rounded-lg bg-emerald-300/[0.06] border border-emerald-300/10 p-4">
+        <div className="text-xs font-bold text-emerald-200 mb-2">HR知识库的三个层次</div>
+        <div className="grid gap-2 text-xs">
+          <div className="rounded bg-white/[0.03] p-2"><span className="font-bold text-emerald-300">L1 制度问答：</span>上传员工手册、考勤制度、报销规范。员工自助查询，HR从重复问答中解放。</div>
+          <div className="rounded bg-white/[0.03] p-2"><span className="font-bold text-emerald-300">L2 案例参考：</span>上传过往优秀JD、培训方案、绩效反馈范例。AI生成新内容时参考你的最佳实践。</div>
+          <div className="rounded bg-white/[0.03] p-2"><span className="font-bold text-emerald-300">L3 组织大脑：</span>结构化沉淀每一次招聘决策、培训效果、离职原因。AI基于历史数据给出预测和建议。</div>
+        </div>
+      </div>
+    </div>
+
+    {/* Evolution summary */}
+    <div className="rounded-xl border border-emerald-300/20 bg-emerald-300/[0.06] p-5">
+      <div className="text-sm font-bold text-emerald-300 mb-2">四个能力的进化关系</div>
+      <div className="flex flex-wrap items-center gap-2 text-xs">
+        <span className="rounded-full bg-emerald-300/10 px-3 py-1 text-emerald-200">提示词：让AI听懂任务</span>
+        <span className="text-emerald-100/30">→</span>
+        <span className="rounded-full bg-emerald-300/10 px-3 py-1 text-emerald-200">知识库：让AI有依据</span>
+        <span className="text-emerald-100/30">→</span>
+        <span className="rounded-full bg-emerald-300/10 px-3 py-1 text-emerald-200">Skill：让AI稳定交付</span>
+        <span className="text-emerald-100/30">→</span>
+        <span className="rounded-full bg-emerald-300/10 px-3 py-1 text-emerald-200">Agent：让AI连续办事</span>
+      </div>
+      <p className="mt-3 text-xs text-emerald-100/50">这不是四个独立工具——它们是一条进化路径。提示词是起点，Agent是终点。中间每一步都在让AI更懂你、更可靠、更像一个真正的同事。</p>
+    </div>
   </>;
 }
 
