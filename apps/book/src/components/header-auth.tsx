@@ -36,7 +36,7 @@ export function HeaderAuth() {
       </Link>
       <Link
         className="rounded-full px-3 py-2 text-emerald-50/60 hover:bg-white/10 hover:text-white"
-        href="/book/api/auth/signout"
+        href="/api/auth/signout"
         prefetch={false}
       >
         退出登录
