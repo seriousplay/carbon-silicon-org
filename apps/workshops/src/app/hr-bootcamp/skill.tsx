@@ -81,7 +81,8 @@ references/优秀反馈范例.md`}</pre>
 
     <VoteBar module="skill" />
     <PeerAnswers answers={[
-      { author: "赵HR", role: "金融行业HRVP", text: "Skill这个概念的爆点在于——它不只是'记住一段提示词'，而是把你的SOP、判断标准、输出格式整个打包。我建了一个'薪酬review Skill'，里面放了公司的薪酬带宽数据、往年调薪记录、各部门预算上限。现在调薪季的工作从2周缩短到3天。", likes: 45 },
+      { author: "赵HR", role: "金融行业HRVP", text: "我在Workbuddy SkillHub上找到了一个'薪酬review'的现成Skill，直接安装后把自己的薪酬带宽数据、往年调薪记录挂上去。现在调薪季从2周缩短到3天。Skill的威力在于——它不是每次从零输入，而是把老员工的经验固化成了可一键调用的能力包。", likes: 45 },
+      { author: "周HR", role: "互联网公司HRD", text: "skillsmp.com 上搜'HR'能找到几十个现成的Skill模板，从招聘到离职面谈都有。我现在养成了习惯：接到新任务先搜有没有现成的Skill，没有再根据五步法自己建。", likes: 28 },
     ]} />
 
     <div className="mt-10 flex items-center justify-between border-t border-emerald-200/8 pt-6">
