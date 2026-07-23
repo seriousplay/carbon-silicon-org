@@ -45,19 +45,20 @@ export function ProjectModule({ completed, onToggleComplete, onNext, onPrev }: {
       </div>
     </LearnBlock>
 
-    <LearnBlock title="第三步：/goal 功能 — AI Vibe Coding">
-      <p className="mb-4">使用 Workbuddy 的 <strong className="text-emerald-200">/goal 命令</strong>，让AI自动进入"vibe coding"模式，按照开发计划逐任务执行。</p>
+    <LearnBlock title="第三步：Vibe Coding — AI自动化开发">
+      <p className="mb-4">使用 <strong className="text-emerald-200">AI 编程工具</strong>（Zcode / Codex / Kimicode），让AI自动进入"vibe coding"模式，按照开发计划逐任务执行。</p>
       <div className="rounded-xl border border-emerald-200/10 bg-white/[0.02] p-4">
         <div className="text-base font-bold text-emerald-200 mb-2">⌨️ 操作步骤</div>
         <div className="space-y-2 text-base text-emerald-100/70">
-          <p><strong>3.1</strong> 在 Workbuddy 对话框中输入 <code className="rounded bg-emerald-200/10 px-2 py-0.5 text-emerald-200 text-sm">/goal</code></p>
-          <p><strong>3.2</strong> 输入目标描述：<em>"按照开发计划，从第一步开始执行。每完成一个任务，先展示成果，等我确认后再继续。"</em></p>
-          <p><strong>3.3</strong> AI会自动生成代码、创建文件、搭建项目结构。你在旁边观察，发现问题随时<strong>用自然语言纠正</strong>——就像和一个程序员同事协作。</p>
-          <p><strong>3.4</strong> 关键心态：<strong className="text-emerald-200">你是产品经理，AI是你的全栈工程师。</strong>你不需要写代码，但你需要在每一步确认"这符合我的需求吗？"</p>
+          <p><strong>3.1</strong> 打开 <a href="https://zcode.ai" target="_blank" rel="noopener noreferrer" className="text-emerald-300 underline hover:text-emerald-200">Zcode ↗</a> 或 <a href="https://codex.ai" target="_blank" rel="noopener noreferrer" className="text-emerald-300 underline hover:text-emerald-200">Codex ↗</a> 或 <a href="https://kimi.moonshot.cn" target="_blank" rel="noopener noreferrer" className="text-emerald-300 underline hover:text-emerald-200">Kimicode ↗</a>——选择一个你熟悉的AI编程工具。</p>
+          <p><strong>3.2</strong> 将第二步 Workbuddy 输出的开发计划<strong>复制粘贴</strong>给 AI 编程工具。</p>
+          <p><strong>3.3</strong> 输入指令：<em>"按照这个开发计划，从第一步开始执行。每完成一个任务，先展示成果，等我确认后再继续。"</em></p>
+          <p><strong>3.4</strong> AI会自动生成代码、创建文件、搭建项目结构。你在旁边观察，发现问题随时<strong>用自然语言纠正</strong>——就像和一个程序员同事协作。</p>
+          <p><strong>3.5</strong> 关键心态：<strong className="text-emerald-200">你是产品经理，AI是你的全栈工程师。</strong>你不需要写代码，但你需要在每一步确认"这符合我的需求吗？"</p>
         </div>
       </div>
       <div className="mt-3 rounded-xl bg-purple-300/[0.04] border border-purple-300/10 p-4 text-sm text-purple-100/60">
-        <strong className="text-purple-300">🪄 Vibe Coding 是什么？</strong>它不是"AI帮你写代码"——而是你描述想要的效果，AI自己决定技术实现。你说"我想要一个页面，左边是员工列表，右边是详细信息，点击员工后右边自动更新"，AI就自己写HTML/CSS/JS实现。你只描述"感觉"，AI负责"实现"。
+        <strong className="text-purple-300">🪄 工具选择建议：</strong>Zcode 适合快速原型和全栈应用；Codex 适合精准控制代码质量；Kimicode（Kimi的编程模式）适合中文场景和简单应用。新手建议从 Zcode 或 Kimicode 开始——它们的自然语言理解更好，不需要写任何代码。
       </div>
     </LearnBlock>
 
