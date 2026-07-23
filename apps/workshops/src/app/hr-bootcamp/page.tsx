@@ -19,7 +19,7 @@ const modules = [
   { id: "kb", num: 4, icon: "📚", title: "知识库", subtitle: "让AI基于你的资料回答——不再泛泛而谈，而是有据可查。", points: 20 },
   { id: "safety", num: 5, icon: "🛡️", title: "风险边界", subtitle: "什么判断不能交给AI？HR合规的六维度审核法与八条红线。", points: 20 },
   { id: "loop", num: 6, icon: "🔄", title: "回路治理", subtitle: "从金字塔到液态网络——锁定一个业务，跑通你的第一个回路。", points: 20 },
-  { id: "project", num: 7, icon: "🚀", title: "实战项目", subtitle: "整合四步法——从对话澄清意图，到AI vibe coding自动生成应用。", points: 120 },
+  { id: "project", num: 7, icon: "🚀", title: "实战项目", subtitle: "整合四步法——从对话澄清意图，到AI vibe coding自动生成应用。", points: 0 },
 ] as const;
 
 const levels = [
