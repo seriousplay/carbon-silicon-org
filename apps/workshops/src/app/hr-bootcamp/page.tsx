@@ -109,26 +109,16 @@ export default function HRBootcampPage() {
 
         <nav className="h-[calc(100%-9rem)] overflow-y-auto p-3">
           <NavBtn active={active === "welcome"} onClick={() => { setActive("welcome"); setSidebarOpen(false); }}>
-            <span className="text-base">🏠</span> 封面与课程总览
+            🏠 封面与课程总览
           </NavBtn>
 
-          <div className="mt-5 mb-2 px-3 text-[11px] font-bold uppercase tracking-widest text-emerald-300/35">工具赋能</div>
-          {modules.slice(0, 4).map(m => (
-            <ModuleNavBtn key={m.id} module={m} active={active === m.id} completed={completed.has(m.id)} onClick={() => { setActive(m.id); setSidebarOpen(false); }} />
-          ))}
-
-          <div className="mt-5 mb-2 px-3 text-[11px] font-bold uppercase tracking-widest text-emerald-300/35">认知升级</div>
-          {modules.slice(4, 6).map(m => (
-            <ModuleNavBtn key={m.id} module={m} active={active === m.id} completed={completed.has(m.id)} onClick={() => { setActive(m.id); setSidebarOpen(false); }} />
-          ))}
-          <div className="mt-5 mb-2 px-3 text-[11px] font-bold uppercase tracking-widest text-emerald-300/35">实战输出</div>
-          {modules.slice(6).map(m => (
+          {modules.map(m => (
             <ModuleNavBtn key={m.id} module={m} active={active === m.id} completed={completed.has(m.id)} onClick={() => { setActive(m.id); setSidebarOpen(false); }} />
           ))}
 
           <div className="mt-5 mb-2 px-3 text-[11px] font-bold uppercase tracking-widest text-emerald-300/35">社区</div>
           <NavBtn active={active === "gallery"} onClick={() => { setActive("gallery"); setSidebarOpen(false); }}>
-            <span className="text-base">🏆</span> 项目展示厅
+            🏆 项目展示厅
           </NavBtn>
         </nav>
       </aside>
