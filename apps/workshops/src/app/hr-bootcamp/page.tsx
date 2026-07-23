@@ -1,49 +1,33 @@
 "use client";
 
-import { useState, useCallback } from "react";
-import {
-  ChevronRight, CheckCircle2, Circle, Trophy, TrendingUp,
-  BookOpen, Shield, Target, Star, Zap, ArrowRight, Menu, X,
-  Users, Briefcase, GraduationCap, Heart, DollarSign, BarChart3
-} from "lucide-react";
+import { useState, useCallback, useEffect } from "react";
+import { Menu, X, CheckCircle2, Circle, Trophy, Zap, ArrowRight, Star } from "lucide-react";
+import { PromptModule } from "./prompt";
+import { AgentModule } from "./agent";
+import { SkillModule } from "./skill";
+import { KBModule } from "./kb";
+import { SafetyModule } from "./safety";
+import { LoopModule } from "./loop";
 
-// ─── Course Structure ────────────────────────────────
-const steps = [
-  { id: "hr1", step: 1, time: "0-5min", section: "AI基础", title: "AI基础：四个核心能力", desc: "提示词、智能体、Skill、知识库——AI赋能HR的四大支柱。", subs: ["prompt", "agent", "skill", "kb"] },
-  { id: "hr2", step: 2, time: "15-40min", section: "HR上手", title: "HR提示词上手", desc: "写好提示词的5个核心技巧，HR专用模板实战。" },
-  { id: "hr3", step: 3, time: "40-70min", section: "HR上手", title: "HR工作流：拿到成品", desc: "从对话到交付物，用AI产出招聘JD、培训方案、绩效反馈。" },
-  { id: "hr4", step: 4, time: "70-95min", section: "Skill成品", title: "Skill：从对话到成品", desc: "把常用工作流程封装为可复用的AI技能。" },
-  { id: "hr5", step: 5, time: "95-115min", section: "风险边界", title: "HR审核与使用边界", desc: "什么判断不能交给AI？HR合规的八条红线。" },
-  { id: "hr6", step: 6, time: "115-118min", section: "组织导入", title: "AI进入组织后的排异", desc: "为什么个人用得好、团队推不动？组织排异的四种模式。" },
-  { id: "hr7", step: 7, time: "118-120min", section: "组织导入", title: "回路治理导入", desc: "用回路思维把个人AI能力变成组织资产。" },
-
-  { id: "loop1", step: 8, time: "120-150min", section: "回路治理", title: "从金字塔到液态网络", desc: "从大陆文明到海洋文明——理解回路式组织与传统组织的七个根本差异，为什么你的公司不能只把AI当工具。" },
-  { id: "loop2", step: 9, time: "150-170min", section: "回路治理", title: "锁定关键业务，设计你的回路", desc: "不需要自上而下的组织变革。选一个痛点业务，画出它的回路地图，定义人机角色。" },
-  { id: "loop3", step: 10, time: "170-180min", section: "回路治理", title: "我的行动承诺", desc: "带回公司的不是一个概念，而是一个可执行的最小回路方案。" },
-];
-
-// Sub-steps for hr1 (each AI concept is a learning loop)
-const subSteps = [
-  { id: "prompt", title: "提示词 Prompt", icon: "💬", desc: "给AI下一份清晰任务书", color: "emerald" },
-  { id: "agent", title: "智能体 Agent", icon: "🤖", desc: "交目标后连续办事", color: "blue" },
-  { id: "skill", title: "技能 Skill", icon: "⚡", desc: "把经验变成可调用外挂", color: "purple" },
-  { id: "kb", title: "知识库 RAG", icon: "📚", desc: "让AI基于你的资料回答", color: "amber" },
+// ─── Module Definitions ───────────────────────────────
+const modules = [
+  { id: "prompt", num: 1, icon: "💬", title: "提示词", subtitle: "给AI下一份清晰任务书——掌握对齐公式，一次输出可用结果。", points: 20 },
+  { id: "agent", num: 2, icon: "🤖", title: "智能体", subtitle: "不只是问答，而是连续办事——交给AI一个目标，它自己拆步骤交付。", points: 20 },
+  { id: "skill", num: 3, icon: "⚡", title: "技能", subtitle: "把经验变成可调用外挂——让AI稳定产出专业级交付物。", points: 20 },
+  { id: "kb", num: 4, icon: "📚", title: "知识库", subtitle: "让AI基于你的资料回答——不再泛泛而谈，而是有据可查。", points: 20 },
+  { id: "safety", num: 5, icon: "🛡️", title: "风险边界", subtitle: "什么判断不能交给AI？HR合规的六维度审核法与八条红线。", points: 20 },
+  { id: "loop", num: 6, icon: "🔄", title: "回路治理", subtitle: "从金字塔到液态网络——锁定一个业务，跑通你的第一个回路。", points: 20 },
 ] as const;
 
-const tasks = [
-  { id: "1", icon: Users, color: "emerald", label: "招聘回路", desc: "简历到面试的转化黑洞", output: "面试评估表Excel" },
-  { id: "2", icon: GraduationCap, color: "blue", label: "培训回路", desc: "培训完就忘，没有行为改变", output: "培训方案PPT" },
-  { id: "3", icon: BarChart3, color: "purple", label: "绩效回路", desc: "绩效面谈变成走过场", output: "绩效反馈Word" },
-  { id: "4", icon: Heart, color: "rose", label: "员工关怀回路", desc: "福利发了，满意度没涨", output: "关怀方案文档" },
-  { id: "5", icon: DollarSign, color: "amber", label: "薪酬回路", desc: "调薪靠拍脑袋，缺乏数据支撑", output: "薪酬分析报告" },
+const levels = [
+  { name: "新手探索者", min: 0, icon: "🌱" },
+  { name: "AI实践者", min: 60, icon: "🚀" },
+  { name: "超级个体", min: 100, icon: "⭐" },
+  { name: "碳硅共生者", min: 140, icon: "🌊" },
 ];
 
-const colorMap: Record<string, string> = {
-  emerald: "border-emerald-300/30 bg-emerald-300/10 text-emerald-200",
-  blue: "border-blue-300/30 bg-blue-300/10 text-blue-200",
-  purple: "border-purple-300/30 bg-purple-300/10 text-purple-200",
-  rose: "border-rose-300/30 bg-rose-300/10 text-rose-200",
-  amber: "border-amber-300/30 bg-amber-300/10 text-amber-200",
+const badgeIcons: Record<string, string> = {
+  prompt: "🎯", agent: "🤖", skill: "⚡", kb: "📖", safety: "🛡️", loop: "🔄",
 };
 
 // ─── Main Component ───────────────────────────────────
@@ -51,920 +35,218 @@ export default function HRBootcampPage() {
   const [active, setActive] = useState("welcome");
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [completed, setCompleted] = useState<Set<string>>(new Set());
-  const [selectedTask, setSelectedTask] = useState<string | null>(null);
+  const [bonusPoints, setBonusPoints] = useState(0);
+  const [showLevelUp, setShowLevelUp] = useState(false);
+
+  const totalPoints = completed.size * 20 + bonusPoints;
+  const currentLevel = [...levels].reverse().find(l => totalPoints >= l.min)!;
+  const nextLevel = levels.find(l => l.min > totalPoints);
+  const progressPct = nextLevel ? Math.round(((totalPoints - currentLevel.min) / (nextLevel.min - currentLevel.min)) * 100) : 100;
 
   const toggleComplete = useCallback((id: string) => {
     setCompleted(prev => {
       const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
+      if (next.has(id)) { next.delete(id); } else { next.add(id); setShowLevelUp(true); }
       return next;
     });
   }, []);
 
-  const progress = Math.round((completed.size / steps.length) * 100);
+  const addBonus = useCallback(() => setBonusPoints(p => p + 10), []);
+
+  useEffect(() => {
+    if (showLevelUp) { const t = setTimeout(() => setShowLevelUp(false), 2500); return () => clearTimeout(t); }
+  }, [showLevelUp]);
+
+  const goNext = () => {
+    const idx = modules.findIndex(m => m.id === active);
+    if (idx < modules.length - 1) { setActive(modules[idx + 1].id); setSidebarOpen(false); }
+  };
+  const goPrev = () => {
+    const idx = modules.findIndex(m => m.id === active);
+    if (idx > 0) { setActive(modules[idx - 1].id); setSidebarOpen(false); }
+  };
 
   return (
-    <div className="flex h-screen overflow-hidden bg-[#07110f] text-[#f0fbf6]">
-      {/* Sidebar */}
-      <aside className={`fixed inset-y-0 left-0 z-50 w-64 transform border-r border-emerald-200/10 bg-[#0a1a16] transition-transform lg:relative lg:translate-x-0 ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}`}>
-        <div className="flex h-14 items-center justify-between border-b border-emerald-200/10 px-4">
-          <span className="text-sm font-black text-emerald-200">从工具赋能，到碳硅共生</span>
+    <div className="flex h-[100dvh] overflow-hidden bg-[#07110f] text-[#f0fbf6]">
+      {/* ─── Sidebar ─── */}
+      <aside className={`fixed inset-y-0 left-0 z-50 w-72 transform border-r border-emerald-200/8 bg-[#0a1a16] transition-transform duration-300 lg:relative lg:translate-x-0 ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}`}>
+        <div className="flex h-16 items-center justify-between border-b border-emerald-200/8 px-5">
+          <div>
+            <div className="text-sm font-black text-emerald-200">从工具赋能，到碳硅共生</div>
+            <div className="text-xs text-emerald-100/35">AI for HR · 精英赋能营</div>
+          </div>
           <button onClick={() => setSidebarOpen(false)} className="lg:hidden"><X className="h-5 w-5 text-emerald-400" /></button>
         </div>
-        <nav className="h-[calc(100%-3.5rem)] overflow-y-auto p-3">
-          <NavGroup label="首页" />
-          <NavItem target="welcome" active={active === "welcome"} onClick={() => { setActive("welcome"); setSidebarOpen(false); }}>封面与课程总览</NavItem>
 
-          <NavGroup label="AI基础 15min" />
-          {steps.filter(s => s.section === "AI基础").map(s => (
-            <NavItem key={s.id} target={s.id} step={s.step} active={active === s.id} completed={completed.has(s.id)} onClick={() => { setActive(s.id); setSidebarOpen(false); }}>
-              {s.title.split("：")[1] || s.title}
-            </NavItem>
+        {/* Level HUD */}
+        <div className="border-b border-emerald-200/8 px-5 py-4">
+          <div className="flex items-center gap-2.5">
+            <span className="text-2xl">{currentLevel.icon}</span>
+            <div className="flex-1">
+              <div className="text-sm font-bold text-emerald-100">{currentLevel.name}</div>
+              <div className="flex items-center gap-1.5 mt-1">
+                <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-emerald-200/10">
+                  <div className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-emerald-300 transition-all duration-700" style={{ width: `${progressPct}%` }} />
+                </div>
+                <span className="text-xs font-bold text-emerald-300/70">{totalPoints}pt</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <nav className="h-[calc(100%-9rem)] overflow-y-auto p-3">
+          <NavBtn active={active === "welcome"} onClick={() => { setActive("welcome"); setSidebarOpen(false); }}>
+            <span className="text-base">🏠</span> 封面与课程总览
+          </NavBtn>
+
+          <div className="mt-5 mb-2 px-3 text-[11px] font-bold uppercase tracking-widest text-emerald-300/35">工具赋能</div>
+          {modules.slice(0, 4).map(m => (
+            <ModuleNavBtn key={m.id} module={m} active={active === m.id} completed={completed.has(m.id)} onClick={() => { setActive(m.id); setSidebarOpen(false); }} />
           ))}
 
-          <NavGroup label="HR上手 55min" />
-          {steps.filter(s => s.section === "HR上手").map(s => (
-            <NavItem key={s.id} target={s.id} step={s.step} active={active === s.id} completed={completed.has(s.id)} onClick={() => { setActive(s.id); setSidebarOpen(false); }}>
-              {s.title.split("：")[1] || s.title}
-            </NavItem>
+          <div className="mt-5 mb-2 px-3 text-[11px] font-bold uppercase tracking-widest text-emerald-300/35">认知升级</div>
+          {modules.slice(4).map(m => (
+            <ModuleNavBtn key={m.id} module={m} active={active === m.id} completed={completed.has(m.id)} onClick={() => { setActive(m.id); setSidebarOpen(false); }} />
           ))}
-
-          <NavGroup label="Skill成品 25min" />
-          {steps.filter(s => s.section === "Skill成品").map(s => (
-            <NavItem key={s.id} target={s.id} step={s.step} active={active === s.id} completed={completed.has(s.id)} onClick={() => { setActive(s.id); setSidebarOpen(false); }}>
-              {s.title.split("：")[1] || s.title}
-            </NavItem>
-          ))}
-
-          <NavGroup label="风险边界 20min" />
-          {steps.filter(s => s.section === "风险边界").map(s => (
-            <NavItem key={s.id} target={s.id} step={s.step} active={active === s.id} completed={completed.has(s.id)} onClick={() => { setActive(s.id); setSidebarOpen(false); }}>
-              {s.title.split("：")[1] || s.title}
-            </NavItem>
-          ))}
-
-          <NavGroup label="组织导入 5min" />
-          {steps.filter(s => s.section === "组织导入").map(s => (
-            <NavItem key={s.id} target={s.id} step={s.step} active={active === s.id} completed={completed.has(s.id)} onClick={() => { setActive(s.id); setSidebarOpen(false); }}>
-              {s.title.split("：")[1] || s.title}
-            </NavItem>
-          ))}
-
-          <NavGroup label="回路治理 60min" />
-          {steps.filter(s => s.section === "回路治理").map(s => (
-            <NavItem key={s.id} target={s.id} step={s.step} active={active === s.id} completed={completed.has(s.id)} onClick={() => { setActive(s.id); setSidebarOpen(false); }}>
-              {s.title.split("：")[1] || s.title}
-            </NavItem>
-          ))}
-
-          <NavGroup label="扩展" />
-          <NavItem target="choose" active={active === "choose"} onClick={() => { setActive("choose"); setSidebarOpen(false); }}>选择一个HR深化场景</NavItem>
-          <NavItem target="governance" active={active === "governance"} onClick={() => { setActive("governance"); setSidebarOpen(false); }}>治理红线</NavItem>
         </nav>
       </aside>
 
-      {/* Overlay */}
-      {sidebarOpen && <div className="fixed inset-0 z-40 bg-black/60 lg:hidden" onClick={() => setSidebarOpen(false)} />}
+      {sidebarOpen && <div className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm lg:hidden" onClick={() => setSidebarOpen(false)} />}
 
-      {/* Main */}
+      {/* ─── Main ─── */}
       <main className="flex flex-1 flex-col overflow-hidden">
         {/* Top Bar */}
-        <header className="flex h-14 shrink-0 items-center gap-4 border-b border-emerald-200/10 bg-[#0a1a16]/80 px-4 backdrop-blur">
+        <header className="flex h-16 shrink-0 items-center gap-4 border-b border-emerald-200/8 bg-[#0a1a16]/70 px-5 backdrop-blur-md">
           <button onClick={() => setSidebarOpen(true)} className="lg:hidden"><Menu className="h-5 w-5 text-emerald-400" /></button>
-          <div className="flex-1">
-            <div className="flex items-center gap-3">
-              <div className="h-2 flex-1 overflow-hidden rounded-full bg-emerald-200/10">
-                <div className="h-full rounded-full bg-gradient-to-r from-emerald-400 to-emerald-300 transition-all duration-500" style={{ width: `${progress}%` }} />
-              </div>
-              <span className="text-xs font-bold text-emerald-300/70">{progress}%</span>
+          <div className="flex flex-1 items-center gap-3">
+            <div className="h-2 max-w-xs flex-1 overflow-hidden rounded-full bg-emerald-200/10">
+              <div className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-emerald-300 transition-all duration-700" style={{ width: `${(completed.size / modules.length) * 100}%` }} />
             </div>
+            <span className="text-xs font-bold text-emerald-300/60">{completed.size}/{modules.length} 模块</span>
           </div>
-          <div className="flex items-center gap-2 text-xs text-emerald-300/70">
-            <Trophy className="h-4 w-4" />
-            <span>{completed.size}/{steps.length}步</span>
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-1.5 rounded-full bg-emerald-300/10 px-3 py-1.5">
+              <Trophy className="h-4 w-4 text-emerald-300" />
+              <span className="text-sm font-bold text-emerald-200">{totalPoints}</span>
+            </div>
           </div>
         </header>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto">
-          {active === "welcome" && <WelcomeSection onStart={() => setActive("hr1")} selectedTask={selectedTask} onSelectTask={setSelectedTask} />}
-          {active === "choose" && <TaskSelectSection selectedTask={selectedTask} onSelectTask={(t) => { setSelectedTask(t); setActive("welcome"); }} />}
-          {active === "governance" && <GovernanceSection />}
-          {subSteps.map(sub => (
-            active === `hr1-${sub.id}` && <SubStepSection key={sub.id} subId={sub.id} title={sub.title} icon={sub.icon} desc={sub.desc} color={sub.color}
-              onBack={() => setActive("hr1")}
-              onNext={() => { const idx = subSteps.findIndex(s => s.id === sub.id); if (idx < subSteps.length - 1) setActive(`hr1-${subSteps[idx + 1].id}`); else setActive("hr2"); }}
-            />
-          ))}
-          {steps.map(s => (
-            active === s.id && (
-              <StepSection key={s.id} step={s} completed={completed.has(s.id)} onToggleComplete={() => toggleComplete(s.id)}
-                onNext={() => { const idx = steps.findIndex(x => x.id === s.id); if (idx < steps.length - 1) setActive(steps[idx + 1].id); }}
-                onPrev={() => { const idx = steps.findIndex(x => x.id === s.id); if (idx > 0) setActive(steps[idx - 1].id); }}
-              />
-            )
-          ))}
+        <div className="flex-1 overflow-y-auto scroll-smooth">
+          <div key={active} className="animate-[fadeIn_0.3s_ease-out]">
+            {active === "welcome" && <WelcomeSection completed={completed} onStart={() => setActive("prompt")} />}
+            {active === "prompt" && <PromptModule completed={completed.has("prompt")} onToggleComplete={() => toggleComplete("prompt")} onNext={goNext} onPrev={goPrev} />}
+            {active === "agent" && <AgentModule completed={completed.has("agent")} onToggleComplete={() => toggleComplete("agent")} onNext={goNext} onPrev={goPrev} />}
+            {active === "skill" && <SkillModule completed={completed.has("skill")} onToggleComplete={() => toggleComplete("skill")} onNext={goNext} onPrev={goPrev} />}
+            {active === "kb" && <KBModule completed={completed.has("kb")} onToggleComplete={() => toggleComplete("kb")} onNext={goNext} onPrev={goPrev} />}
+            {active === "safety" && <SafetyModule completed={completed.has("safety")} onToggleComplete={() => toggleComplete("safety")} onNext={goNext} onPrev={goPrev} />}
+            {active === "loop" && <LoopModule completed={completed.has("loop")} onToggleComplete={() => toggleComplete("loop")} onNext={goNext} onPrev={goPrev} />}
+          </div>
         </div>
       </main>
+
+      {/* Level-up Toast */}
+      {showLevelUp && (
+        <div className="fixed bottom-6 left-1/2 z-50 -translate-x-1/2 animate-[slideUp_0.4s_ease-out]">
+          <div className="flex items-center gap-3 rounded-full border border-emerald-300/30 bg-emerald-300/15 px-6 py-3 backdrop-blur-md">
+            <Zap className="h-5 w-5 text-emerald-300" />
+            <span className="text-sm font-black text-emerald-100">+20 积分！继续加油 💪</span>
+          </div>
+        </div>
+      )}
+
+      <style>{`
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes slideUp { from { opacity: 0; transform: translate(-50%, 20px); } to { opacity: 1; transform: translate(-50%, 0); } }
+      `}</style>
     </div>
   );
 }
 
-// ─── Sub-Components ───────────────────────────────────
+// ─── Nav Components ───────────────────────────────────
 
-function NavGroup({ label }: { label: string }) {
-  return <div className="mt-4 mb-1 px-2 text-[11px] font-bold uppercase tracking-widest text-emerald-300/40">{label}</div>;
-}
-
-function NavItem({ target, step, active, completed, onClick, children }: {
-  target: string; step?: number; active: boolean; completed?: boolean; onClick: () => void; children: React.ReactNode;
-}) {
+function NavBtn({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
   return (
-    <button onClick={onClick} className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm transition ${active ? "bg-emerald-300/10 text-emerald-200" : "text-emerald-100/60 hover:bg-white/[0.04] hover:text-emerald-100"}`}>
-      {step ? (completed ? <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-400" /> : <Circle className="h-4 w-4 shrink-0 text-emerald-100/30" />) : <span className="w-4 shrink-0" />}
-      <span className="truncate">{children}</span>
+    <button onClick={onClick} className={`flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-left text-base transition ${active ? "bg-emerald-300/10 text-emerald-200" : "text-emerald-100/55 hover:bg-white/[0.03] hover:text-emerald-100"}`}>
+      {children}
     </button>
   );
 }
 
-function WelcomeSection({ onStart, selectedTask, onSelectTask }: { onStart: () => void; selectedTask: string | null; onSelectTask: (t: string) => void }) {
+function ModuleNavBtn({ module: m, active, completed, onClick }: { module: typeof modules[0]; active: boolean; completed: boolean; onClick: () => void }) {
   return (
-    <div className="mx-auto max-w-3xl px-6 py-10">
-      <div className="mb-8 text-center">
-        <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-3xl border border-emerald-300/20 bg-emerald-300/10">
-          <Zap className="h-10 w-10 text-emerald-300" />
-        </div>
-        <p className="text-xs font-bold uppercase tracking-widest text-emerald-300/50">AI for HR · 精英赋能营</p>
-        <h1 className="mt-4 text-4xl font-black tracking-tight">从工具赋能<span className="text-emerald-300">，到碳硅共生</span></h1>
-        <p className="mt-4 text-lg leading-relaxed text-emerald-100/60">
-          先会用提示词、智能体、Skill和知识库，再理解组织如何接住AI。<br />
-          10个模块，5个HR场景任选。
-        </p>
-        <div className="mt-8 flex flex-wrap justify-center gap-3">
-          <button onClick={onStart} className="inline-flex items-center gap-2 rounded-full bg-emerald-300 px-8 py-3 text-sm font-black text-[#07110f] transition hover:bg-emerald-200">
-            开始学习 <ArrowRight className="h-4 w-4" />
-          </button>
-          <button onClick={() => onSelectTask("")} className="inline-flex items-center gap-2 rounded-full border border-emerald-200/20 px-8 py-3 text-sm font-bold text-emerald-100 transition hover:bg-white/5">
-            先选场景
-          </button>
-        </div>
-        {selectedTask && (
-          <div className="mt-4 inline-flex items-center gap-2 rounded-full border border-emerald-300/20 bg-emerald-300/10 px-4 py-2 text-sm font-bold text-emerald-200">
-            <Target className="h-4 w-4" />
-            当前场景：{tasks.find(t => t.id === selectedTask)?.label || selectedTask}
-          </div>
-        )}
+    <button onClick={onClick} className={`flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left transition ${active ? "bg-emerald-300/10 ring-1 ring-emerald-300/20" : "hover:bg-white/[0.03]"}`}>
+      <span className="text-xl shrink-0">{m.icon}</span>
+      <div className="flex-1 min-w-0">
+        <div className={`text-base font-bold ${active ? "text-emerald-200" : completed ? "text-emerald-100/80" : "text-emerald-100/55"}`}>{m.title}</div>
+        <div className="truncate text-xs text-emerald-100/30">{m.subtitle.split("——")[0]}</div>
       </div>
-
-      <div className="mt-10 grid gap-3">
-        {steps.map(s => (
-          <div key={s.id} className="flex items-center gap-4 rounded-2xl border border-emerald-200/10 bg-white/[0.02] p-4">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-300/10 text-sm font-black text-emerald-200">{s.step}</div>
-            <div className="flex-1 min-w-0">
-              <div className="text-xs font-bold text-emerald-200/60">{s.section} · {s.time}</div>
-              <div className="mt-0.5 font-bold truncate">{s.title}</div>
-              <div className="mt-0.5 text-xs text-emerald-100/40">{s.desc}</div>
-            </div>
-            <ChevronRight className="h-4 w-4 shrink-0 text-emerald-100/30" />
-          </div>
-        ))}
-      </div>
-    </div>
+      {completed ? <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-400" /> : <Circle className="h-4 w-4 shrink-0 text-emerald-100/15" />}
+    </button>
   );
 }
 
-function TaskSelectSection({ selectedTask, onSelectTask }: { selectedTask: string | null; onSelectTask: (t: string) => void }) {
+// ─── Welcome / Home ───────────────────────────────────
+
+function WelcomeSection({ completed, onStart }: { completed: Set<string>; onStart: () => void }) {
   return (
-    <div className="mx-auto max-w-3xl px-6 py-10">
-      <h2 className="text-2xl font-black">选择一个HR深化场景</h2>
-      <p className="mt-2 text-emerald-100/50">每个场景都有对应的提示词模板、AI工作流和成品产出。</p>
-      <div className="mt-6 grid gap-4 sm:grid-cols-2">
-        {tasks.map(t => {
-          const Icon = t.icon;
+    <div className="mx-auto max-w-2xl px-5 py-12 sm:px-8 sm:py-16">
+      <div className="text-center">
+        <div className="mx-auto mb-5 flex h-20 w-20 items-center justify-center rounded-3xl border border-emerald-300/20 bg-emerald-300/10">
+          <Zap className="h-10 w-10 text-emerald-300" />
+        </div>
+        <p className="text-xs font-bold uppercase tracking-[0.2em] text-emerald-300/50">AI for HR · 精英赋能营</p>
+        <h1 className="mt-5 text-4xl font-black tracking-tight sm:text-5xl">从工具赋能<span className="text-emerald-300">，到碳硅共生</span></h1>
+        <p className="mt-5 text-lg leading-8 text-emerald-100/55">
+          6个学习模块，每个都是一个完整的闭环：概念理解 → HR场景 → 实践练习 → 模板工具。<br />
+          完成后你将带走一个可执行的最小回路方案。
+        </p>
+        <div className="mt-8">
+          <button onClick={onStart} className="inline-flex items-center gap-2 rounded-full bg-emerald-300 px-8 py-3.5 text-base font-black text-[#07110f] transition hover:scale-105 hover:bg-emerald-200 active:scale-95">
+            开始学习 <ArrowRight className="h-5 w-5" />
+          </button>
+        </div>
+      </div>
+
+      {/* Module Roadmap */}
+      <div className="mt-12 grid gap-3">
+        {modules.map(m => {
+          const done = completed.has(m.id);
           return (
-            <button key={t.id} onClick={() => onSelectTask(t.id)}
-              className={`rounded-2xl border p-5 text-left transition ${selectedTask === t.id ? `${colorMap[t.color]} border-2` : "border-emerald-200/10 bg-white/[0.02] hover:bg-white/[0.04]"}`}>
-              <div className="flex items-center gap-3">
-                <Icon className="h-6 w-6 text-emerald-300" />
-                <div>
-                  <div className="font-bold">{t.label}</div>
-                  <div className="text-xs text-emerald-100/40">{t.desc}</div>
+            <button key={m.id} onClick={onStart} className="group flex items-center gap-4 rounded-2xl border border-emerald-200/8 bg-white/[0.015] p-5 text-left transition hover:border-emerald-200/25 hover:bg-white/[0.04]">
+              <span className="text-2xl">{m.icon}</span>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold text-emerald-300/40">模块{m.num}</span>
+                  {done && <span className="rounded-full bg-emerald-300/15 px-2 py-0.5 text-xs font-bold text-emerald-300">已完成</span>}
                 </div>
+                <div className="mt-0.5 text-lg font-bold text-emerald-100">{m.title}</div>
+                <div className="mt-0.5 text-sm leading-7 text-emerald-100/40">{m.subtitle}</div>
               </div>
-              <div className="mt-3 rounded-full border border-emerald-200/10 bg-white/[0.03] px-3 py-1 text-xs text-emerald-200/70">成品：{t.output}</div>
+              {done ? <CheckCircle2 className="h-5 w-5 shrink-0 text-emerald-400" /> : <ArrowRight className="h-4 w-4 shrink-0 text-emerald-100/20 transition group-hover:translate-x-1 group-hover:text-emerald-300" />}
             </button>
           );
         })}
       </div>
-      <button onClick={() => onSelectTask(selectedTask || tasks[0].id)} className="mt-6 inline-flex items-center gap-2 rounded-full bg-emerald-300 px-6 py-2 text-sm font-black text-[#07110f]">
-        确认选择 <ArrowRight className="h-4 w-4" />
-      </button>
-    </div>
-  );
-}
 
-function StepSection({ step: s, completed, onToggleComplete, onNext, onPrev }: {
-  step: typeof steps[0]; completed: boolean; onToggleComplete: () => void; onNext: () => void; onPrev: () => void;
-}) {
-  return (
-    <div className="mx-auto max-w-3xl px-6 py-10">
-      <div className="mb-6 flex items-center gap-2 text-xs font-bold text-emerald-200/60">
-        <span>{s.section}</span><ChevronRight className="h-3 w-3" /><span>{s.time}</span>
-      </div>
-      <h2 className="text-3xl font-black">{s.title}</h2>
-      <p className="mt-4 text-lg leading-relaxed text-emerald-100/60">{s.desc}</p>
-
-      <div className="mt-8 space-y-6">
-        {s.id === "hr1" && <HR1Content />}
-        {s.id === "hr2" && <HR2Content />}
-        {s.id === "hr3" && <HR3Content />}
-        {s.id === "hr4" && <HR4Content />}
-        {s.id === "hr5" && <HR5Content />}
-        {s.id === "hr6" && <HR6Content />}
-        {s.id === "hr7" && <HR7Content />}
-        {s.id === "loop1" && <Loop1Content />}
-        {s.id === "loop2" && <Loop2Content />}
-        {s.id === "loop3" && <Loop3Content />}
-      </div>
-
-      <div className="mt-8 flex items-center justify-between">
-        <button onClick={onPrev} className="rounded-full border border-emerald-200/20 px-6 py-2 text-sm font-bold text-emerald-100 transition hover:bg-white/5">← 上一步</button>
-        <button onClick={onToggleComplete}
-          className={`inline-flex items-center gap-2 rounded-full px-6 py-2 text-sm font-black transition ${completed ? "bg-emerald-300/20 text-emerald-300" : "bg-emerald-300 text-[#07110f] hover:bg-emerald-200"}`}>
-          {completed ? <><CheckCircle2 className="h-4 w-4" /> 已完成</> : "标记完成"}
-        </button>
-        <button onClick={onNext} className="rounded-full border border-emerald-200/20 px-6 py-2 text-sm font-bold text-emerald-100 transition hover:bg-white/5">下一步 →</button>
-      </div>
-    </div>
-  );
-}
-
-// ─── Step Content Components ──────────────────────────
-
-function InfoBox({ children }: { children: React.ReactNode }) {
-  return <div className="rounded-xl border border-emerald-300/20 bg-emerald-300/[0.06] p-4 text-sm leading-relaxed text-emerald-100/80">{children}</div>;
-}
-
-function StepTable({ headers, rows }: { headers: string[]; rows: React.ReactNode[][] }) {
-  return (
-    <div className="overflow-x-auto rounded-xl border border-emerald-200/10">
-      <table className="w-full text-sm">
-        <thead><tr className="border-b border-emerald-200/10 bg-emerald-200/[0.04]">{headers.map(h => <th key={h} className="px-4 py-3 text-left font-bold text-emerald-200">{h}</th>)}</tr></thead>
-        <tbody>{rows.map((row, i) => <tr key={i} className="border-b border-emerald-200/5 last:border-0">{row.map((cell, j) => <td key={j} className="px-4 py-3 text-emerald-100/70">{cell}</td>)}</tr>)}</tbody>
-      </table>
-    </div>
-  );
-}
-
-function HR1Content() {
-  return (
-    <div className="mx-auto max-w-3xl px-6 py-10">
-      <h2 className="text-3xl font-black">AI基础：四个核心能力</h2>
-      <p className="mt-4 text-lg leading-relaxed text-emerald-100/60">
-        四个能力不是平级的——它们是一条进化阶梯。每个能力都是一个完整的学习闭环：概念理解、HR场景、实践练习、模板和工具推荐。
-      </p>
-      <div className="mt-8 grid gap-4 sm:grid-cols-2">
-        {subSteps.map(sub => (
-          <button key={sub.id} onClick={() => setActive(`hr1-${sub.id}`)}
-            className="group rounded-2xl border border-emerald-200/14 bg-white/[0.035] p-5 text-left transition hover:-translate-y-1 hover:border-emerald-200/35 hover:bg-white/[0.06]">
-            <div className="flex items-center gap-3">
-              <span className="text-3xl">{sub.icon}</span>
-              <div>
-                <div className="font-black text-emerald-100 group-hover:text-emerald-200">{sub.title}</div>
-                <div className="text-xs text-emerald-100/40">{sub.desc}</div>
+      {/* Badge Wall */}
+      {completed.size > 0 && (
+        <div className="mt-10 rounded-2xl border border-emerald-200/10 bg-white/[0.02] p-6">
+          <div className="mb-4 flex items-center gap-2">
+            <Star className="h-5 w-5 text-emerald-300" />
+            <span className="text-base font-bold text-emerald-100">我的徽章墙</span>
+          </div>
+          <div className="flex flex-wrap gap-3">
+            {modules.map(m => (
+              <div key={m.id} className={`flex flex-col items-center gap-1 rounded-2xl border p-4 transition ${completed.has(m.id) ? "border-emerald-300/30 bg-emerald-300/10" : "border-emerald-200/8 bg-white/[0.01] opacity-30"}`}>
+                <span className="text-3xl">{badgeIcons[m.id]}</span>
+                <span className="text-xs font-bold text-emerald-100/70">{m.title}</span>
               </div>
-            </div>
-            <div className="mt-3 flex items-center gap-1 text-xs font-bold text-emerald-300">
-              进入学习 <ChevronRight className="h-3 w-3 transition group-hover:translate-x-1" />
-            </div>
-          </button>
-        ))}
-      </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
-}
-
-// ─── Sub-Step Section (learning loop for each AI concept) ───
-
-function SubStepSection({ subId, title, icon, desc, color, onBack, onNext }: {
-  subId: string; title: string; icon: string; desc: string; color: string; onBack: () => void; onNext: () => void;
-}) {
-  return (
-    <div className="mx-auto max-w-3xl px-6 py-10">
-      <button onClick={onBack} className="mb-4 flex items-center gap-1 text-xs font-bold text-emerald-300/60 hover:text-emerald-200">
-        <ChevronRight className="h-3 w-3 rotate-180" /> 返回四个核心能力
-      </button>
-      <div className="flex items-center gap-3 mb-2">
-        <span className="text-4xl">{icon}</span>
-        <div>
-          <h2 className="text-2xl font-black">{title}</h2>
-          <p className="text-sm text-emerald-100/40">{desc}</p>
-        </div>
-      </div>
-      <div className="mt-6 space-y-6">
-        {subId === "prompt" && <PromptModule />}
-        {subId === "agent" && <AgentModule />}
-        {subId === "skill" && <SkillModule />}
-        {subId === "kb" && <KnowledgeBaseModule />}
-      </div>
-      <div className="mt-8 flex justify-end">
-        <button onClick={onNext} className="inline-flex items-center gap-2 rounded-full bg-emerald-300 px-6 py-2 text-sm font-black text-[#07110f] transition hover:bg-emerald-200">
-          下一个能力 <ChevronRight className="h-4 w-4" />
-        </button>
-      </div>
-    </div>
-  );
-}
-
-function LearnBlock({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <div className="rounded-xl border border-emerald-200/10 bg-white/[0.02] p-5">
-      <div className="mb-3 flex items-center gap-2">
-        <div className="h-1 w-4 rounded-full bg-emerald-300" />
-        <h3 className="text-sm font-bold uppercase tracking-wider text-emerald-300">{title}</h3>
-      </div>
-      {children}
-    </div>
-  );
-}
-
-function PromptModule() {
-  return (<>
-    <LearnBlock title="概念理解">
-      <p className="text-sm leading-relaxed text-emerald-100/70">
-        提示词是你和AI沟通的<strong className="text-emerald-200">任务说明书</strong>。好的提示词让AI一次性输出可用结果，差的提示词让你改十遍。
-      </p>
-      <div className="mt-3 rounded-lg bg-emerald-300/[0.06] border border-emerald-300/10 px-4 py-3 text-sm font-bold text-emerald-200">
-        对齐公式 = 角色 + 目标 + 对象画像 + 逻辑步骤 + 输出限制
-      </div>
-    </LearnBlock>
-
-    <LearnBlock title="HR场景对比">
-      <div className="grid gap-3 sm:grid-cols-2">
-        <div className="rounded-lg border border-rose-300/10 bg-rose-300/[0.04] p-4">
-          <div className="text-xs font-bold text-rose-300/70 mb-2">❌ 散装提问</div>
-          <p className="text-sm text-rose-100/60">帮我写一个产品经理的JD。</p>
-        </div>
-        <div className="rounded-lg border border-emerald-300/10 bg-emerald-300/[0.04] p-4">
-          <div className="text-xs font-bold text-emerald-300/70 mb-2">✅ 对齐提问</div>
-          <p className="text-sm text-emerald-100/70">你是一位资深招聘HR（角色）。为200人SaaS公司写高级产品经理JD（目标）。候选人需3年以上B端经验（画像）。输出：职责5条、要求、加分项、面试关注点（步骤+限制）。</p>
-        </div>
-      </div>
-    </LearnBlock>
-
-    <LearnBlock title="实践练习">
-      <p className="text-sm text-emerald-100/60 mb-3">用对齐公式改写以下提示词：</p>
-      <div className="rounded-lg border border-amber-300/10 bg-amber-300/[0.04] p-4 text-sm text-amber-100/60">
-        原始："帮我写一封绩效反馈。"
-      </div>
-      <div className="mt-3 text-xs text-emerald-100/40">提示：补全角色（你是___）、目标（写给___的___）、画像（员工特点是___）、步骤（先___再___最后___）、限制（字数___语气___）</div>
-      <div className="mt-2 border-b border-dashed border-emerald-200/20 pt-2 pb-4 min-h-[3rem] text-sm text-emerald-100/50"></div>
-    </LearnBlock>
-
-    <LearnBlock title="HR模板速查">
-      <div className="grid gap-2 text-xs">
-        <div className="rounded bg-white/[0.03] p-3"><span className="font-bold text-emerald-300">招聘JD：</span>角色+岗位名+公司规模+经验要求+输出格式（职责/要求/加分项/面试问题）</div>
-        <div className="rounded bg-white/[0.03] p-3"><span className="font-bold text-emerald-300">绩效反馈：</span>角色+员工画像+具体事件+反馈要点（肯定/改进/行动）+语气要求+字数限制</div>
-        <div className="rounded bg-white/[0.03] p-3"><span className="font-bold text-emerald-300">培训方案：</span>角色+学员画像+培训主题+时长+输出（大纲/活动/评估方式）</div>
-        <div className="rounded bg-white/[0.03] p-3"><span className="font-bold text-emerald-300">员工沟通：</span>角色+事件背景+沟通目标+对方情绪状态+语气要求+禁止用语</div>
-      </div>
-    </LearnBlock>
-
-    <LearnBlock title="工具推荐">
-      <StepTable headers={["工具", "特点", "适合场景"]} rows={[
-        ["豆包 (doubao.com)", "免费、中文优化、响应快", "日常提示词练习、HR文案生成"],
-        ["DeepSeek (chat.deepseek.com)", "免费、推理能力强", "分析类任务、复杂提示词"],
-        ["Kimi (kimi.moonshot.cn)", "超长上下文、可上传文件", "读取简历/制度文档后提问"],
-      ]} />
-    </LearnBlock>
-  </>);
-}
-
-function AgentModule() {
-  return (<>
-    <LearnBlock title="概念理解">
-      <p className="text-sm leading-relaxed text-emerald-100/70">
-        Agent不是"问一句答一句"——而是你<strong className="text-emerald-200">交给它一个目标，它自己拆步骤、调用工具、交付完整结果</strong>。提示词是单轮对话，Agent是多轮连续执行。
-      </p>
-    </LearnBlock>
-
-    <LearnBlock title="HR场景：招聘助手Agent">
-      <div className="flex flex-wrap items-center gap-1.5 text-xs">
-        <span className="rounded-full bg-emerald-300/10 px-2 py-0.5 text-emerald-200">📥 输入岗位需求</span>
-        <span className="text-emerald-100/30">→</span>
-        <span className="rounded-full bg-emerald-300/10 px-2 py-0.5 text-emerald-200">🤖 自动生成JD</span>
-        <span className="text-emerald-100/30">→</span>
-        <span className="rounded-full bg-emerald-300/10 px-2 py-0.5 text-emerald-200">🔍 筛选简历打分</span>
-        <span className="text-emerald-100/30">→</span>
-        <span className="rounded-full bg-emerald-300/10 px-2 py-0.5 text-emerald-200">📋 生成面试问题</span>
-        <span className="text-emerald-100/30">→</span>
-        <span className="rounded-full bg-emerald-300/10 px-2 py-0.5 text-emerald-200">📊 输出评估表</span>
-      </div>
-      <p className="mt-3 text-xs text-emerald-100/40">你给一个目标"完成这个岗位的招聘准备"，Agent自己走完全流程。不是你在驱动每一步。</p>
-    </LearnBlock>
-
-    <LearnBlock title="实践练习">
-      <p className="text-sm text-emerald-100/60 mb-3">选一个HR高频任务，设计它的Agent流程：</p>
-      <div className="grid gap-2">
-        {["1. 任务名称：________", "2. 输入信号（什么触发这个Agent？）：________", "3. Agent需要完成的步骤（3-5步）：________", "4. 最终交付物是什么？：________"].map(s => (
-          <div key={s} className="rounded bg-white/[0.03] p-3 text-sm text-emerald-100/50 border-b border-dashed border-emerald-200/15 min-h-[2rem]">{s}</div>
-        ))}
-      </div>
-    </LearnBlock>
-
-    <LearnBlock title="单Agent vs 多Agent">
-      <StepTable headers={["层级", "能做什么", "HR例子", "上手难度"]} rows={[
-        ["单Agent", "一个助手完成一个流程", "招聘助手从JD到面试题一条龙", "⭐ 入门"],
-        ["多Agent", "多个助手分工协作", "调研+分析+创作+审核Agent协同", "⭐⭐⭐ 进阶"],
-      ]} />
-    </LearnBlock>
-
-    <LearnBlock title="工具推荐">
-      <StepTable headers={["工具", "特点", "适合场景"]} rows={[
-        ["扣子 Coze (coze.cn)", "免费创建Bot、可视化编排、支持知识库", "HR入门首选、单Agent创建"],
-        ["Dify (dify.ai)", "开源、支持复杂工作流、可私有部署", "企业级多Agent编排"],
-        ["Trae / Codex", "AI编程工具，精准控制Agent行为", "需要代码能力的高级用户"],
-      ]} />
-    </LearnBlock>
-  </>);
-}
-
-function SkillModule() {
-  return (<>
-    <LearnBlock title="概念理解">
-      <p className="text-sm leading-relaxed text-emerald-100/70">
-        Skill不是一段"长文本咒语"——它是把你的<strong className="text-emerald-200">默会经验刻录成随时调用的外挂操作手册</strong>。三个特点：按需加载、极其稳定、团队可复用。
-      </p>
-      <div className="mt-3 rounded-lg bg-emerald-300/[0.06] border border-emerald-300/10 p-4">
-        <div className="text-xs font-bold text-emerald-200 mb-2">同一任务三级对比</div>
-        <div className="grid gap-2 text-xs">
-          <div className="rounded bg-rose-300/[0.04] p-2"><span className="font-bold text-rose-300/60">L1：</span><span className="text-rose-100/50">"帮我写绩效反馈" → 空泛模板化</span></div>
-          <div className="rounded bg-amber-300/[0.04] p-2"><span className="font-bold text-amber-300/60">L2：</span><span className="text-amber-100/50">完整提示词 → 很好但每次要重写</span></div>
-          <div className="rounded bg-emerald-300/[0.06] p-2"><span className="font-bold text-emerald-300/60">L3：</span><span className="text-emerald-100/60">Skill包 → SOP已内置，只需输入变量</span></div>
-        </div>
-      </div>
-    </LearnBlock>
-
-    <LearnBlock title="Skill四层结构">
-      <StepTable headers={["层级", "名称", "存放内容", "比喻"]} rows={[
-        ["1", "使用说明书", "用途、触发条件、SOP流程", "操作手册"],
-        ["2", "参考文档", "评分标准、制度文件、优秀范例", "专业依据"],
-        ["3", "资源模板", "输出格式模板、排版要求", "输出标准"],
-        ["4", "可执行脚本", "数据计算、图表生成（进阶）", "自动化工具"],
-      ]} />
-    </LearnBlock>
-
-    <LearnBlock title="实践练习">
-      <div className="text-xs font-bold text-emerald-200 mb-2">创建你的第一个Skill — 五步法</div>
-      <div className="grid gap-2">
-        {[
-          "Step 1 梳理经验：选一个你重复做了10次以上的HR任务（如筛选简历）",
-          "Step 2 准备资料：收集评分标准、优秀JD、面试问题库 → 放入references",
-          "Step 3 挂载模板：提供期望的输出格式（评估表模板） → 放入assets",
-          "Step 4 编写说明：在SKILL.md中写清楚触发条件、语气、SOP步骤",
-          "Step 5 部署测试：挂载到AI平台，用真实材料跑一遍，人工校验后发布",
-        ].map((s, i) => (
-          <div key={i} className="flex items-start gap-2 rounded bg-white/[0.03] p-3 text-xs text-emerald-100/60">
-            <span className="mt-0.5 font-black text-emerald-300">{i + 1}</span><span>{s.replace(/^Step \d+ /, "")}</span>
-          </div>
-        ))}
-      </div>
-    </LearnBlock>
-
-    <LearnBlock title="HR Skill模板">
-      <div className="rounded-lg border border-emerald-300/10 bg-emerald-300/[0.03] p-4">
-        <div className="text-xs font-bold text-emerald-200 mb-2">SKILL.md 骨架（可直接复制使用）</div>
-        <pre className="text-xs text-emerald-100/60 whitespace-pre-wrap leading-relaxed">{`# 绩效反馈生成器
-
-## 触发条件
-当HR输入"员工绩效反馈"时激活
-
-## 角色
-你是一位有10年经验的HRBP
-
-## SOP
-1. 共情：先肯定员工贡献（20%）
-2. 事实：客观描述具体行为和数据（20%）
-3. 改进：给出2-3条可执行建议（40%）
-4. 行动：约定下次review时间和标准（20%）
-
-## 输出格式
-- 总字数400-600字
-- 语气温暖专业，不制造恐慌
-- 每段不超过3句
-
-## 参考文档
-- references/绩效评估标准.md
-- references/优秀反馈范例.md`}</pre>
-      </div>
-    </LearnBlock>
-
-    <LearnBlock title="工具推荐">
-      <StepTable headers={["工具", "特点", "适合场景"]} rows={[
-        ["扣子 Coze", "可视化创建Bot、支持知识库挂载", "HR Skill入门首选"],
-        ["ima (ima.qq.com)", "腾讯出品、支持知识库+Skill", "微信生态集成"],
-        ["Cursor / Claude", "支持SKILL.md格式的专业Skill", "需要文件结构的进阶Skill"],
-      ]} />
-    </LearnBlock>
-  </>);
-}
-
-function KnowledgeBaseModule() {
-  return (<>
-    <LearnBlock title="概念理解">
-      <p className="text-sm leading-relaxed text-emerald-100/70">
-        没有知识库的AI，回答基于<strong className="text-amber-300">全网通用知识</strong>——泛泛而谈。有了知识库，AI先读<strong className="text-emerald-300">你的资料</strong>，再基于资料回答。回答能引用来源，不靠猜测。
-      </p>
-      <div className="mt-3 grid gap-3 sm:grid-cols-2">
-        <div className="rounded-lg border border-rose-300/10 bg-rose-300/[0.04] p-4">
-          <div className="text-xs font-bold text-rose-300/70 mb-1">❌ 没有知识库</div>
-          <p className="text-xs text-rose-100/50">问："我们公司年假制度？"<br/>AI："一般5-15天……"——猜的。</p>
-        </div>
-        <div className="rounded-lg border border-emerald-300/10 bg-emerald-300/[0.04] p-4">
-          <div className="text-xs font-bold text-emerald-300/70 mb-1">✅ 有知识库</div>
-          <p className="text-xs text-emerald-100/60">上传《员工手册》后问同样问题。<br/>AI："根据手册3.2条，入职满1年享10天年假……"——有据可查。</p>
-        </div>
-      </div>
-    </LearnBlock>
-
-    <LearnBlock title="HR知识库三个层次">
-      <div className="grid gap-2 text-xs">
-        <div className="rounded bg-white/[0.03] p-3"><span className="font-bold text-emerald-300">L1 制度问答：</span>上传员工手册、考勤制度、报销规范。员工自助查询，HR从重复问答中解放。</div>
-        <div className="rounded bg-white/[0.03] p-3"><span className="font-bold text-emerald-300">L2 案例参考：</span>上传优秀JD、培训方案、绩效反馈范例。AI生成新内容时参考你的最佳实践。</div>
-        <div className="rounded bg-white/[0.03] p-3"><span className="font-bold text-emerald-300">L3 组织大脑：</span>沉淀每次招聘决策、培训效果、离职原因。AI基于历史数据给出预测和建议。</div>
-      </div>
-    </LearnBlock>
-
-    <LearnBlock title="实践练习">
-      <p className="text-sm text-emerald-100/60 mb-3">列出你可以立刻上传到知识库的3份HR文档：</p>
-      <div className="grid gap-2">
-        {["1. __________（制度类：手册/规范/流程）", "2. __________（案例类：优秀JD/方案/反馈）", "3. __________（数据类：历史记录/分析报告）"].map(s => (
-          <div key={s} className="rounded bg-white/[0.03] p-3 text-sm text-emerald-100/50 border-b border-dashed border-emerald-200/15 min-h-[2rem]">{s}</div>
-        ))}
-      </div>
-    </LearnBlock>
-
-    <LearnBlock title="工具推荐">
-      <StepTable headers={["工具", "特点", "适合场景"]} rows={[
-        ["Kimi (kimi.moonshot.cn)", "免费、超长上下文、拖拽上传", "快速体验知识库效果"],
-        ["扣子 Coze 知识库", "可挂载到Bot、支持自动更新", "HR自助问答Bot"],
-        ["ima (ima.qq.com)", "腾讯知识库、微信集成", "企业内部知识管理"],
-      ]} />
-    </LearnBlock>
-  </>);
-}
-
-function HR2Content() {
-  return <>
-    <InfoBox><strong className="text-emerald-200">HR提示词公式：</strong><code className="mx-1 rounded bg-emerald-200/10 px-2 py-0.5 text-emerald-200">角色 + 场景 + 目标 + 输入材料 + 约束边界 + 输出格式 + 审核标准</code></InfoBox>
-    <div className="grid gap-3 sm:grid-cols-2">
-      <div className="rounded-xl border border-rose-300/10 bg-rose-300/[0.04] p-4">
-        <div className="mb-2 text-xs font-bold text-rose-300/70">❌ 太笼统</div>
-        <p className="text-sm text-rose-100/60">帮我写一个产品经理的 JD。</p>
-      </div>
-      <div className="rounded-xl border border-emerald-300/10 bg-emerald-300/[0.04] p-4">
-        <div className="mb-2 text-xs font-bold text-emerald-300/70">✅ 可执行</div>
-        <p className="text-sm text-emerald-100/70">你是一名资深招聘 HR。请为一家 200 人 SaaS 公司写高级产品经理 JD。输入：B 端产品、3 年以上经验、熟悉敏捷协作。输出：岗位职责 5 条、硬性要求、加分项、面试关注点。语气专业但不浮夸。</p>
-      </div>
-    </div>
-    <div className="text-sm font-bold text-emerald-200">五类高频场景：招聘 JD · 绩效反馈 · 培训大纲 · 员工沟通 · 制度问答</div>
-  </>;
-}
-
-function HR3Content() {
-  return <>
-    <InfoBox><strong className="text-emerald-200">现场学习方式：</strong>不要只听概念。选一个真实 HR 任务，跟步骤做，最后拿到一个能带回工作的成品。</InfoBox>
-    <StepTable
-      headers={["任务", "三步工作流", "成品"]}
-      rows={[
-        ["招聘", "写 JD → 筛简历 → 生成面试问题", "面试评估表"],
-        ["培训", "诊断需求 → 设计大纲 → 生成课后行动任务", "培训方案 PPT"],
-        ["绩效", "整理事实 → 生成反馈 → 改成面谈脚本", "绩效反馈 Word"],
-        ["员工关怀", "识别信号 → 设计沟通 → 制定跟进动作", "关怀行动清单"],
-        ["制度问答", "上传制度 → 提问 → 核对引用来源", "制度问答示例"],
-      ]}
-    />
-  </>;
-}
-
-function HR4Content() {
-  return <>
-    <InfoBox><strong className="text-emerald-200">Skill 不是一条提示词，</strong>而是一组可复用的任务能力包。它把输入材料、处理步骤、输出格式和质量标准固化下来，让同类 HR 任务可以反复生成一致的成品。</InfoBox>
-    <StepTable
-      headers={["能力", "解决什么问题", "HR例子"]}
-      rows={[
-        ["提示词", "让 AI 明白这一次要做什么", "写一份高级产品经理 JD"],
-        ["知识库", "让 AI 基于组织资料回答", "基于员工手册知识库解释请假制度"],
-        [<strong key="s" className="text-emerald-300">Skill</strong>, <strong key="d" className="text-emerald-300">把同类任务变成稳定成品</strong>, <strong key="e" className="text-emerald-300">一键生成面试评估表 Excel、培训方案 PPT、绩效反馈 Word</strong>],
-      ]}
-    />
-  </>;
-}
-
-function HR5Content() {
-  const checks = [
-    { dim: "合规性", check: "JD、评估和建议是否违反劳动法或公司制度？", fix: "请检查是否存在合规风险，并列出依据。" },
-    { dim: "公平性", check: "是否存在性别、年龄、地域、婚育等偏见？", fix: "请检查筛选标准中的潜在歧视性表述。" },
-    { dim: "准确性", check: "AI 有没有编造事实、岗位信息或制度条款？", fix: "请标注哪些结论来自输入材料，哪些是推断。" },
-    { dim: "温度感", check: "绩效反馈、关怀沟通是否太冷、太机械？", fix: "请调整语气，保持专业但有尊重和同理心。" },
-    { dim: "保密性", check: "是否包含员工隐私或薪酬等敏感信息？", fix: "请移除或脱敏处理涉及个人隐私的内容。" },
-    { dim: "责任归属", check: "最终决策是否保留给人类 HR？", fix: "请明确标注'AI建议，需HR审核确认'。" },
-  ];
-  return <>
-    <div className="rounded-xl border border-amber-300/20 bg-amber-300/[0.06] p-4 text-sm text-amber-100/80">
-      <strong className="text-amber-300">HR 使用 AI 的原则：</strong>AI 可以加速整理、生成和分析，但不能替代最终录用、绩效、薪酬、处分、解除劳动关系等责任判断。
-    </div>
-    <div className="text-sm font-bold text-emerald-200">AI初稿审核法（HR六维度）</div>
-    <div className="grid gap-3">
-      {checks.map(c => (
-        <div key={c.dim} className="rounded-xl border border-emerald-200/10 bg-white/[0.02] p-4">
-          <div className="text-sm font-bold text-emerald-200">{c.dim}</div>
-          <div className="mt-1 text-sm text-emerald-100/60">{c.check}</div>
-          <div className="mt-1 text-xs text-emerald-100/30">🔧 {c.fix}</div>
-        </div>
-      ))}
-    </div>
-  </>;
-}
-
-function HR6Content() {
-  return <>
-    <InfoBox>今天我们解决的是<strong className="text-emerald-200">个体会不会用。</strong>但当每个 HR 都会用 AI 以后，组织还会遇到第二个问题：旧流程、旧审批、旧指标能不能接住这种新能力？</InfoBox>
-    <StepTable
-      headers={["HR模块", "个体会用AI之后", "组织可能的排异"]}
-      rows={[
-        ["招聘", "HR 能快速筛简历、生成面试题", "面试官仍按旧经验判断，AI 标注没有进入决策记录"],
-        ["绩效", "HR 能整理事实和反馈稿", "绩效流程仍只看季度评分，日常证据没有被接入"],
-        ["培训", "HR 能生成课程和行动任务", "培训后没有行为追踪，课程完成不代表能力改变"],
-        ["员工关系", "HR 能识别风险信号和沟通建议", "信号没有触发责任人和跟进行动"],
-      ]}
-    />
-  </>;
-}
-
-function HR7Content() {
-  return <>
-    <InfoBox><strong className="text-emerald-200">回路思维：</strong>个人 AI 能力 → 团队工作方法 → 组织流程资产 → 持续反馈改进。用回路把个人 AI 能力变成组织可复用的智能密度。</InfoBox>
-    <div className="grid gap-4">
-      {[
-        { step: "1", title: "沉淀", desc: "把个人成功的 AI 对话、提示词模板、Skill 保存为团队共享资产" },
-        { step: "2", title: "标准化", desc: "将高频 HR 任务的 AI 工作流固化为标准操作流程（SOP）" },
-        { step: "3", title: "反馈", desc: "建立 AI 产出的质量评估机制，定期回顾和改进" },
-        { step: "4", title: "迭代", desc: "根据业务变化和组织反馈，持续更新提示词库和 Skill" },
-      ].map(item => (
-        <div key={item.step} className="flex items-start gap-3 rounded-xl border border-emerald-200/10 bg-white/[0.02] p-4">
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-emerald-300/10 text-sm font-black text-emerald-300">{item.step}</div>
-          <div>
-            <div className="font-bold text-emerald-100">{item.title}</div>
-            <div className="text-sm text-emerald-100/50">{item.desc}</div>
-          </div>
-        </div>
-      ))}
-    </div>
-  </>;
-}
-
-function GovernanceSection() {
-  const rules = [
-    { id: 1, text: "不得用AI做雇佣/解雇的最终决定" },
-    { id: 2, text: "不得用AI独立处理员工投诉和纪律处分" },
-    { id: 3, text: "不得用AI生成未经HR审核的薪酬调整方案" },
-    { id: 4, text: "不得用AI访问或分析未经授权的员工隐私数据" },
-    { id: 5, text: "不得用AI替代法定的劳动合规审查" },
-    { id: 6, text: "不得用AI独立撰写具有法律效力的HR文件" },
-    { id: 7, text: "不得将AI建议作为绩效评估的唯一依据" },
-    { id: 8, text: "不得向AI透露员工身份证号、银行账号等敏感信息" },
-  ];
-  return (
-    <div className="mx-auto max-w-3xl px-6 py-10">
-      <div className="flex items-center gap-3">
-        <Shield className="h-8 w-8 text-rose-400" />
-        <h2 className="text-2xl font-black">HR使用AI的八条红线</h2>
-      </div>
-      <p className="mt-2 text-emerald-100/50">这些判断必须由人类HR做出，AI只能提供参考信息。</p>
-      <div className="mt-6 grid gap-3">
-        {rules.map(r => (
-          <div key={r.id} className="flex items-start gap-3 rounded-xl border border-rose-300/10 bg-rose-300/[0.03] p-4">
-            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-rose-300/10 text-sm font-black text-rose-300">{r.id}</div>
-            <p className="pt-0.5 text-sm leading-relaxed text-rose-100/80">{r.text}</p>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-// ─── Loop Governance Module ───────────────────────────
-
-function Loop1Content() {
-  const dimensions = [
-    {
-      dim: "核心隐喻",
-      detail: "传统组织是大陆文明的产物——像金字塔一样划界而治：部门是领地，流程是城墙，管理层是塔顶的统治者。金字塔的理想状态是「一切按边界运转」，越界=需要惩罚的违规。回路组织是海洋文明的逻辑——像液态网络一样因连接而生：感知节点（数据采集）→处理中枢（AI+人）→效应器（执行）→反馈信号（学习）。网络的理想状态是「每次流动都比上一次更密」，断流=需要修复的堵塞。",
-      hr: "招聘：不是'JD发出去了，等简历来'——而是'每一次面试结果都在校准下一次筛选条件'。",
-    },
-    {
-      dim: "设计对象",
-      detail: "传统组织设计核心问题：谁做什么？谁向谁汇报？产出是组织架构图和岗位说明书。回路组织设计核心问题：在这个决策上，AI做什么？人保留什么？反馈信号从哪来？产出是回路地图和人机角色矩阵。",
-      hr: "绩效：不是'设计绩效流程'——而是'在绩效面谈这个决策点上，AI整理事实数据、生成反馈初稿，HR审核温度和合规性，员工反馈进入下一轮校准'。",
-    },
-    {
-      dim: "协调机制",
-      detail: "传统组织靠人跟人说话——晨会、周报、审批流、述职。信息每经一层汇报衰减一次。回路组织靠信号自动流动——AI不需要人汇报，直接从数据感知。采购间隔缩短2天？信号已自动触发调整。某个品类连续被客户删掉？推荐权重已自动降低。",
-      hr: "培训：不是'培训完发问卷'——而是'培训后30天的行为数据自动回流，告诉你哪些能力真正改变了'。",
-    },
-    {
-      dim: "能力归属",
-      detail: "传统组织中，老采购知道'这个季节山东土豆比河北好'。人走了，判断力就走了。培养新人需要三年。回路组织中，老采购每次'推翻AI建议并说明原因'，回路就吸收了这个判断力。新人入职第一周就能在AI辅助下做出接近老采购水平的判断。能力不跟着人走——留在系统里。",
-      hr: "招聘：不是'猎头老王有独特的人脉和眼光'——而是'老王每次筛选的理由被结构化记录，AI学会了王式判断，新人HR也能用'。",
-    },
-    {
-      dim: "规模化",
-      detail: "传统组织：业务量翻倍→人头基本翻倍。回路组织：业务量翻倍→AI反而更聪明（更多数据）→人效更高。增长本身成为竞争力增强器，而不是稀释器。",
-      hr: "员工服务：不是'员工翻倍就多招HR'——而是'AI自助回答80%的常规问题，HR只处理需要判断的20%'。",
-    },
-    {
-      dim: "变革方式",
-      detail: "传统变革是项目制的——几年一次组织架构调整、请咨询公司、全员宣贯。致命问题：周期太长、阻力太大、信息丢失太多。回路变革是持续进化的——不是'重新设计组织'，而是'持续校准回路'。当客户行为模式变了，回路自动调整预测参数。变革不需要动员大会——它发生在每一次日常操作中。",
-      hr: "不需要宣布'启动AI转型项目'。从招聘筛选这个环节开始，跑通第一条回路，让结果说话。",
-    },
-    {
-      dim: "衡量标准",
-      detail: "传统组织衡量执行质量：KPI达标？SOP合规？回路组织追加衡量学习速度：AI建议的采纳率在上升吗？人的推翻率在下降吗？新业务的冷启动周期在缩短吗？整个回路是否在'越用越聪明'？追加指标：预测准确率、推翻原因记录率、模型-人工判断偏差的变化趋势。",
-      hr: "不仅看'招到几个人'，还要看'AI筛选的准确率从60%提升到了85%'——这不是技术指标，是组织学习能力的指标。",
-    },
-  ];
-
-  return (<>
-    <InfoBox>
-      <strong className="text-emerald-200">从大陆文明到海洋文明：</strong>传统组织是一座<strong className="text-amber-300">金字塔</strong>——层层分工、自上而下审批、信息层层衰减。金字塔的权力来自控制边界，上限是塔顶那个人的认知天花板。回路组织是一片<strong className="text-emerald-300">液态网络</strong>——信号自由流动、节点自动协作、每次交互都让网络更密。网络的力量来自连接密度，上限是它流动了多少次信号。这不是工具升级，是从大陆文明的"划界统治"到海洋文明的"连接涌现"的范式跃迁。
-    </InfoBox>
-
-    <div className="text-sm font-bold text-emerald-200 mt-2">七个维度的根本差异</div>
-    <div className="grid gap-4">
-      {dimensions.map(item => (
-        <div key={item.dim} className="rounded-xl border border-emerald-200/10 bg-white/[0.02] p-4">
-          <div className="text-sm font-bold text-emerald-300">{item.dim}</div>
-          <p className="mt-2 text-sm leading-relaxed text-emerald-100/70">{item.detail}</p>
-          <div className="mt-2 rounded-lg bg-emerald-300/[0.06] border border-emerald-300/10 px-3 py-2 text-xs text-emerald-200/80">
-            🎯 HR场景：{item.hr}
-          </div>
-        </div>
-      ))}
-    </div>
-
-    <div className="rounded-xl border border-emerald-300/20 bg-emerald-300/[0.06] p-5 mt-4">
-      <div className="text-sm font-bold text-emerald-300 mb-2">一号位必须关注的五个转变</div>
-      <div className="grid gap-3 text-sm text-emerald-100/70">
-        {[
-          { shift: "从看架构图到看回路图", detail: "组织架构图告诉你权力如何分布。回路地图告诉你智慧如何流动。对AI时代来说，后者重要得多。" },
-          { shift: "从管人到管决策权分配", detail: "最核心的管理动作不再是管人，而是设计每个关键决策点上的人机角色：AI做什么？人保留什么？" },
-          { shift: "从招聘经验到招聘判断力+表达能力", detail: "最值钱的人有两类：判断力极强的，和能把隐性知识表达出来的。'我就是有感觉'——在回路组织中价值被严重限制。" },
-          { shift: "从积累经验到积累数据资产", detail: "20年深耕不等于20年经验。深耕=20万条结构化决策记录+5个完整季节周期+1000个同类客户的集体经验。" },
-          { shift: "从定战略到定进化方向", detail: "AI能告诉你'是什么'，但'应该做什么'涉及价值观、风险偏好——这是人保留的领地。你的战略判断有了比任何咨询报告都更真实的信息基础。" },
-        ].map(item => (
-          <div key={item.shift} className="rounded-lg bg-white/[0.03] px-4 py-2.5">
-            <span className="font-bold text-emerald-200">{item.shift}：</span>{item.detail}
-          </div>
-        ))}
-      </div>
-    </div>
-  </>);
-}
-
-function Loop2Content() {
-  return (<>
-    <InfoBox>
-      <strong className="text-emerald-200">不需要自上而下的组织变革。</strong>你不需要说服CEO、不需要重新画组织架构图。你需要做的只是：锁定一个让团队真实疼痛的业务环节，在这个环节上跑通一条回路。当这条回路开始"自己变聪明"的时候，其他人会主动来找你。
-    </InfoBox>
-
-    {/* Case Study */}
-    <div className="rounded-xl border border-emerald-200/10 bg-white/[0.02] p-5">
-      <div className="text-sm font-bold text-emerald-300 mb-3">📖 案例：一家生鲜供应链公司的智能补货回路</div>
-      <p className="text-sm leading-relaxed text-emerald-100/70 mb-3">
-        某生鲜供应链公司每天为1000多家社区店配货。传统模式下，采购员凭经验判断今天该买什么、买多少。老采购退休，新人三年才能独立。
-        他们做了什么？不是上一个AI系统，而是重新设计了<strong className="text-emerald-200">采购决策这个回路</strong>：
-      </p>
-      <div className="flex flex-wrap items-center gap-1.5 text-xs mb-3">
-        <span className="rounded-full bg-emerald-300/10 px-2 py-0.5 text-emerald-200">📊 历史销售+天气+库存</span>
-        <span className="text-emerald-100/30">→</span>
-        <span className="rounded-full bg-emerald-300/10 px-2 py-0.5 text-emerald-200">🤖 AI生成采购建议清单</span>
-        <span className="text-emerald-100/30">→</span>
-        <span className="rounded-full bg-amber-300/10 px-2 py-0.5 text-amber-200">👤 采购员花5分钟确认</span>
-        <span className="text-emerald-100/30">→</span>
-        <span className="rounded-full bg-emerald-300/10 px-2 py-0.5 text-emerald-200">📦 执行采购</span>
-        <span className="text-emerald-100/30">→</span>
-        <span className="rounded-full bg-emerald-300/10 px-2 py-0.5 text-emerald-200">🔄 实际消耗数据回流</span>
-        <span className="text-emerald-100/30">→</span>
-        <span className="rounded-full bg-emerald-300/10 px-2 py-0.5 text-emerald-200">🤖 AI自动校准下一次预测</span>
-      </div>
-      <div className="grid grid-cols-2 gap-3 text-xs">
-        <div className="rounded-lg bg-emerald-300/[0.06] p-3">
-          <div className="font-bold text-emerald-200 mb-1">回路的"学习"在哪？</div>
-          <p className="text-emerald-100/60">采购员每次推翻AI建议并记录原因（"山东土豆比河北的好，因为雨水少淀粉含量高"），回路就吸收了这个判断。下次同样条件，AI不再建议河北土豆。</p>
-        </div>
-        <div className="rounded-lg bg-emerald-300/[0.06] p-3">
-          <div className="font-bold text-emerald-200 mb-1">回路的"进化"在哪？</div>
-          <p className="text-emerald-100/60">当AI建议的采纳率从55%升到85%，当新采购员入职2周就能独立操作——说明回路在"自己变聪明"。不需要开会、不需要培训——能力自动传递。</p>
-        </div>
-      </div>
-    </div>
-
-    {/* Four-Step Method */}
-    <div className="text-sm font-bold text-emerald-200 mt-2">四步设计你的第一个回路</div>
-    <div className="grid gap-4">
-      {[
-        { num: "1", title: "选一个痛点业务", desc: "不要全面铺开。选一个高频、有数据、结果可衡量的HR业务。关键判断：这个业务有没有'每次都需要老员工的经验判断'的环节？这个环节就是回路的核心。", tip: "反面教材：'全面升级招聘体系'。正确做法：'先让AI帮我筛选简历，我确认后，每次推翻都记录原因'" },
-        { num: "2", title: "画出回路地图", desc: "在一张A4纸上画出：📥 信号从哪来？（数据输入）→ 🤖 AI做什么？（分析/建议）→ 👤 人判断什么？（审核/修正）→ 📋 决策怎么执行？→ 🔄 反馈信号怎么回到起点？", tip: "如果画不出来——不知道每个节点的输入输出——说明你的业务还运行在'人治'模式上。" },
-        { num: "3", title: "定义人机角色矩阵", desc: "列出表格：决策点 | AI角色 | 人角色 | 人推翻时必须记录什么。核心原则：AI建议，人确认。人推翻时必须结构化记录原因——这是回路最重要的学习材料。", tip: "一个HR推翻AI的简历排序，如果只说'我感觉不对'——回路什么也学不到。如果说'这个人虽然经验不匹配，但他的行业背景和我们的新业务方向高度一致'——回路就学到了一个新规则。" },
-        { num: "4", title: "定义反馈信号和进化指标", desc: "什么数据能告诉你回路在越来越聪明？采纳率上升了吗？推翻率下降了吗？新人上手周期缩短了吗？决策的实际结果在变好吗？这些指标必须是自动采集的——不需要任何人来做额外报告。", tip: "三个月后回看：AI筛选的简历被HR接受的比例从60%升到80%了吗？HR每天花在筛选上的时间从2小时降到30分钟了吗？" },
-      ].map(s => (
-        <div key={s.num} className="rounded-xl border border-emerald-200/10 bg-white/[0.02] p-4">
-          <div className="flex items-start gap-3">
-            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-emerald-300/10 text-sm font-black text-emerald-300">{s.num}</div>
-            <div className="flex-1">
-              <div className="font-bold text-emerald-100">{s.title}</div>
-              <div className="mt-1 text-sm text-emerald-100/60">{s.desc}</div>
-              <div className="mt-2 rounded-lg bg-amber-300/[0.06] border border-amber-300/10 px-3 py-1.5 text-xs text-amber-200/70">💡 {s.tip}</div>
-            </div>
-          </div>
-        </div>
-      ))}
-    </div>
-
-    {/* HR-specific loop examples */}
-    <div className="rounded-xl border border-emerald-200/10 bg-white/[0.02] p-5 mt-4">
-      <div className="text-sm font-bold text-emerald-300 mb-3">三个HR回路速查</div>
-      <div className="grid gap-3">
-        {[
-          { name: "招聘筛选回路", nodes: "简历流入 → AI初筛打分 → HR审核确认(记录推翻原因) → 安排面试 → 入职后6个月绩效回流校准" },
-          { name: "培训效果回路", nodes: "课前评估 → AI推荐个性化学习路径 → 学员学习 → 课后30天行为数据自动采集 → AI校准下次推荐" },
-          { name: "离职预警回路", nodes: "多源信号(考勤/绩效/沟通频率/调薪间隔) → AI识别风险模式和优先级 → HR核实+干预 → 干预结果回流校准模型" },
-        ].map(loop => (
-          <div key={loop.name} className="rounded-lg bg-white/[0.03] p-3">
-            <div className="text-xs font-bold text-emerald-200">{loop.name}</div>
-            <div className="mt-1 text-xs text-emerald-100/50">{loop.nodes}</div>
-          </div>
-        ))}
-      </div>
-    </div>
-  </>);
-}
-
-function Loop3Content() {
-  return (<>
-    <InfoBox>
-      <strong className="text-emerald-200">今天的产出不是一个概念，是一个你可以带回公司、下周一就开始执行的方案。</strong>请花10分钟认真填写。这不是作业——这是你给自己和团队的承诺。
-    </InfoBox>
-
-    {/* Filled example */}
-    <div className="rounded-xl border border-amber-300/20 bg-amber-300/[0.04] p-4">
-      <div className="text-xs font-bold text-amber-300 mb-2">📝 填写示例（供参考）</div>
-      <div className="grid gap-2 text-xs">
-        {[
-          { q: "关键业务", a: "销售岗位的简历筛选——每天50-80份，HR花2小时初筛，经常漏掉好候选人，且不同HR标准不统一。" },
-          { q: "AI做什么", a: "AI读取简历，根据JD自动打分排序，标注Top20和需要HR特别关注的风险点（如频繁跳槽、经历断层）。" },
-          { q: "人保留什么", a: "最终面试名单由HR确认。AI没把握的边界情况（如转行者、非主流背景）必须人工判断。每次推翻AI排序必须记录理由。" },
-          { q: "反馈信号", a: "HR采纳AI推荐的Top20比例（目标：3个月内从60%到80%）。通过AI筛选的候选人面试通过率vs未通过的对比。入职6个月绩效评分回溯。" },
-          { q: "下周一第一件事", a: "整理过去半年的JD和对应的入职者绩效数据作为初始训练集。找技术同事帮忙对接一个AI API。预计2周内可以跑通MVP。" },
-        ].map((item, i) => (
-          <div key={i} className="rounded bg-white/[0.03] p-2">
-            <span className="font-bold text-amber-200/80">{item.q}：</span>
-            <span className="text-amber-100/60">{item.a}</span>
-          </div>
-        ))}
-      </div>
-    </div>
-
-    <div className="grid gap-4 mt-4">
-      {[
-        { q: "你要锁定的关键业务是什么？", hint: "选择一个高频、有痛点、你能直接影响的HR业务。写具体，不要写'招聘'——写'销售岗位简历筛选'。" },
-        { q: "这个业务上，AI可以帮你做什么？", hint: "数据处理？模式识别？生成初稿？批量筛选？不要想全面AI化——只想第一步能做什么。" },
-        { q: "什么判断必须保留给人？", hint: "涉及合规风险？需要情境理解？涉及人的主观感受？明确人和AI的边界。" },
-        { q: "什么数据可以作为反馈信号？", hint: "这个信号必须是自动可采集的——不需要额外的人工报告。" },
-        { q: "你下周一要做的第一件事是什么？", hint: "约相关同事聊？选一个AI工具？整理第一批数据？开始画回路图？越具体越好。" },
-      ].map((item, i) => (
-        <div key={i} className="rounded-xl border border-emerald-200/10 bg-white/[0.02] p-4">
-          <div className="flex items-start gap-2">
-            <span className="mt-0.5 text-emerald-300 font-black">{i + 1}.</span>
-            <div className="flex-1">
-              <div className="font-bold text-sm text-emerald-100">{item.q}</div>
-              <div className="mt-1 text-xs text-emerald-100/30">{item.hint}</div>
-              <div className="mt-2 border-b border-dashed border-emerald-200/20 pt-2 pb-1 text-sm text-emerald-100/50 min-h-[2rem]"></div>
-            </div>
-          </div>
-        </div>
-      ))}
-    </div>
-
-    <div className="rounded-xl border border-emerald-300/20 bg-emerald-300/[0.06] p-5 mt-4">
-      <div className="text-sm font-bold text-emerald-300 mb-2">送给每一位HR</div>
-      <p className="text-sm leading-relaxed text-emerald-100/70">
-        AI时代的HR，不是被AI替代的岗位——而是帮助组织"长出智能"的关键角色。你不需要成为技术专家。你需要的是：<strong className="text-emerald-200">识别关键业务回路、设计人机角色、定义反馈信号、让每一次判断都变成组织学习的养料。</strong>
-      </p>
-      <p className="mt-3 text-sm leading-relaxed text-emerald-100/50">
-        回到公司后，不需要搞"AI转型"大项目。锁定一个业务痛点，跑通一条回路，让团队看到"原来改的不是流程，而是组织学习的方式"。当第一条回路开始自己变聪明的时候，变革就不再需要你去推动——它会自己生长。
-      </p>
-    </div>
-  </>);
 }
