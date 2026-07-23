@@ -8,6 +8,7 @@ import { SkillModule } from "./skill";
 import { KBModule } from "./kb";
 import { SafetyModule } from "./safety";
 import { LoopModule } from "./loop";
+import { ProjectModule } from "./project";
 
 // ─── Module Definitions ───────────────────────────────
 const modules = [
@@ -17,6 +18,7 @@ const modules = [
   { id: "kb", num: 4, icon: "📚", title: "知识库", subtitle: "让AI基于你的资料回答——不再泛泛而谈，而是有据可查。", points: 20 },
   { id: "safety", num: 5, icon: "🛡️", title: "风险边界", subtitle: "什么判断不能交给AI？HR合规的六维度审核法与八条红线。", points: 20 },
   { id: "loop", num: 6, icon: "🔄", title: "回路治理", subtitle: "从金字塔到液态网络——锁定一个业务，跑通你的第一个回路。", points: 20 },
+  { id: "project", num: 7, icon: "🚀", title: "实战项目", subtitle: "整合四步法——从对话澄清意图，到AI vibe coding自动生成应用。", points: 40 },
 ] as const;
 
 const levels = [
@@ -27,7 +29,7 @@ const levels = [
 ];
 
 const badgeIcons: Record<string, string> = {
-  prompt: "🎯", agent: "🤖", skill: "⚡", kb: "📖", safety: "🛡️", loop: "🔄",
+  prompt: "🎯", agent: "🤖", skill: "⚡", kb: "📖", safety: "🛡️", loop: "🔄", project: "🚀",
 };
 
 // ─── Main Component ───────────────────────────────────
@@ -105,7 +107,11 @@ export default function HRBootcampPage() {
           ))}
 
           <div className="mt-5 mb-2 px-3 text-[11px] font-bold uppercase tracking-widest text-emerald-300/35">认知升级</div>
-          {modules.slice(4).map(m => (
+          {modules.slice(4, 6).map(m => (
+            <ModuleNavBtn key={m.id} module={m} active={active === m.id} completed={completed.has(m.id)} onClick={() => { setActive(m.id); setSidebarOpen(false); }} />
+          ))}
+          <div className="mt-5 mb-2 px-3 text-[11px] font-bold uppercase tracking-widest text-emerald-300/35">实战输出</div>
+          {modules.slice(6).map(m => (
             <ModuleNavBtn key={m.id} module={m} active={active === m.id} completed={completed.has(m.id)} onClick={() => { setActive(m.id); setSidebarOpen(false); }} />
           ))}
         </nav>
@@ -142,6 +148,7 @@ export default function HRBootcampPage() {
             {active === "kb" && <KBModule completed={completed.has("kb")} onToggleComplete={() => toggleComplete("kb")} onNext={goNext} onPrev={goPrev} />}
             {active === "safety" && <SafetyModule completed={completed.has("safety")} onToggleComplete={() => toggleComplete("safety")} onNext={goNext} onPrev={goPrev} />}
             {active === "loop" && <LoopModule completed={completed.has("loop")} onToggleComplete={() => toggleComplete("loop")} onNext={goNext} onPrev={goPrev} />}
+            {active === "project" && <ProjectModule completed={completed.has("project")} onToggleComplete={() => toggleComplete("project")} onNext={goNext} onPrev={goPrev} />}
           </div>
         </div>
       </main>
