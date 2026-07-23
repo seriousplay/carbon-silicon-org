@@ -35,17 +35,18 @@ export function AgentModule({ completed, onToggleComplete, onNext, onPrev }: {
     </LearnBlock>
 
     <LearnBlock title="工具推荐">
-      <StepTable headers={["工具", "特点", "适合场景"]} rows={[
-        ["扣子 Coze (coze.cn)", "免费创建Bot、可视化编排、支持知识库", "HR入门首选、单Agent创建"],
-        ["Dify (dify.ai)", "开源、支持复杂工作流、可私有部署", "企业级多Agent编排"],
-        ["Trae / Codex", "AI编程工具，精准控制Agent行为", "需要代码能力的高级用户"],
+      <StepTable headers={["优先级", "工具", "特点", "适合场景"]} rows={[
+        ["🥇 首选", "Workbuddy", "原生Agent支持、全流程自动化编排、零代码", "HR Agent创建首选——搭一个招聘助手只需15分钟"],
+        ["🥈 次选", "扣子 Coze (coze.cn)", "免费创建Bot、可视化编排、支持知识库", "快速上手、HR入门练手"],
+        ["🥉 第三", "Codex / Trae", "AI编程工具，精准控制Agent行为", "需要代码能力定制高级Agent"],
+        ["4", "Claude", "强大的推理和长上下文能力", "复杂HR分析任务、多轮深度对话Agent"],
       ]} />
     </LearnBlock>
 
     <VoteBar module="agent" />
     <PeerAnswers answers={[
       { author: "王HR", role: "科技公司HRD", text: "我设计了一个离职预警Agent：输入是多源信号（考勤异常+绩效下降+沟通频率降低），Agent自动评估风险等级，生成干预建议和沟通脚本。HR只需要审核和执行。最重要的是——每次干预结果会回流校准模型。", likes: 31 },
-      { author: "陈HR", role: "零售业HR经理", text: "我以前觉得Agent离我很远，但用扣子15分钟就搭了一个培训需求分析Agent。输入学员岗位和绩效数据，自动输出培训方案。不是技术问题，是思维转变——从'我一步步操作AI'到'我交给AI一个任务'。", likes: 19 },
+      { author: "陈HR", role: "零售业HR经理", text: "用Workbuddy 15分钟就搭了一个培训需求分析Agent。输入学员岗位和绩效数据，自动输出培训方案。不是技术问题，是思维转变——从'我一步步操作AI'到'我交给AI一个任务'。", likes: 19 },
     ]} />
 
     <div className="mt-10 flex items-center justify-between border-t border-emerald-200/8 pt-6">
