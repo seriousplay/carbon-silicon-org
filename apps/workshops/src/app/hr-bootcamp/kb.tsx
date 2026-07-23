@@ -1,7 +1,7 @@
 "use client";
 
 import { CheckCircle2 } from "lucide-react";
-import { LearnBlock, StepTable, CompareCard, PracticeInput, VoteBar, PeerAnswers, ModulePage } from "./shared";
+import { LearnBlock, StepTable, CompareCard, VoteBar, PeerAnswers, ModulePage } from "./shared";
 
 export function KBModule({ completed, onToggleComplete, onNext, onPrev }: {
   completed: boolean; onToggleComplete: () => void; onNext: () => void; onPrev: () => void;
@@ -34,16 +34,33 @@ export function KBModule({ completed, onToggleComplete, onNext, onPrev }: {
     </LearnBlock>
 
     <LearnBlock title="实践练习">
-      <p className="mb-4">列出3份你可以立刻上传到知识库的HR文档：</p>
-      <PracticeInput placeholder="1. __________（制度类：手册/规范/流程）\n2. __________（案例类：优秀JD/方案/反馈）\n3. __________（数据类：历史记录/分析报告）" lines={4} />
+      <p className="mb-4">在 <strong className="text-emerald-200">ima 平台</strong> 上完成以下操作：</p>
+      <div className="space-y-3">
+        {[
+          { n: "1", title: "新建知识库", desc: "打开 ima → 点击「新建知识库」→ 命名为「HR工作知识库」或你的专属名称" },
+          { n: "2", title: "添加3篇笔记（三种来源）", desc: "📱 公众号文章：在微信中打开一篇HR相关公众号文章 → 点击右上角「…」→ 选择「在ima中打开」→ 保存到你的知识库" },
+          { n: "3", title: "", desc: "🤖 AI辅助创作：让AI帮你写一篇笔记（如'2025年HR趋势分析'或'我司绩效面谈话术'）→ 保存到知识库" },
+          { n: "4", title: "", desc: "✍️ 自己手写：手动写一篇笔记——可以是你工作中遇到的一个真实HR案例、一个你常用的面试问题模板、或一个你想记录的工作心得" },
+          { n: "5", title: "与AI对话，提炼新笔记", desc: "在知识库中点击「AI对话」→ 基于你的知识库向AI提问（如'基于我的笔记，总结出3条适合我公司的HR改进建议'）→ 将对话中AI的回答和你的补充，整理成一篇新的笔记保存" },
+        ].map(item => (
+          <div key={item.n} className="flex items-start gap-3 rounded-xl bg-white/[0.03] p-4">
+            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-emerald-300/10 text-sm font-black text-emerald-300">{item.n}</span>
+            <div>
+              {item.title && <div className="font-bold text-emerald-100">{item.title}</div>}
+              <div className="text-emerald-100/60">{item.desc}</div>
+            </div>
+          </div>
+        ))}
+      </div>
     </LearnBlock>
 
-    <LearnBlock title="工具推荐">
-      <StepTable headers={["工具", "特点", "适合场景"]} rows={[
-        ["Kimi kimi.moonshot.cn", "免费、超长上下文、拖拽上传", "快速体验知识库效果"],
-        ["扣子 Coze 知识库", "可挂载到Bot、支持自动更新", "HR自助问答Bot"],
-        ["ima (ima.qq.com)", "腾讯知识库、微信集成", "企业内部知识管理"],
+    <LearnBlock title="知识库平台推荐">
+      <StepTable headers={["优先级", "平台", "一键访问", "特点"]} rows={[
+        ["🥇 首选", "ima (腾讯)", <a key="i" href="https://ima.qq.com" target="_blank" rel="noopener noreferrer" className="text-emerald-300 underline hover:text-emerald-200">ima.qq.com ↗</a>, "微信生态深度集成、公众号一键保存、AI对话基于个人知识库"],
+        ["🥈 次选", "Obsidian", <a key="o" href="https://obsidian.md" target="_blank" rel="noopener noreferrer" className="text-emerald-300 underline hover:text-emerald-200">obsidian.md ↗</a>, "本地优先、Markdown格式、插件生态强大、支持AI插件"],
+        ["🥉 第三", "Gemini Notebook (原NotebookLM)", <a key="g" href="https://notebooklm.google.com" target="_blank" rel="noopener noreferrer" className="text-emerald-300 underline hover:text-emerald-200">notebooklm.google.com ↗</a>, "谷歌出品、深度分析文档、自动生成摘要和问答"],
       ]} />
+      <p className="mt-3 text-sm text-emerald-100/40">💡 建议从 ima 开始——它能直接从微信保存公众号文章，最符合HR的日常工作流。</p>
     </LearnBlock>
 
     <VoteBar module="kb" />

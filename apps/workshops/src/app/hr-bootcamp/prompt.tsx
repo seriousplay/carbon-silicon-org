@@ -44,9 +44,9 @@ export function PromptModule({ completed, onToggleComplete, onNext, onPrev }: {
 
     <LearnBlock title="工具推荐">
       <StepTable headers={["工具", "特点", "适合场景"]} rows={[
-        ["豆包 doubao.com", "免费、中文优化、响应快", "日常提示词练习、HR文案"],
-        ["DeepSeek chat.deepseek.com", "免费、推理能力强", "分析类任务、复杂提示词"],
-        ["Kimi kimi.moonshot.cn", "超长上下文、可上传文件", "读简历/制度后提问"],
+        ["豆包", <a key="d" href="https://doubao.com" target="_blank" rel="noopener noreferrer" className="text-emerald-300 underline hover:text-emerald-200">doubao.com ↗</a>, "免费、中文优化、响应快", "日常提示词练习、HR文案"],
+        ["DeepSeek", <a key="ds" href="https://chat.deepseek.com" target="_blank" rel="noopener noreferrer" className="text-emerald-300 underline hover:text-emerald-200">chat.deepseek.com ↗</a>, "免费、推理能力强", "分析类任务、复杂提示词"],
+        ["Kimi", <a key="km" href="https://kimi.moonshot.cn" target="_blank" rel="noopener noreferrer" className="text-emerald-300 underline hover:text-emerald-200">kimi.moonshot.cn ↗</a>, "超长上下文、可上传文件", "读简历/制度后提问"],
       ]} />
     </LearnBlock>
 
