@@ -40,7 +40,7 @@ export default function HRBootcampPage() {
   const [bonusPoints, setBonusPoints] = useState(0);
   const [showLevelUp, setShowLevelUp] = useState(false);
 
-  const totalPoints = completed.size * 20 + bonusPoints;
+  const totalPoints = modules.filter(m => completed.has(m.id)).reduce((sum, m) => sum + m.points, 0) + bonusPoints;
   const currentLevel = [...levels].reverse().find(l => totalPoints >= l.min)!;
   const nextLevel = levels.find(l => l.min > totalPoints);
   const progressPct = nextLevel ? Math.round(((totalPoints - currentLevel.min) / (nextLevel.min - currentLevel.min)) * 100) : 100;
@@ -158,7 +158,7 @@ export default function HRBootcampPage() {
         <div className="fixed bottom-6 left-1/2 z-50 -translate-x-1/2 animate-[slideUp_0.4s_ease-out]">
           <div className="flex items-center gap-3 rounded-full border border-emerald-300/30 bg-emerald-300/15 px-6 py-3 backdrop-blur-md">
             <Zap className="h-5 w-5 text-emerald-300" />
-            <span className="text-sm font-black text-emerald-100">+20 积分！继续加油 💪</span>
+            <span className="text-sm font-black text-emerald-100">+{modules.find(m => m.id === active)?.points || 20} 积分！继续加油 💪</span>
           </div>
         </div>
       )}
