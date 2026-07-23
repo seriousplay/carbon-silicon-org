@@ -302,3 +302,32 @@ model User {
 
   @@map("users")
 }
+
+// ─── HR Bootcamp: Peer Review ─────────────────────
+
+model BootcampProject {
+  id          String   @id @default(uuid()) @db.Uuid
+  authorName  String   @map("author_name")
+  authorRole  String?  @map("author_role")
+  title       String
+  description String
+  url         String?
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz()
+
+  votes       BootcampVote[]
+
+  @@map("bootcamp_projects")
+}
+
+model BootcampVote {
+  id        String   @id @default(uuid()) @db.Uuid
+  projectId String   @map("project_id") @db.Uuid
+  voterName String   @map("voter_name")
+  score     Int      // 1-5 stars
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz()
+
+  project   BootcampProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, voterName])
+  @@map("bootcamp_votes")
+}
