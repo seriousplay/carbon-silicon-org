@@ -1,7 +1,7 @@
 "use client";
 
 import { CheckCircle2 } from "lucide-react";
-import { LearnBlock, StepTable, FlowDiagram, PracticeInput, VoteBar, PeerAnswers, ModulePage } from "./shared";
+import { LearnBlock, StepTable, FlowDiagram, PracticeInput, VoteBar, ModulePage } from "./shared";
 
 export function AgentModule({ completed, onToggleComplete, onNext, onPrev }: {
   completed: boolean; onToggleComplete: () => void; onNext: () => void; onPrev: () => void;

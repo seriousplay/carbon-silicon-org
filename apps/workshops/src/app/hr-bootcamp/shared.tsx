@@ -79,10 +79,6 @@ export function FlowDiagram({ steps }: { steps: { icon: string; label: string }[
 
 export function VoteBar({ module }: { module: string }) {
   const [voted, setVoted] = useState<"got" | "need" | null>(null);
-  // Simulated peer data
-  const baseGot = 78 + (module.charCodeAt(0) % 12);
-  const gotPct = voted === "got" ? baseGot + 4 : voted === "need" ? baseGot - 3 : baseGot;
-  const needPct = 100 - gotPct;
 
   return (
     <div className="mt-8 rounded-2xl border border-emerald-200/10 bg-white/[0.02] p-6">
@@ -91,20 +87,10 @@ export function VoteBar({ module }: { module: string }) {
         <span className="text-base font-bold text-emerald-100">这个概念你理解了吗？</span>
       </div>
       {voted ? (
-        <div>
-          <div className="flex h-10 overflow-hidden rounded-full">
-            <div className="flex items-center justify-center bg-emerald-400/20 text-sm font-bold text-emerald-300 transition-all duration-700" style={{ width: `${gotPct}%` }}>
-              {gotPct > 15 && `理解了 ${gotPct}%`}
-            </div>
-            <div className="flex items-center justify-center bg-amber-400/15 text-sm font-bold text-amber-300 transition-all duration-700" style={{ width: `${needPct}%` }}>
-              {needPct > 15 && `还需练习 ${needPct}%`}
-            </div>
-          </div>
-          <p className="mt-3 text-sm text-emerald-100/40">
-            {voted === "got"
-              ? "👍 你和大多数同学一样已经掌握了！试着把学到的用到实际工作中。"
-              : "💡 没关系！建议重新看一遍「概念理解」部分，或者查看下面其他同学的回答。"}
-          </p>
+        <div className="rounded-xl bg-emerald-300/[0.06] border border-emerald-300/10 p-4 text-base text-emerald-100/70">
+          {voted === "got"
+            ? "👍 你已标记为「理解了」。试着把学到的用到实际工作中。"
+            : "💡 你已标记为「还需练习」。建议重新看一遍概念理解部分，或复习实践练习。"}
         </div>
       ) : (
         <div className="flex gap-3">

@@ -1,7 +1,7 @@
 "use client";
 
 import { CheckCircle2 } from "lucide-react";
-import { LearnBlock, StepTable, CompareCard, VoteBar, PeerAnswers, ModulePage } from "./shared";
+import { LearnBlock, StepTable, CompareCard, VoteBar, ModulePage } from "./shared";
 
 export function KBModule({ completed, onToggleComplete, onNext, onPrev }: {
   completed: boolean; onToggleComplete: () => void; onNext: () => void; onPrev: () => void;
