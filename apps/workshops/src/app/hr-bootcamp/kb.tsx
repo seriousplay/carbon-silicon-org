@@ -64,9 +64,6 @@ export function KBModule({ completed, onToggleComplete, onNext, onPrev }: {
     </LearnBlock>
 
     <VoteBar module="kb" />
-    <PeerAnswers answers={[
-      { author: "刘HR", role: "跨国公司HRM", text: "我们公司有6个国家的员工手册，以前HR每天回答几十个重复的制度问题。我把所有制度文档上传到扣子知识库，做了个员工自助Bot。上线一个月，HR的制度问答时间从每天2小时降到20分钟。", likes: 38 },
-    ]} />
 
     <div className="mt-10 flex items-center justify-between border-t border-emerald-200/8 pt-6">
       <button onClick={onPrev} className="rounded-full border border-emerald-200/15 px-5 py-2.5 text-sm font-bold text-emerald-100/60 transition hover:bg-white/5">← 上一模块</button>

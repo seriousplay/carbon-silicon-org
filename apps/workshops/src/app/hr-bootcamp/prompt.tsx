@@ -51,10 +51,6 @@ export function PromptModule({ completed, onToggleComplete, onNext, onPrev }: {
     </LearnBlock>
 
     <VoteBar module="prompt" />
-    <PeerAnswers answers={[
-      { author: "张HR", role: "某互联网公司招聘负责人", text: "我的对齐公式版本：你是一位有10年经验的HRBP（角色）。请为市场部高级经理张伟写一封年终绩效反馈（目标）。他今年主导了3次大型活动，但团队管理出现过两次沟通事故（画像）。请先肯定贡献，再指出改进点，最后给3条行动建议（步骤）。字数500-600，语气温暖专业（限制）。", likes: 23 },
-      { author: "李HR", role: "制造业HR主管", text: "对齐公式真的很实用！我用它写了一份车间主管的JD，直接发给了招聘平台，收到的简历匹配度明显提高了。关键是习惯性地补全五个要素。", likes: 17 },
-    ]} />
 
     <div className="mt-10 flex items-center justify-between border-t border-emerald-200/8 pt-6">
       <button onClick={onPrev} className="rounded-full border border-emerald-200/15 px-5 py-2.5 text-sm font-bold text-emerald-100/60 transition hover:bg-white/5">← 上一模块</button>

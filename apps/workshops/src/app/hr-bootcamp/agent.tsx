@@ -44,10 +44,6 @@ export function AgentModule({ completed, onToggleComplete, onNext, onPrev }: {
     </LearnBlock>
 
     <VoteBar module="agent" />
-    <PeerAnswers answers={[
-      { author: "王HR", role: "科技公司HRD", text: "我设计了一个离职预警Agent：输入是多源信号（考勤异常+绩效下降+沟通频率降低），Agent自动评估风险等级，生成干预建议和沟通脚本。HR只需要审核和执行。最重要的是——每次干预结果会回流校准模型。", likes: 31 },
-      { author: "陈HR", role: "零售业HR经理", text: "用Workbuddy 15分钟就搭了一个培训需求分析Agent。输入学员岗位和绩效数据，自动输出培训方案。不是技术问题，是思维转变——从'我一步步操作AI'到'我交给AI一个任务'。", likes: 19 },
-    ]} />
 
     <div className="mt-10 flex items-center justify-between border-t border-emerald-200/8 pt-6">
       <button onClick={onPrev} className="rounded-full border border-emerald-200/15 px-5 py-2.5 text-sm font-bold text-emerald-100/60 transition hover:bg-white/5">← 上一模块</button>
