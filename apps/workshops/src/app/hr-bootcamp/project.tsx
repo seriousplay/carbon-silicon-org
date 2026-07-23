@@ -29,19 +29,19 @@ export function ProjectModule({ completed, onToggleComplete, onNext, onPrev }: {
       </div>
     </LearnBlock>
 
-    <LearnBlock title="第二步：智能体制定开发计划">
-      <p className="mb-4">将第一步输出的<strong className="text-emerald-200">PRD文档</strong>作为附件输入给 Workbuddy，让它制定详细的开发计划。</p>
+    <LearnBlock title="第二步：AI制定开发计划">
+      <p className="mb-4">将第一步输出的<strong className="text-emerald-200">PRD文档</strong>输入给 AI 编程工具（Zcode / Codex），让它制定详细的开发计划。</p>
       <div className="rounded-xl border border-emerald-200/10 bg-white/[0.02] p-4">
         <div className="text-base font-bold text-emerald-200 mb-2">📎 操作步骤</div>
         <div className="space-y-2 text-base text-emerald-100/70">
-          <p><strong>2.1</strong> 打开 <a href="https://workbuddy.ai" target="_blank" rel="noopener noreferrer" className="text-emerald-300 underline hover:text-emerald-200">Workbuddy ↗</a>，创建新项目。</p>
-          <p><strong>2.2</strong> 将第一步AI输出的PRD文档<strong>复制粘贴或作为附件上传</strong>给 Workbuddy。</p>
+          <p><strong>2.1</strong> 打开 <a href="https://zcode.ai" target="_blank" rel="noopener noreferrer" className="text-emerald-300 underline hover:text-emerald-200">Zcode ↗</a> 或 <a href="https://codex.ai" target="_blank" rel="noopener noreferrer" className="text-emerald-300 underline hover:text-emerald-200">Codex ↗</a>，创建新项目/对话。</p>
+          <p><strong>2.2</strong> 将第一步AI输出的PRD文档<strong>复制粘贴或作为附件上传</strong>。</p>
           <p><strong>2.3</strong> 输入指令：<em>"基于这份PRD，制定一个完整的开发计划。包括：技术栈选择、项目结构、分阶段开发任务、每个任务的输入输出、预估时间。"</em></p>
-          <p><strong>2.4</strong> 审核 Workbuddy 返回的开发计划，确认或调整。确保计划中每个步骤都有<strong>明确的交付物</strong>。</p>
+          <p><strong>2.4</strong> 审核 AI 返回的开发计划，确认或调整。确保计划中每个步骤都有<strong>明确的交付物</strong>。</p>
         </div>
       </div>
       <div className="mt-3 rounded-xl bg-amber-300/[0.04] border border-amber-300/10 p-4 text-sm text-amber-100/60">
-        <strong className="text-amber-300">⚡ 关键：</strong>Workbuddy不只是给你一个计划——它会拆解任务、生成代码骨架、甚至自动执行部分开发步骤。你作为产品经理审核和确认，Workbuddy作为全栈工程师执行。
+        <strong className="text-amber-300">⚡ 关键：</strong>Zcode/Codex不只是给你一个计划——它会拆解任务、生成代码骨架、甚至自动执行部分开发步骤。你作为产品经理审核和确认，AI作为全栈工程师执行。
       </div>
     </LearnBlock>
 
