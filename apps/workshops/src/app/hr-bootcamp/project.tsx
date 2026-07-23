@@ -118,7 +118,7 @@ export function ProjectModule({ completed, onToggleComplete, onNext, onPrev }: {
 
     {/* ─── Peer Gallery & Scoring ─── */}
     <LearnBlock title="🏆 项目展示厅 · 同侪评分">
-      <p className="mb-4 text-emerald-100/60">完成项目后，提交到展示厅。每个人可以对他人项目打分（1-5星）。<strong className="text-emerald-300">排行榜前三名将获得加权积分</strong>：🥇第1名+60分，🥈第2名+40分，🥉第3名+20分。</p>
+      <p className="mb-4 text-emerald-100/60">完成项目后，提交到展示厅。每个人可以对他人项目打分（1-5星）。<strong className="text-emerald-300">排行榜前三名将获得阶梯积分</strong>：🥇第1名+120分，🥈第2名+100分，🥉第3名+80分。</p>
 
       {/* Leaderboard */}
       {top3.length > 0 && (
