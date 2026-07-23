@@ -10,7 +10,7 @@ type Project = {
   createdAt: string; voteCount: number; avgScore: number;
 };
 
-export function Gallery({ userName }: { userName: string }) {
+export function Gallery({ userName, onSubmit }: { userName: string; onSubmit: () => void }) {
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -39,6 +39,7 @@ export function Gallery({ userName }: { userName: string }) {
         body: JSON.stringify({ authorName: authorName || "匿名", authorRole, title, description, url }),
       });
       setShowForm(false); setTitle(""); setDescription(""); setUrl(""); setAuthorRole(""); fetchProjects();
+      onSubmit(); // Award points for first submission
     } catch {}
     setSubmitting(false);
   };

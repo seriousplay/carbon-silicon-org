@@ -166,7 +166,7 @@ export default function HRBootcampPage() {
             {active === "loop" && <LoopModule completed={completed.has("loop")} onToggleComplete={() => toggleComplete("loop")} onNext={goNext} onPrev={goPrev} />}
             {active === "project" && <ProjectModule completed={completed.has("project")} onToggleComplete={() => toggleComplete("project")} onNext={goNext} onPrev={goPrev} />}
             {active === "gallery" && (
-              userName ? <Gallery userName={userName} /> :
+              userName ? <Gallery userName={userName} onSubmit={() => setBonusPoints(p => p + 120)} /> :
               <div className="flex items-center justify-center min-h-[60vh]">
                 <div className="rounded-2xl border border-emerald-200/10 bg-white/[0.02] p-8 text-center max-w-md">
                   <span className="text-4xl">👋</span>
