@@ -9,6 +9,7 @@ import { KBModule } from "./kb";
 import { SafetyModule } from "./safety";
 import { LoopModule } from "./loop";
 import { ProjectModule } from "./project";
+import { Gallery } from "./gallery";
 
 // ─── Module Definitions ───────────────────────────────
 const modules = [
@@ -39,6 +40,16 @@ export default function HRBootcampPage() {
   const [completed, setCompleted] = useState<Set<string>>(new Set());
   const [bonusPoints, setBonusPoints] = useState(0);
   const [showLevelUp, setShowLevelUp] = useState(false);
+  const [userName, setUserName] = useState<string>("");
+  const [nameInput, setNameInput] = useState("");
+
+  // Identity: sessionStorage for cross-session persistence
+  useEffect(() => { setUserName(sessionStorage.getItem("hrbc_name") || ""); }, []);
+  const saveName = () => {
+    if (!nameInput.trim()) return;
+    sessionStorage.setItem("hrbc_name", nameInput.trim());
+    setUserName(nameInput.trim());
+  };
 
   const totalPoints = modules.filter(m => completed.has(m.id)).reduce((sum, m) => sum + m.points, 0) + bonusPoints;
   const currentLevel = [...levels].reverse().find(l => totalPoints >= l.min)!;
@@ -114,6 +125,11 @@ export default function HRBootcampPage() {
           {modules.slice(6).map(m => (
             <ModuleNavBtn key={m.id} module={m} active={active === m.id} completed={completed.has(m.id)} onClick={() => { setActive(m.id); setSidebarOpen(false); }} />
           ))}
+
+          <div className="mt-5 mb-2 px-3 text-[11px] font-bold uppercase tracking-widest text-emerald-300/35">社区</div>
+          <NavBtn active={active === "gallery"} onClick={() => { setActive("gallery"); setSidebarOpen(false); }}>
+            <span className="text-base">🏆</span> 项目展示厅
+          </NavBtn>
         </nav>
       </aside>
 
@@ -149,6 +165,21 @@ export default function HRBootcampPage() {
             {active === "safety" && <SafetyModule completed={completed.has("safety")} onToggleComplete={() => toggleComplete("safety")} onNext={goNext} onPrev={goPrev} />}
             {active === "loop" && <LoopModule completed={completed.has("loop")} onToggleComplete={() => toggleComplete("loop")} onNext={goNext} onPrev={goPrev} />}
             {active === "project" && <ProjectModule completed={completed.has("project")} onToggleComplete={() => toggleComplete("project")} onNext={goNext} onPrev={goPrev} />}
+            {active === "gallery" && (
+              userName ? <Gallery userName={userName} /> :
+              <div className="flex items-center justify-center min-h-[60vh]">
+                <div className="rounded-2xl border border-emerald-200/10 bg-white/[0.02] p-8 text-center max-w-md">
+                  <span className="text-4xl">👋</span>
+                  <h2 className="mt-4 text-xl font-black text-white">先介绍一下你自己</h2>
+                  <p className="mt-2 text-base text-emerald-100/50">设置你的名字后，就可以提交项目和参与投票了。</p>
+                  <div className="mt-6 flex gap-2">
+                    <input className="flex-1 rounded-xl border border-emerald-200/15 bg-black/20 px-4 py-2.5 text-base text-emerald-100 outline-none focus:border-emerald-300/40" placeholder="你的名字" value={nameInput} onChange={e => setNameInput(e.target.value)} onKeyDown={e => e.key === "Enter" && saveName()} />
+                    <button onClick={saveName} className="rounded-full bg-emerald-300 px-6 py-2.5 text-sm font-black text-[#07110f] transition hover:scale-105">确认</button>
+                  </div>
+                  <p className="mt-4 text-sm text-emerald-100/30">不需要密码。名字用于项目署名和投票，可随时修改。</p>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </main>
