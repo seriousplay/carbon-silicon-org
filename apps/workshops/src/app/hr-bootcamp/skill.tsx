@@ -68,12 +68,15 @@ references/绩效评估标准.md
 references/优秀反馈范例.md`}</pre>
     </LearnBlock>
 
-    <LearnBlock title="工具推荐">
-      <StepTable headers={["工具", "特点", "适合场景"]} rows={[
-        ["扣子 Coze", "可视化创建Bot、支持知识库挂载", "HR Skill入门首选"],
-        ["ima (ima.qq.com)", "腾讯出品、支持知识库+Skill", "微信生态集成"],
-        ["Cursor / Claude", "支持SKILL.md格式的专业Skill", "需要文件结构的进阶Skill"],
+    <LearnBlock title="技能市场 — 搜索现成的Skill">
+      <p className="mb-4">现在几乎所有智能体平台都支持Skill——你不需要从零搭建。去这些技能市场搜索HR相关的现成Skill，直接使用或修改即可：</p>
+      <StepTable headers={["技能市场", "链接", "特点"]} rows={[
+        ["Workbuddy SkillHub", "workbuddy.ai/skills", "原生Skill生态，一键安装使用"],
+        ["扣子技能商店", "coze.cn/store", "海量中文Skill，覆盖HR/办公/教育场景"],
+        ["SkillsMp", "skillsmp.com", "Skill集合平台，跨工具搜索和分享"],
+        ["Claude Projects", "claude.ai/projects", "上传知识库+自定义指令，相当于轻量Skill"],
       ]} />
+      <p className="mt-4 text-sm text-emerald-100/40">💡 建议先搜索"HR"、"招聘"、"绩效"等关键词，找到现成的Skill后先试用，再根据自己的业务修改SOP和参考文档。</p>
     </LearnBlock>
 
     <VoteBar module="skill" />
