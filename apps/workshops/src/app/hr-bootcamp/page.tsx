@@ -124,29 +124,9 @@ export default function HRBootcampPage() {
             🏆 项目展示厅
           </NavBtn>
 
-          <div className="mt-5 mb-2 px-3 text-[11px] font-bold uppercase tracking-widest text-emerald-300/35">碳硅组织资源</div>
-          <div className="space-y-1 px-2">
-            <a href="https://csi-org.com/loopos" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-emerald-100/50 transition hover:bg-white/[0.03] hover:text-emerald-100">
-              🔄 组织操作系统 <span className="text-xs text-emerald-300/40">LoopOS ↗</span>
-            </a>
-            <a href="https://csi-org.com/book" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-emerald-100/50 transition hover:bg-white/[0.03] hover:text-emerald-100">
-              📖 配套工具库 <span className="text-xs text-emerald-300/40">22个OD工具 ↗</span>
-            </a>
-            <a href="https://ima.qq.com/wiki/?shareId=9ce99ea4be1ff387fb8fbb3dfdb57ff28de8bf42a2cbefcb3c34d475be1a9eac" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-emerald-100/50 transition hover:bg-white/[0.03] hover:text-emerald-100">
-              📚 AI原生组织知识库 <span className="text-xs text-emerald-300/40">ima ↗</span>
-            </a>
-            {/* QR codes */}
-            <div className="mt-3 grid grid-cols-2 gap-3">
-              <div className="flex flex-col items-center rounded-xl border border-emerald-200/8 bg-white/[0.02] p-3">
-                <img src="/workshops/qr-knowledge.png" alt="知识库二维码" className="h-24 w-24 rounded-lg" />
-                <span className="mt-2 text-xs text-emerald-100/40">📚 ima知识库</span>
-              </div>
-              <div className="flex flex-col items-center rounded-xl border border-emerald-200/8 bg-white/[0.02] p-3">
-                <img src="/workshops/qr-wechat.jpg" alt="公众号二维码" className="h-24 w-24 rounded-lg" />
-                <span className="mt-2 text-xs text-emerald-100/40">💬 碳硅组织研习社</span>
-              </div>
-            </div>
-          </div>
+          <NavBtn active={active === "resources"} onClick={() => { setActive("resources"); setSidebarOpen(false); }}>
+            🔗 碳硅组织资源
+          </NavBtn>
         </nav>
       </aside>
 
@@ -195,6 +175,41 @@ export default function HRBootcampPage() {
                     <button onClick={saveName} className="rounded-full bg-emerald-300 px-6 py-2.5 text-sm font-black text-[#07110f] transition hover:scale-105">确认</button>
                   </div>
                   <p className="mt-4 text-sm text-emerald-100/30">不需要密码。名字用于项目署名和投票，可随时修改。</p>
+                </div>
+              </div>
+            )}
+            {active === "resources" && (
+              <div className="mx-auto max-w-2xl px-5 py-10 sm:px-8 sm:py-14">
+                <h2 className="text-3xl font-black tracking-tight text-white">🔗 碳硅组织资源</h2>
+                <p className="mt-3 text-lg leading-8 text-emerald-100/55">与本期课程配套的碳硅组织产品生态和学习社区。</p>
+                <div className="mt-8 space-y-4">
+                  <a href="https://csi-org.com/loopos" target="_blank" rel="noopener noreferrer" className="flex items-center gap-4 rounded-2xl border border-emerald-200/10 bg-white/[0.02] p-5 transition hover:border-emerald-200/25 hover:bg-white/[0.04]">
+                    <span className="text-2xl">🔄</span>
+                    <div className="flex-1"><div className="font-bold text-emerald-100">组织操作系统 LoopOS</div><div className="text-sm text-emerald-100/40">回路治理操作系统——把个人AI能力变成组织资产</div></div>
+                    <span className="text-xs text-emerald-300/40">↗</span>
+                  </a>
+                  <a href="https://csi-org.com/book" target="_blank" rel="noopener noreferrer" className="flex items-center gap-4 rounded-2xl border border-emerald-200/10 bg-white/[0.02] p-5 transition hover:border-emerald-200/25 hover:bg-white/[0.04]">
+                    <span className="text-2xl">📖</span>
+                    <div className="flex-1"><div className="font-bold text-emerald-100">配套工具库</div><div className="text-sm text-emerald-100/40">22个OD工具 + 组织诊断测评</div></div>
+                    <span className="text-xs text-emerald-300/40">↗</span>
+                  </a>
+                  <a href="https://ima.qq.com/wiki/?shareId=9ce99ea4be1ff387fb8fbb3dfdb57ff28de8bf42a2cbefcb3c34d475be1a9eac" target="_blank" rel="noopener noreferrer" className="flex items-center gap-4 rounded-2xl border border-emerald-200/10 bg-white/[0.02] p-5 transition hover:border-emerald-200/25 hover:bg-white/[0.04]">
+                    <span className="text-2xl">📚</span>
+                    <div className="flex-1"><div className="font-bold text-emerald-100">AI原生组织全球实践 · ima知识库</div><div className="text-sm text-emerald-100/40">全球AI原生组织案例、方法论和实践工具</div></div>
+                    <span className="text-xs text-emerald-300/40">↗</span>
+                  </a>
+                </div>
+                <div className="mt-8 grid gap-4 sm:grid-cols-2">
+                  <div className="flex flex-col items-center rounded-2xl border border-emerald-200/10 bg-white/[0.02] p-6">
+                    <img src="/workshops/qr-knowledge.png" alt="知识库二维码" className="h-32 w-32 rounded-xl" />
+                    <span className="mt-3 text-sm font-bold text-emerald-100/60">📚 扫码进入 ima 知识库</span>
+                    <span className="text-xs text-emerald-100/30">AI原生组织全球实践</span>
+                  </div>
+                  <div className="flex flex-col items-center rounded-2xl border border-emerald-200/10 bg-white/[0.02] p-6">
+                    <img src="/workshops/qr-wechat.jpg" alt="公众号二维码" className="h-32 w-32 rounded-xl" />
+                    <span className="mt-3 text-sm font-bold text-emerald-100/60">💬 扫码关注公众号</span>
+                    <span className="text-xs text-emerald-100/30">碳硅组织研习社</span>
+                  </div>
                 </div>
               </div>
             )}
