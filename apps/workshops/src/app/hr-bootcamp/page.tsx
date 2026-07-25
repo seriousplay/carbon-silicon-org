@@ -10,11 +10,11 @@ import { SafetyModule } from "./safety";
 import { LoopModule } from "./loop";
 import { ProjectModule } from "./project";
 import { Gallery } from "./gallery";
+import { IntroModule } from "./intro";
 
 // ─── Module Definitions ───────────────────────────────
 const modules = [
-  { id: "prompt", num: 1, icon: "💬", title: "提示词", subtitle: "给AI下一份清晰任务书——掌握对齐公式，一次输出可用结果。", points: 20 },
-  { id: "agent", num: 2, icon: "🤖", title: "智能体", subtitle: "不只是问答，而是连续办事——交给AI一个目标，它自己拆步骤交付。", points: 20 },
+  { id: "prompt", num: 1, icon: "💬", title: "提示词", subtitle: "给AI下一份清晰任务书——掌握对齐公式，一次输出可用结果。", points: 20 },  { id: "agent", num: 2, icon: "🤖", title: "智能体", subtitle: "不只是问答，而是连续办事——交给AI一个目标，它自己拆步骤交付。", points: 20 },
   { id: "skill", num: 3, icon: "⚡", title: "技能", subtitle: "把经验变成可调用外挂——让AI稳定产出专业级交付物。", points: 20 },
   { id: "kb", num: 4, icon: "📚", title: "知识库", subtitle: "让AI基于你的资料回答——不再泛泛而谈，而是有据可查。", points: 20 },
   { id: "safety", num: 5, icon: "🛡️", title: "风险边界", subtitle: "什么判断不能交给AI？HR合规的六维度审核法与八条红线。", points: 20 },
@@ -111,6 +111,9 @@ export default function HRBootcampPage() {
           <NavBtn active={active === "welcome"} onClick={() => { setActive("welcome"); setSidebarOpen(false); }}>
             🏠 封面与课程总览
           </NavBtn>
+          <NavBtn active={active === "intro"} onClick={() => { setActive("intro"); setSidebarOpen(false); }}>
+            🗺️ 开篇导入：组织迁徙地图
+          </NavBtn>
 
           {modules.map(m => (
             <ModuleNavBtn key={m.id} module={m} active={active === m.id} completed={completed.has(m.id)} onClick={() => { setActive(m.id); setSidebarOpen(false); }} />
@@ -147,7 +150,8 @@ export default function HRBootcampPage() {
         {/* Content */}
         <div className="flex-1 overflow-y-auto scroll-smooth">
           <div key={active} className="animate-[fadeIn_0.3s_ease-out]">
-            {active === "welcome" && <WelcomeSection completed={completed} onStart={() => setActive("prompt")} />}
+            {active === "welcome" && <WelcomeSection completed={completed} onStart={() => setActive("intro")} />}
+            {active === "intro" && <IntroModule onNext={() => setActive("prompt")} />}
             {active === "prompt" && <PromptModule completed={completed.has("prompt")} onToggleComplete={() => toggleComplete("prompt")} onNext={goNext} onPrev={goPrev} />}
             {active === "agent" && <AgentModule completed={completed.has("agent")} onToggleComplete={() => toggleComplete("agent")} onNext={goNext} onPrev={goPrev} />}
             {active === "skill" && <SkillModule completed={completed.has("skill")} onToggleComplete={() => toggleComplete("skill")} onNext={goNext} onPrev={goPrev} />}
