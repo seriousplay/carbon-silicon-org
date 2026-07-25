@@ -123,6 +123,30 @@ export default function HRBootcampPage() {
           <NavBtn active={active === "gallery"} onClick={() => { setActive("gallery"); setSidebarOpen(false); }}>
             🏆 项目展示厅
           </NavBtn>
+
+          <div className="mt-5 mb-2 px-3 text-[11px] font-bold uppercase tracking-widest text-emerald-300/35">碳硅组织资源</div>
+          <div className="space-y-1 px-2">
+            <a href="https://csi-org.com/loopos" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-emerald-100/50 transition hover:bg-white/[0.03] hover:text-emerald-100">
+              🔄 组织操作系统 <span className="text-xs text-emerald-300/40">LoopOS ↗</span>
+            </a>
+            <a href="https://csi-org.com/book" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-emerald-100/50 transition hover:bg-white/[0.03] hover:text-emerald-100">
+              📖 配套工具库 <span className="text-xs text-emerald-300/40">22个OD工具 ↗</span>
+            </a>
+            <a href="https://ima.qq.com/wiki/?shareId=9ce99ea4be1ff387fb8fbb3dfdb57ff28de8bf42a2cbefcb3c34d475be1a9eac" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-emerald-100/50 transition hover:bg-white/[0.03] hover:text-emerald-100">
+              📚 AI原生组织知识库 <span className="text-xs text-emerald-300/40">ima ↗</span>
+            </a>
+            {/* QR codes */}
+            <div className="mt-3 grid grid-cols-2 gap-3">
+              <div className="flex flex-col items-center rounded-xl border border-emerald-200/8 bg-white/[0.02] p-3">
+                <img src="/workshops/qr-knowledge.png" alt="知识库二维码" className="h-24 w-24 rounded-lg" />
+                <span className="mt-2 text-xs text-emerald-100/40">📚 ima知识库</span>
+              </div>
+              <div className="flex flex-col items-center rounded-xl border border-emerald-200/8 bg-white/[0.02] p-3">
+                <img src="/workshops/qr-wechat.jpg" alt="公众号二维码" className="h-24 w-24 rounded-lg" />
+                <span className="mt-2 text-xs text-emerald-100/40">💬 碳硅组织研习社</span>
+              </div>
+            </div>
+          </div>
         </nav>
       </aside>
 
