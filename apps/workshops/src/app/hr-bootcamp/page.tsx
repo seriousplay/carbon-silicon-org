@@ -183,20 +183,20 @@ export default function HRBootcampPage() {
                 <h2 className="text-3xl font-black tracking-tight text-white">🔗 碳硅组织资源</h2>
                 <p className="mt-3 text-lg leading-8 text-emerald-100/55">与本期课程配套的碳硅组织产品生态和学习社区。</p>
                 <div className="mt-8 space-y-4">
-                  <a href="https://csi-org.com/loopos" target="_blank" rel="noopener noreferrer" className="flex items-center gap-4 rounded-2xl border border-emerald-200/10 bg-white/[0.02] p-5 transition hover:border-emerald-200/25 hover:bg-white/[0.04]">
+                  <a href="https://csi-org.com/loopos" target="_blank" rel="noopener noreferrer" className="group flex items-center gap-4 rounded-2xl border border-emerald-300/20 bg-emerald-300/[0.04] p-5 transition hover:border-emerald-300/40 hover:bg-emerald-300/[0.08]">
                     <span className="text-2xl">🔄</span>
                     <div className="flex-1"><div className="font-bold text-emerald-100">组织操作系统 LoopOS</div><div className="text-sm text-emerald-100/40">回路治理操作系统——把个人AI能力变成组织资产</div></div>
-                    <span className="text-xs text-emerald-300/40">↗</span>
+                    <span className="rounded-full bg-emerald-400/20 px-3 py-1 text-sm font-bold text-emerald-300 ring-1 ring-emerald-400/30 transition group-hover:bg-emerald-400/30">访问 ↗</span>
                   </a>
-                  <a href="https://csi-org.com/book" target="_blank" rel="noopener noreferrer" className="flex items-center gap-4 rounded-2xl border border-emerald-200/10 bg-white/[0.02] p-5 transition hover:border-emerald-200/25 hover:bg-white/[0.04]">
+                  <a href="https://csi-org.com/book" target="_blank" rel="noopener noreferrer" className="group flex items-center gap-4 rounded-2xl border border-emerald-300/20 bg-emerald-300/[0.04] p-5 transition hover:border-emerald-300/40 hover:bg-emerald-300/[0.08]">
                     <span className="text-2xl">📖</span>
                     <div className="flex-1"><div className="font-bold text-emerald-100">配套工具库</div><div className="text-sm text-emerald-100/40">22个OD工具 + 组织诊断测评</div></div>
-                    <span className="text-xs text-emerald-300/40">↗</span>
+                    <span className="rounded-full bg-emerald-400/20 px-3 py-1 text-sm font-bold text-emerald-300 ring-1 ring-emerald-400/30 transition group-hover:bg-emerald-400/30">访问 ↗</span>
                   </a>
-                  <a href="https://ima.qq.com/wiki/?shareId=9ce99ea4be1ff387fb8fbb3dfdb57ff28de8bf42a2cbefcb3c34d475be1a9eac" target="_blank" rel="noopener noreferrer" className="flex items-center gap-4 rounded-2xl border border-emerald-200/10 bg-white/[0.02] p-5 transition hover:border-emerald-200/25 hover:bg-white/[0.04]">
+                  <a href="https://ima.qq.com/wiki/?shareId=9ce99ea4be1ff387fb8fbb3dfdb57ff28de8bf42a2cbefcb3c34d475be1a9eac" target="_blank" rel="noopener noreferrer" className="group flex items-center gap-4 rounded-2xl border border-emerald-300/20 bg-emerald-300/[0.04] p-5 transition hover:border-emerald-300/40 hover:bg-emerald-300/[0.08]">
                     <span className="text-2xl">📚</span>
                     <div className="flex-1"><div className="font-bold text-emerald-100">AI原生组织全球实践 · ima知识库</div><div className="text-sm text-emerald-100/40">全球AI原生组织案例、方法论和实践工具</div></div>
-                    <span className="text-xs text-emerald-300/40">↗</span>
+                    <span className="rounded-full bg-emerald-400/20 px-3 py-1 text-sm font-bold text-emerald-300 ring-1 ring-emerald-400/30 transition group-hover:bg-emerald-400/30">访问 ↗</span>
                   </a>
                 </div>
                 <div className="mt-8 grid gap-4 sm:grid-cols-2">

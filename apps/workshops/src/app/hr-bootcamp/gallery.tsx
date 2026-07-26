@@ -144,7 +144,7 @@ export function Gallery({ userName, onSubmit }: { userName: string; onSubmit: ()
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1">
                     <span className="text-base font-bold text-emerald-100">{p.title}</span>
-                    {p.url && <a href={p.url} target="_blank" rel="noopener noreferrer" className="text-xs text-emerald-300/60 underline hover:text-emerald-200">🔗</a>}
+                    {p.url && <a href={p.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 rounded-full bg-emerald-400/15 px-3 py-1 text-sm font-bold text-emerald-300 ring-1 ring-emerald-400/30 transition hover:bg-emerald-400/25 hover:text-emerald-100">🔗 访问项目 ↗</a>}
                   </div>
                   <p className="text-base leading-7 text-emerald-100/50 mb-2">{p.description}</p>
                   <div className="flex items-center gap-3 text-sm text-emerald-100/35">
