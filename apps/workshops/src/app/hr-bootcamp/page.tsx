@@ -43,11 +43,11 @@ export default function HRBootcampPage() {
   const [userName, setUserName] = useState<string>("");
   const [nameInput, setNameInput] = useState("");
 
-  // Identity: sessionStorage for cross-session persistence
-  useEffect(() => { setUserName(sessionStorage.getItem("hrbc_name") || ""); }, []);
+  // Identity: localStorage for cross-session persistence
+  useEffect(() => { setUserName(localStorage.getItem("hrbc_name") || ""); }, []);
   const saveName = () => {
     if (!nameInput.trim()) return;
-    sessionStorage.setItem("hrbc_name", nameInput.trim());
+    localStorage.setItem("hrbc_name", nameInput.trim());
     setUserName(nameInput.trim());
   };
 

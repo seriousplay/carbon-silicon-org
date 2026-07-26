@@ -14,13 +14,13 @@ export function Gallery({ userName, onSubmit }: { userName: string; onSubmit: ()
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  const [authorName] = useState(userName);
-  const [authorRole, setAuthorRole] = useState("");
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [url, setUrl] = useState("");
+  const [authorRole, setAuthorRole] = useState("");
 
   const fetchProjects = useCallback(async () => {
     setLoading(true);
@@ -30,18 +30,35 @@ export function Gallery({ userName, onSubmit }: { userName: string; onSubmit: ()
 
   useEffect(() => { fetchProjects(); }, [fetchProjects]);
 
+  // Check if user already has a project
+  const myProject = projects.find(p => p.authorName === userName);
+
   const submitProject = async () => {
     if (!title || !description) return;
     setSubmitting(true);
     try {
-      await fetch("/workshops/api/hr-bootcamp/projects", {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ authorName: authorName || "匿名", authorRole, title, description, url }),
-      });
-      setShowForm(false); setTitle(""); setDescription(""); setUrl(""); setAuthorRole(""); fetchProjects();
-      onSubmit(); // Award points for first submission
+      if (editingId) {
+        // Update existing
+        await fetch(`/workshops/api/hr-bootcamp/projects/${editingId}`, {
+          method: "PATCH", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ title, description, url, authorRole }),
+        });
+      } else {
+        // Create new
+        await fetch("/workshops/api/hr-bootcamp/projects", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ authorName: userName, authorRole, title, description, url }),
+        });
+        onSubmit();
+      }
+      setShowForm(false); setEditingId(null); setTitle(""); setDescription(""); setUrl(""); setAuthorRole(""); fetchProjects();
     } catch {}
     setSubmitting(false);
+  };
+
+  const startEdit = (p: Project) => {
+    setEditingId(p.id); setShowForm(true);
+    setTitle(p.title); setDescription(p.description); setUrl(p.url || ""); setAuthorRole(p.authorRole || "");
   };
 
   const vote = async (projectId: string, score: number) => {
@@ -80,29 +97,36 @@ export function Gallery({ userName, onSubmit }: { userName: string; onSubmit: ()
         </div>
       )}
 
-      {/* Submit */}
+      {/* Submit / Edit */}
       {!showForm ? (
-        <button onClick={() => setShowForm(true)}
-          className="mt-6 w-full rounded-2xl border-2 border-dashed border-emerald-200/20 bg-white/[0.01] p-8 text-center transition hover:border-emerald-300/30 hover:bg-white/[0.03]">
-          <span className="text-3xl">📤</span>
-          <div className="mt-3 text-lg font-bold text-emerald-200">提交我的项目 +120分</div>
-          <div className="mt-1 text-base text-emerald-100/40">完成实战项目后，在这里分享你的作品</div>
-        </button>
+        myProject ? (
+          <button onClick={() => startEdit(myProject)}
+            className="mt-6 w-full rounded-2xl border border-emerald-300/20 bg-emerald-300/[0.04] p-6 text-center transition hover:border-emerald-300/30 hover:bg-emerald-300/[0.06]">
+            <span className="text-2xl">✏️</span>
+            <div className="mt-2 text-base font-bold text-emerald-200">修改我的项目</div>
+            <div className="text-sm text-emerald-100/40">你已提交「{myProject.title}」，可随时更新内容</div>
+          </button>
+        ) : (
+          <button onClick={() => setShowForm(true)}
+            className="mt-6 w-full rounded-2xl border-2 border-dashed border-emerald-200/20 bg-white/[0.01] p-8 text-center transition hover:border-emerald-300/30 hover:bg-white/[0.03]">
+            <span className="text-3xl">📤</span>
+            <div className="mt-3 text-lg font-bold text-emerald-200">提交我的项目 +120分</div>
+            <div className="mt-1 text-base text-emerald-100/40">完成实战项目后，在这里分享你的作品</div>
+          </button>
+        )
       ) : (
         <div className="mt-6 rounded-2xl border border-emerald-300/20 bg-white/[0.02] p-6 space-y-4">
-          <div className="grid gap-3 sm:grid-cols-2">
-            <input className="rounded-xl border border-emerald-200/15 bg-black/20 px-4 py-2.5 text-base text-emerald-100 outline-none focus:border-emerald-300/40" placeholder={`你的名字：${authorName || "请设置"}`} value={authorName} disabled />
-            <input className="rounded-xl border border-emerald-200/15 bg-black/20 px-4 py-2.5 text-base text-emerald-100 outline-none focus:border-emerald-300/40" placeholder="你的职位（选填）" value={authorRole} onChange={e => setAuthorRole(e.target.value)} />
-          </div>
+          <div className="text-sm font-bold text-emerald-200">{editingId ? "✏️ 修改项目" : "📤 提交新项目"}</div>
+          <input className="w-full rounded-xl border border-emerald-200/15 bg-black/20 px-4 py-2.5 text-base text-emerald-100 outline-none focus:border-emerald-300/40" placeholder="你的职位（选填）" value={authorRole} onChange={e => setAuthorRole(e.target.value)} />
           <input className="w-full rounded-xl border border-emerald-200/15 bg-black/20 px-4 py-2.5 text-base text-emerald-100 outline-none focus:border-emerald-300/40" placeholder="项目名称 *" value={title} onChange={e => setTitle(e.target.value)} />
           <textarea className="w-full rounded-xl border border-emerald-200/15 bg-black/20 px-4 py-3 text-base text-emerald-100 outline-none focus:border-emerald-300/40" rows={3} placeholder="项目描述：什么问题？什么工具？效果如何？*" value={description} onChange={e => setDescription(e.target.value)} />
           <input className="w-full rounded-xl border border-emerald-200/15 bg-black/20 px-4 py-2.5 text-base text-emerald-100 outline-none focus:border-emerald-300/40" placeholder="项目链接（选填）" value={url} onChange={e => setUrl(e.target.value)} />
           <div className="flex gap-2">
             <button onClick={submitProject} disabled={submitting || !title || !description}
               className="flex items-center gap-2 rounded-full bg-emerald-300 px-6 py-2.5 text-sm font-black text-[#07110f] transition hover:scale-105 disabled:opacity-40">
-              <Send className="h-4 w-4" /> {submitting ? "提交中..." : "提交 +120分"}
+              <Send className="h-4 w-4" /> {submitting ? "保存中..." : editingId ? "保存修改" : "提交 +120分"}
             </button>
-            <button onClick={() => setShowForm(false)} className="rounded-full border border-emerald-200/20 px-5 py-2.5 text-sm text-emerald-100/50">取消</button>
+            <button onClick={() => { setShowForm(false); setEditingId(null); setTitle(""); setDescription(""); setUrl(""); setAuthorRole(""); }} className="rounded-full border border-emerald-200/20 px-5 py-2.5 text-sm text-emerald-100/50">取消</button>
           </div>
         </div>
       )}
@@ -127,6 +151,7 @@ export function Gallery({ userName, onSubmit }: { userName: string; onSubmit: ()
                     <span>{p.authorName}</span>
                     {p.authorRole && <span>· {p.authorRole}</span>}
                     <span>· {new Date(p.createdAt).toLocaleDateString("zh-CN")}</span>
+                    {p.authorName === userName && <button onClick={() => startEdit(p)} className="ml-2 text-emerald-300/50 hover:text-emerald-200">✏️ 编辑</button>}
                   </div>
                 </div>
                 <div className="flex flex-col items-center gap-2 shrink-0">

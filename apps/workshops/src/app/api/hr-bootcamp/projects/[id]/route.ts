@@ -21,3 +21,24 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     return NextResponse.json({ error: String(e) }, { status: 500 });
   }
 }
+
+// PATCH /api/hr-bootcamp/projects/[id] — update own project
+export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
+  if (!db) return NextResponse.json({ error: "DB not available" }, { status: 500 });
+  try {
+    const { id } = await params;
+    const body = await req.json();
+    const updated = await db.bootcampProject.update({
+      where: { id },
+      data: {
+        ...(body.title && { title: body.title }),
+        ...(body.description && { description: body.description }),
+        ...(body.url !== undefined && { url: body.url || null }),
+        ...(body.authorRole !== undefined && { authorRole: body.authorRole || null }),
+      },
+    });
+    return NextResponse.json(updated);
+  } catch (e) {
+    return NextResponse.json({ error: String(e) }, { status: 500 });
+  }
+}
